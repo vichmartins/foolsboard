@@ -105,5 +105,10 @@ frontend/
 - [x] Backend: data model, CRUD API, media upload, migrations
 - [x] Frontend: React Flow canvas, right-click-create, edges, context panel
 - [x] Postgres: provisioned and active
+- [x] Board management: create / rename / delete (animated dialogs)
+- [x] Per-type structured node fields (scene/character/dialog/event/note)
+- [x] Delete confirmations (gradient overlay)
 - [ ] Auth (when needed)
+
+See [CHANGELOG](CHANGELOG.md) for version history.
 ```

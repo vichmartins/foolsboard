@@ -7,7 +7,8 @@ import {
   updateNode,
   uploadAsset,
 } from '../api'
-import { NODE_TYPES, type Asset, type StoryNode } from '../types'
+import { NODE_TYPES, TYPE_FIELDS, type Asset, type StoryNode } from '../types'
+import ConfirmDialog from './ConfirmDialog'
 
 interface Props {
   boardId: string
@@ -20,27 +21,33 @@ interface Props {
 export default function ContextPanel({ boardId, node, onChange, onDelete, onClose }: Props) {
   const [title, setTitle] = useState(node.title)
   const [type, setType] = useState(node.type)
-  const [text, setText] = useState(String(node.content?.text ?? ''))
+  // The whole content blob is held in state; per-type fields read/write keys in it
+  // so switching type never loses data the other type captured.
+  const [content, setContent] = useState<Record<string, unknown>>(node.content ?? {})
   const [assets, setAssets] = useState<Asset[]>([])
   const [busy, setBusy] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Re-sync local fields whenever a different node is selected.
+  // Re-sync local state whenever a different node is selected.
   useEffect(() => {
     setTitle(node.title)
     setType(node.type)
-    setText(String(node.content?.text ?? ''))
+    setContent(node.content ?? {})
+    setConfirmDelete(false)
     listAssets(node.id).then(setAssets).catch(() => setAssets([]))
   }, [node.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fields = TYPE_FIELDS[type] ?? TYPE_FIELDS.note
+
+  function setField(key: string, value: string) {
+    setContent((c) => ({ ...c, [key]: value }))
+  }
 
   async function save() {
     setBusy(true)
     try {
-      const updated = await updateNode(boardId, node.id, {
-        title,
-        type,
-        content: { ...node.content, text },
-      })
+      const updated = await updateNode(boardId, node.id, { title, type, content })
       onChange(updated)
     } finally {
       setBusy(false)
@@ -91,16 +98,36 @@ export default function ContextPanel({ boardId, node, onChange, onDelete, onClos
         <input value={title} onChange={(e) => setTitle(e.target.value)} />
       </label>
 
-      <label className="field">
-        <span>Notes</span>
-        <textarea rows={6} value={text} onChange={(e) => setText(e.target.value)} />
-      </label>
+      {/* Dynamic, type-specific fields (stored in node.content). */}
+      {fields.map((f) => (
+        <label className="field" key={f.key}>
+          <span>{f.label}</span>
+          {f.multiline ? (
+            <textarea
+              rows={5}
+              placeholder={f.placeholder}
+              value={String(content[f.key] ?? '')}
+              onChange={(e) => setField(f.key, e.target.value)}
+            />
+          ) : (
+            <input
+              placeholder={f.placeholder}
+              value={String(content[f.key] ?? '')}
+              onChange={(e) => setField(f.key, e.target.value)}
+            />
+          )}
+        </label>
+      ))}
 
       <div className="panel__actions">
         <button className="btn btn--primary" onClick={save} disabled={busy}>
           Save
         </button>
-        <button className="btn btn--danger" onClick={removeNode} disabled={busy}>
+        <button
+          className="btn btn--danger"
+          onClick={() => setConfirmDelete(true)}
+          disabled={busy}
+        >
           Delete
         </button>
       </div>
@@ -134,6 +161,17 @@ export default function ContextPanel({ boardId, node, onChange, onDelete, onClos
           {assets.length === 0 && <li className="media-empty">No media yet</li>}
         </ul>
       </div>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Delete object?"
+          message={`"${title || 'Untitled'}" and its media will be permanently deleted.`}
+          confirmLabel="Delete"
+          danger
+          onConfirm={removeNode}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
     </aside>
   )
 }

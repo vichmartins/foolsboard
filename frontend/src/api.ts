@@ -19,6 +19,17 @@ export async function createBoard(name: string, description?: string): Promise<B
   return (await http.post('/boards', { name, description })).data
 }
 
+export async function updateBoard(
+  boardId: string,
+  payload: { name?: string; description?: string },
+): Promise<Board> {
+  return (await http.patch(`/boards/${boardId}`, payload)).data
+}
+
+export async function deleteBoard(boardId: string): Promise<void> {
+  await http.delete(`/boards/${boardId}`)
+}
+
 export async function getGraph(boardId: string): Promise<BoardGraph> {
   return (await http.get(`/boards/${boardId}/graph`)).data
 }

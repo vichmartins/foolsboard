@@ -64,3 +64,34 @@ export const KIND_COLORS: Record<string, string> = {
   event: '#ef4444',
   note: '#64748b',
 }
+
+// Structured fields shown in the context panel, per object kind. All values are
+// stored inside the node's `content` JSON, so adding a field needs no migration.
+export interface FieldDef {
+  key: string
+  label: string
+  multiline?: boolean
+  placeholder?: string
+}
+
+export const TYPE_FIELDS: Record<string, FieldDef[]> = {
+  scene: [
+    { key: 'location', label: 'Location', placeholder: 'Where does it happen?' },
+    { key: 'time', label: 'Time', placeholder: 'When? (day/night, era…)' },
+    { key: 'summary', label: 'Summary', multiline: true, placeholder: 'What happens in this scene?' },
+  ],
+  character: [
+    { key: 'role', label: 'Role', placeholder: 'Protagonist, villain, mentor…' },
+    { key: 'traits', label: 'Traits', placeholder: 'Brave, cunning, anxious…' },
+    { key: 'description', label: 'Description', multiline: true, placeholder: 'Who are they?' },
+  ],
+  dialog: [
+    { key: 'speaker', label: 'Speaker', placeholder: 'Who is talking?' },
+    { key: 'line', label: 'Line', multiline: true, placeholder: 'What is said?' },
+  ],
+  event: [
+    { key: 'trigger', label: 'Trigger', placeholder: 'What causes it?' },
+    { key: 'outcome', label: 'Outcome', multiline: true, placeholder: 'What changes as a result?' },
+  ],
+  note: [{ key: 'text', label: 'Notes', multiline: true, placeholder: 'Free-form notes…' }],
+}
