@@ -25,6 +25,7 @@ import { KIND_COLORS, nodePreview, type StoryEdge, type StoryNode } from '../typ
 import ConfirmDialog from './ConfirmDialog'
 import ContextMenu from './ContextMenu'
 import ContextPanel from './ContextPanel'
+import FloatingEdge from './FloatingEdge'
 import PromptDialog from './PromptDialog'
 import StoryNodeCard from './StoryNodeCard'
 
@@ -41,8 +42,9 @@ function countLabel(n: number, singular: string) {
 }
 
 const nodeTypes = { story: StoryNodeCard }
+const edgeTypes = { floating: FloatingEdge }
 
-function toRFNode(n: StoryNode): Node {
+function toRFNode(n: StoryNode, boardId: string): Node {
   return {
     id: n.id,
     type: 'story',
@@ -52,6 +54,7 @@ function toRFNode(n: StoryNode): Node {
       kind: n.type,
       preview: nodePreview(n.type, n.content),
       story: n,
+      boardId,
     },
   }
 }
@@ -59,12 +62,13 @@ function toRFNode(n: StoryNode): Node {
 function toRFEdge(e: StoryEdge): Edge {
   return {
     id: e.id,
+    type: 'floating',
     source: e.source_id,
     target: e.target_id,
-    // Default to right->left so links made before per-side handles still render.
     sourceHandle: (e.data?.sourceHandle as string | undefined) ?? 'right',
     targetHandle: (e.data?.targetHandle as string | undefined) ?? 'left',
     label: e.label ?? undefined,
+    data: e.data,
   }
 }
 
@@ -85,7 +89,7 @@ function CanvasInner({ boardId }: { boardId: string }) {
     let active = true
     api.getGraph(boardId).then((g) => {
       if (!active) return
-      setNodes(g.nodes.map(toRFNode))
+      setNodes(g.nodes.map((n) => toRFNode(n, boardId)))
       setEdges(g.edges.map(toRFEdge))
       setSelectedId(null)
     })
@@ -140,7 +144,7 @@ function CanvasInner({ boardId }: { boardId: string }) {
         x: pos.x,
         y: pos.y,
       })
-      setNodes((nds) => [...nds, toRFNode(created)])
+      setNodes((nds) => [...nds, toRFNode(created, boardId)])
       setSelectedId(created.id)
     },
     [boardId, screenToFlowPosition],
@@ -174,8 +178,8 @@ function CanvasInner({ boardId }: { boardId: string }) {
 
   // Reflect a panel edit back into the canvas card (including the preview line).
   const applyNodeUpdate = useCallback((updated: StoryNode) => {
-    setNodes((nds) => nds.map((n) => (n.id === updated.id ? toRFNode(updated) : n)))
-  }, [])
+    setNodes((nds) => nds.map((n) => (n.id === updated.id ? toRFNode(updated, boardId) : n)))
+  }, [boardId])
 
   // --- Edge editing --------------------------------------------------------
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
@@ -226,7 +230,7 @@ function CanvasInner({ boardId }: { boardId: string }) {
         api.createEdge(boardId, edge.source, created.id, label),
         api.createEdge(boardId, created.id, edge.target),
       ])
-      setNodes((nds) => [...nds, toRFNode(created)])
+      setNodes((nds) => [...nds, toRFNode(created, boardId)])
       setEdges((eds) =>
         eds.filter((e) => e.id !== edge.id).concat(toRFEdge(e1), toRFEdge(e2)),
       )
@@ -282,6 +286,7 @@ function CanvasInner({ boardId }: { boardId: string }) {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         connectionMode={ConnectionMode.Loose}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}

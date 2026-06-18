@@ -52,6 +52,8 @@ export interface BoardGraph {
   edges: StoryEdge[]
 }
 
+export type Side = 'top' | 'right' | 'bottom' | 'left'
+
 // The kinds of objects you can drop on the canvas.
 export const NODE_TYPES = ['scene', 'character', 'dialog', 'event', 'note'] as const
 export type NodeKind = (typeof NODE_TYPES)[number]

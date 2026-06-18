@@ -69,7 +69,12 @@ export async function createEdge(
       target_id: targetId,
       label,
       // Which side of each node the link attaches to (persisted in edge.data).
-      data: { sourceHandle: sourceHandle ?? null, targetHandle: targetHandle ?? null },
+      data: {
+        sourceHandle: sourceHandle ?? null,
+        targetHandle: targetHandle ?? null,
+        sourceT: 0.5,
+        targetT: 0.5,
+      },
     })
   ).data
 }
@@ -77,7 +82,7 @@ export async function createEdge(
 export async function updateEdge(
   boardId: string,
   edgeId: string,
-  payload: { label?: string | null },
+  payload: { label?: string | null; data?: Record<string, unknown> },
 ): Promise<StoryEdge> {
   return (await http.patch(`/boards/${boardId}/edges/${edgeId}`, payload)).data
 }

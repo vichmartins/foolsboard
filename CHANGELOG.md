@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.5.0
+
+- **Draggable connection points** — links now attach to a precise point on a
+  node's border, not a fixed side anchor. With one connection on a side it
+  centers automatically; with two or more you can drag each point along the
+  border to position it. The offset (side + position) is persisted in
+  `edge.data` and restored on reload.
+- **Connection dots only when connected** — the little circles now appear only
+  where an actual link attaches. The four-sided handles are now invisible "ghost"
+  affordances that surface on hover for drawing new links.
+- New custom `FloatingEdge` renders each link as a bezier computed from the
+  stored border geometry, so the line always meets its draggable point.
+
 ## v0.4.0
 
 - **Connect from any side** — every object now has connection handles on all
