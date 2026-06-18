@@ -92,7 +92,7 @@ export default function App() {
         <button className="btn" onClick={() => setDialog('new')}>+ New board</button>
 
         <span className="hint">
-          Right-click canvas to add · drag handles to link · Del to remove
+          Right-click canvas to add · drag handles to link · right-click a link to edit · Del to remove
         </span>
       </header>
 

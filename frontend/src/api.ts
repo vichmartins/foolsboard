@@ -70,6 +70,14 @@ export async function createEdge(
   ).data
 }
 
+export async function updateEdge(
+  boardId: string,
+  edgeId: string,
+  payload: { label?: string | null },
+): Promise<StoryEdge> {
+  return (await http.patch(`/boards/${boardId}/edges/${edgeId}`, payload)).data
+}
+
 export async function deleteEdge(boardId: string, edgeId: string): Promise<void> {
   await http.delete(`/boards/${boardId}/edges/${edgeId}`)
 }

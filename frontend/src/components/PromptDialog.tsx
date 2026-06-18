@@ -8,6 +8,7 @@ interface Props {
   placeholder?: string
   initialValue?: string
   confirmLabel?: string
+  allowEmpty?: boolean
   onSubmit: (value: string) => void
   onCancel: () => void
 }
@@ -18,6 +19,7 @@ export default function PromptDialog({
   placeholder,
   initialValue = '',
   confirmLabel = 'Create',
+  allowEmpty = false,
   onSubmit,
   onCancel,
 }: Props) {
@@ -37,7 +39,7 @@ export default function PromptDialog({
 
   function submit() {
     const v = value.trim()
-    if (v) onSubmit(v)
+    if (v || allowEmpty) onSubmit(v)
   }
 
   return (
@@ -71,7 +73,11 @@ export default function PromptDialog({
           <button className="btn" onClick={onCancel}>
             Cancel
           </button>
-          <button className="btn btn--primary" onClick={submit} disabled={!value.trim()}>
+          <button
+            className="btn btn--primary"
+            onClick={submit}
+            disabled={!allowEmpty && !value.trim()}
+          >
             {confirmLabel}
           </button>
         </div>

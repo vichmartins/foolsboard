@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.3.0
+
+- **Node card previews** — each card now shows a preview line under the title
+  (the first filled type-field, e.g. a character's role or a scene's location).
+- **Connection editing** — right-click a link for a context menu:
+  - *Edit label…* — annotate the branch (clearable) via the dialog.
+  - *Insert node* — splits the connection (A→B becomes A→new→B).
+  - *Delete connection*.
+- **Reconnect / detach** — drag a link's endpoint onto another node to move it,
+  or drop it on empty space to detach it.
+- New reusable `ContextMenu`; `PromptDialog` gained an `allowEmpty` option;
+  added `updateEdge` API.
+
 ## v0.2.1
 
 - The canvas **Delete key** now routes through the confirm dialog whenever

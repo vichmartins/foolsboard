@@ -95,3 +95,13 @@ export const TYPE_FIELDS: Record<string, FieldDef[]> = {
   ],
   note: [{ key: 'text', label: 'Notes', multiline: true, placeholder: 'Free-form notes…' }],
 }
+
+// A short preview string for a node card: the first non-empty type field.
+export function nodePreview(type: string, content: Record<string, unknown>): string {
+  const fields = TYPE_FIELDS[type] ?? TYPE_FIELDS.note
+  for (const f of fields) {
+    const v = content?.[f.key]
+    if (typeof v === 'string' && v.trim()) return v.trim()
+  }
+  return ''
+}

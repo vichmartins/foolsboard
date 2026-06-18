@@ -108,6 +108,8 @@ frontend/
 - [x] Board management: create / rename / delete (animated dialogs)
 - [x] Per-type structured node fields (scene/character/dialog/event/note)
 - [x] Delete confirmations (gradient overlay)
+- [x] Node card previews
+- [x] Connection editing: right-click menu (edit label / insert node / delete) + drag-to-reconnect / detach
 - [ ] Auth (when needed)
 
 See [CHANGELOG](CHANGELOG.md) for version history.

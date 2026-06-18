@@ -5,6 +5,7 @@ import { KIND_COLORS } from '../types'
 export interface StoryNodeData extends Record<string, unknown> {
   title: string
   kind: string
+  preview?: string
 }
 
 export default function StoryNodeCard({ data, selected }: NodeProps) {
@@ -23,6 +24,7 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
         {d.kind}
       </span>
       <span className="story-node__title">{d.title || 'Untitled'}</span>
+      {d.preview && <span className="story-node__preview">{d.preview}</span>}
       <Handle type="source" position={Position.Right} />
     </div>
   )
