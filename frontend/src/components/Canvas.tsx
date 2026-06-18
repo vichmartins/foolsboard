@@ -10,9 +10,7 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
-  reconnectEdge,
   useReactFlow,
-  type Connection,
   type Edge,
   type EdgeChange,
   type Node,
@@ -21,8 +19,10 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import * as api from '../api'
+import { BoardIdContext } from '../boardContext'
 import { findNodeAt, nodeSize, snapToBorder } from '../edgeGeometry'
-import { KIND_COLORS, nodePreview, type Side, type StoryEdge, type StoryNode } from '../types'
+import { toRFEdge } from '../rfMappers'
+import { KIND_COLORS, nodePreview, type Side, type StoryNode } from '../types'
 import ConfirmDialog from './ConfirmDialog'
 import ContextMenu from './ContextMenu'
 import ContextPanel from './ContextPanel'
@@ -45,7 +45,7 @@ function countLabel(n: number, singular: string) {
 const nodeTypes = { story: StoryNodeCard }
 const edgeTypes = { floating: FloatingEdge }
 
-function toRFNode(n: StoryNode, boardId: string): Node {
+function toRFNode(n: StoryNode): Node {
   return {
     id: n.id,
     type: 'story',
@@ -55,21 +55,7 @@ function toRFNode(n: StoryNode, boardId: string): Node {
       kind: n.type,
       preview: nodePreview(n.type, n.content),
       story: n,
-      boardId,
     },
-  }
-}
-
-function toRFEdge(e: StoryEdge): Edge {
-  return {
-    id: e.id,
-    type: 'floating',
-    source: e.source_id,
-    target: e.target_id,
-    sourceHandle: (e.data?.sourceHandle as string | undefined) ?? 'right',
-    targetHandle: (e.data?.targetHandle as string | undefined) ?? 'left',
-    label: e.label ?? undefined,
-    data: e.data,
   }
 }
 
@@ -81,9 +67,6 @@ function CanvasInner({ boardId }: { boardId: string }) {
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const [edgeMenu, setEdgeMenu] = useState<{ x: number; y: number; edge: Edge } | null>(null)
   const [editEdge, setEditEdge] = useState<Edge | null>(null)
-  // Tracks whether an in-progress endpoint drag landed on a node (reconnect) or
-  // on empty space (detach).
-  const edgeReconnected = useRef(true)
   // The node + side a freshly drawn connection started from, captured on
   // connect-start so connect-end can build the edge from drop geometry.
   const connectStart = useRef<{ nodeId: string; side: Side } | null>(null)
@@ -93,7 +76,7 @@ function CanvasInner({ boardId }: { boardId: string }) {
     let active = true
     api.getGraph(boardId).then((g) => {
       if (!active) return
-      setNodes(g.nodes.map((n) => toRFNode(n, boardId)))
+      setNodes(g.nodes.map((n) => toRFNode(n)))
       setEdges(g.edges.map(toRFEdge))
       setSelectedId(null)
     })
@@ -176,7 +159,7 @@ function CanvasInner({ boardId }: { boardId: string }) {
         x: pos.x,
         y: pos.y,
       })
-      setNodes((nds) => [...nds, toRFNode(created, boardId)])
+      setNodes((nds) => [...nds, toRFNode(created)])
       setSelectedId(created.id)
     },
     [boardId, screenToFlowPosition],
@@ -210,8 +193,8 @@ function CanvasInner({ boardId }: { boardId: string }) {
 
   // Reflect a panel edit back into the canvas card (including the preview line).
   const applyNodeUpdate = useCallback((updated: StoryNode) => {
-    setNodes((nds) => nds.map((n) => (n.id === updated.id ? toRFNode(updated, boardId) : n)))
-  }, [boardId])
+    setNodes((nds) => nds.map((n) => (n.id === updated.id ? toRFNode(updated) : n)))
+  }, [])
 
   // --- Edge editing --------------------------------------------------------
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
@@ -262,45 +245,13 @@ function CanvasInner({ boardId }: { boardId: string }) {
         api.createEdge(boardId, edge.source, created.id, label),
         api.createEdge(boardId, created.id, edge.target),
       ])
-      setNodes((nds) => [...nds, toRFNode(created, boardId)])
+      setNodes((nds) => [...nds, toRFNode(created)])
       setEdges((eds) =>
         eds.filter((e) => e.id !== edge.id).concat(toRFEdge(e1), toRFEdge(e2)),
       )
       setSelectedId(created.id)
     },
     [boardId, nodes],
-  )
-
-  // Drag an endpoint onto another node to move the connection; drop it on empty
-  // space to detach (remove) it.
-  const onReconnectStart = useCallback(() => {
-    edgeReconnected.current = false
-  }, [])
-  const onReconnect = useCallback(
-    async (oldEdge: Edge, conn: Connection) => {
-      edgeReconnected.current = true
-      if (!conn.source || !conn.target) return
-      setEdges((eds) => reconnectEdge(oldEdge, conn, eds))
-      const label = typeof oldEdge.label === 'string' ? oldEdge.label : undefined
-      await api.deleteEdge(boardId, oldEdge.id).catch(() => {})
-      const created = await api.createEdge(
-        boardId,
-        conn.source,
-        conn.target,
-        label,
-        conn.sourceHandle,
-        conn.targetHandle,
-      )
-      setEdges((eds) => eds.map((e) => (e.id === oldEdge.id ? toRFEdge(created) : e)))
-    },
-    [boardId],
-  )
-  const onReconnectEnd = useCallback(
-    (_: unknown, edge: Edge) => {
-      if (!edgeReconnected.current) deleteEdgeById(edge)
-      edgeReconnected.current = true
-    },
-    [deleteEdgeById],
   )
 
   const removeSelected = useCallback((nodeId: string) => {
@@ -313,6 +264,7 @@ function CanvasInner({ boardId }: { boardId: string }) {
     (nodes.find((n) => n.id === selectedId)?.data?.story as StoryNode | undefined) ?? null
 
   return (
+    <BoardIdContext.Provider value={boardId}>
     <div className="canvas-wrap">
       <ReactFlow
         nodes={nodes}
@@ -330,9 +282,6 @@ function CanvasInner({ boardId }: { boardId: string }) {
         onPaneContextMenu={onPaneContextMenu}
         onNodeContextMenu={onNodeContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
-        onReconnect={onReconnect}
-        onReconnectStart={onReconnectStart}
-        onReconnectEnd={onReconnectEnd}
         onBeforeDelete={onBeforeDelete}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
@@ -426,6 +375,7 @@ function CanvasInner({ boardId }: { boardId: string }) {
         />
       )}
     </div>
+    </BoardIdContext.Provider>
   )
 }
 

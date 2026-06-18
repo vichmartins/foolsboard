@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.2
+
+- **Grab a link's endpoint to reposition, reassign, or delete it** — the
+  connection pins now live on the edge instead of inside the node card, so a
+  drag survives crossing node boundaries. Drag an endpoint along its border to
+  move it, onto another node to reassign that end (attaching at the exact point
+  you release), or onto empty space to delete the link. While over empty space
+  the link follows the cursor as a live preview.
+- Removed React Flow's native edge reconnection (the pins now own that
+  behaviour). New shared modules: `edgeGeometry` (snap math), `rfMappers`
+  (edge mapping), and `boardContext` (board id for custom edges).
+
 ## v0.5.1
 
 - **One-shot connection placement** — drawing a link now attaches it to the
