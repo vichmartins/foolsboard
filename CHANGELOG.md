@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.1
+
+- **Fix:** the connection right-click menu opened and instantly closed itself
+  (the opening `contextmenu` event bubbled to the menu's own outside-click
+  listener). Outside-close listeners are now attached a frame later and ignore
+  clicks inside the menu, so the menu stays open and is usable.
+
 ## v0.3.0
 
 - **Node card previews** — each card now shows a preview line under the title
