@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from .config import settings
 from .routers import assets, boards, edges, nodes
 
-app = FastAPI(title="foolsboard API", version="0.2.0")
+app = FastAPI(title="foolsboard API", version="0.2.1")
 
 app.add_middleware(
     CORSMiddleware,

@@ -19,8 +19,21 @@ import '@xyflow/react/dist/style.css'
 
 import * as api from '../api'
 import { KIND_COLORS, type StoryEdge, type StoryNode } from '../types'
+import ConfirmDialog from './ConfirmDialog'
 import ContextPanel from './ContextPanel'
 import StoryNodeCard from './StoryNodeCard'
+
+// What React Flow hands to onBeforeDelete, plus a resolver we keep so the
+// confirm dialog's buttons can answer the (async) deletion request.
+interface PendingDelete {
+  nodes: Node[]
+  edges: Edge[]
+  resolve: (confirmed: boolean) => void
+}
+
+function countLabel(n: number, singular: string) {
+  return `${n} ${singular}${n === 1 ? '' : 's'}`
+}
 
 const nodeTypes = { story: StoryNodeCard }
 
@@ -42,6 +55,7 @@ function CanvasInner({ boardId }: { boardId: string }) {
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
 
   // Load the whole board graph whenever the board changes.
   useEffect(() => {
@@ -101,15 +115,29 @@ function CanvasInner({ boardId }: { boardId: string }) {
     [boardId, screenToFlowPosition],
   )
 
+  // Gate keyboard/programmatic deletion behind a confirm dialog when objects
+  // are involved. Edge-only deletions stay instant (low-risk, easily redrawn).
+  const onBeforeDelete = useCallback(
+    ({ nodes: delNodes, edges: delEdges }: { nodes: Node[]; edges: Edge[] }) => {
+      if (delNodes.length === 0) return Promise.resolve(true)
+      return new Promise<boolean>((resolve) =>
+        setPendingDelete({ nodes: delNodes, edges: delEdges, resolve }),
+      )
+    },
+    [],
+  )
+
   const onNodesDelete = useCallback(
     (deleted: Node[]) => {
-      deleted.forEach((n) => api.deleteNode(boardId, n.id))
+      // Deleting a node cascades its edges on the backend, so ignore 404s.
+      deleted.forEach((n) => api.deleteNode(boardId, n.id).catch(() => {}))
       if (deleted.some((n) => n.id === selectedId)) setSelectedId(null)
     },
     [boardId, selectedId],
   )
   const onEdgesDelete = useCallback(
-    (deleted: Edge[]) => deleted.forEach((e) => api.deleteEdge(boardId, e.id)),
+    (deleted: Edge[]) =>
+      deleted.forEach((e) => api.deleteEdge(boardId, e.id).catch(() => {})),
     [boardId],
   )
 
@@ -146,6 +174,7 @@ function CanvasInner({ boardId }: { boardId: string }) {
         onNodeClick={(_, n) => setSelectedId(n.id)}
         onPaneClick={() => setSelectedId(null)}
         onPaneContextMenu={onPaneContextMenu}
+        onBeforeDelete={onBeforeDelete}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
         fitView
@@ -171,6 +200,37 @@ function CanvasInner({ boardId }: { boardId: string }) {
           onChange={applyNodeUpdate}
           onDelete={removeSelected}
           onClose={() => setSelectedId(null)}
+        />
+      )}
+
+      {pendingDelete && (
+        <ConfirmDialog
+          title={
+            pendingDelete.nodes.length === 1
+              ? 'Delete object?'
+              : `Delete ${countLabel(pendingDelete.nodes.length, 'object')}?`
+          }
+          message={
+            pendingDelete.edges.length > 0
+              ? `This will permanently delete ${countLabel(
+                  pendingDelete.nodes.length,
+                  'object',
+                )} and ${countLabel(pendingDelete.edges.length, 'link')}, including their media. This can't be undone.`
+              : `This will permanently delete ${countLabel(
+                  pendingDelete.nodes.length,
+                  'object',
+                )} and their media. This can't be undone.`
+          }
+          confirmLabel="Delete"
+          danger
+          onConfirm={() => {
+            pendingDelete.resolve(true)
+            setPendingDelete(null)
+          }}
+          onCancel={() => {
+            pendingDelete.resolve(false)
+            setPendingDelete(null)
+          }}
         />
       )}
     </div>

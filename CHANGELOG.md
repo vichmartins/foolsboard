@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.1
+
+- The canvas **Delete key** now routes through the confirm dialog whenever
+  objects are involved (edge-only deletions stay instant). The panel's Delete
+  button remains guarded too — both paths share the same dialog.
+- Hardened fire-and-forget deletes against cascade 404s (deleting a node already
+  removes its links on the backend).
+
 ## v0.2.0
 
 - **Board management** — rename and delete the active board from the top bar,
