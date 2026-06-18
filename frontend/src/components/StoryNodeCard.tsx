@@ -3,6 +3,7 @@
 import { Fragment, useRef } from 'react'
 import { Handle, Position, useEdges, useReactFlow, type NodeProps } from '@xyflow/react'
 import { KIND_COLORS, type Side } from '../types'
+import { nodeSize, snapToBorder } from '../edgeGeometry'
 import * as api from '../api'
 
 export interface StoryNodeData extends Record<string, unknown> {
@@ -30,22 +31,6 @@ function pinStyle(side: Side, t: number): React.CSSProperties {
     case 'bottom': return { bottom: -half, left:  `calc(${t * 100}% - ${half}px)` }
     case 'left':   return { left: -half,   top:   `calc(${t * 100}% - ${half}px)` }
   }
-}
-
-function snapToBorder(
-  fx: number, fy: number,
-  nx: number, ny: number, nw: number, nh: number,
-): { side: Side; t: number } {
-  const clamp = (v: number) => Math.max(0, Math.min(1, v))
-  const dTop    = Math.abs(fy - ny)
-  const dBottom = Math.abs(fy - (ny + nh))
-  const dLeft   = Math.abs(fx - nx)
-  const dRight  = Math.abs(fx - (nx + nw))
-  const min = Math.min(dTop, dBottom, dLeft, dRight)
-  if (min === dTop)    return { side: 'top',    t: clamp((fx - nx) / nw) }
-  if (min === dBottom) return { side: 'bottom', t: clamp((fx - nx) / nw) }
-  if (min === dLeft)   return { side: 'left',   t: clamp((fy - ny) / nh) }
-  return                      { side: 'right',  t: clamp((fy - ny) / nh) }
 }
 
 export default function StoryNodeCard({ id, data, selected }: NodeProps) {
@@ -90,8 +75,7 @@ export default function StoryNodeCard({ id, data, selected }: NodeProps) {
     const node = getNode(id)
     if (!node) return
     const fp  = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-    const nw  = node.measured?.width  ?? 180
-    const nh  = node.measured?.height ?? 60
+    const { w: nw, h: nh } = nodeSize(node)
     const snap = snapToBorder(fp.x, fp.y, node.position.x, node.position.y, nw, nh)
     setEdges((eds) =>
       eds.map((edge) => {
@@ -118,8 +102,7 @@ export default function StoryNodeCard({ id, data, selected }: NodeProps) {
     const node = getNode(id)
     if (!node) return
     const fp   = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-    const nw   = node.measured?.width  ?? 180
-    const nh   = node.measured?.height ?? 60
+    const { w: nw, h: nh } = nodeSize(node)
     const snap = snapToBorder(fp.x, fp.y, node.position.x, node.position.y, nw, nh)
     const currentEdge = getEdges().find((edge) => edge.id === pin.edgeId)
     if (!currentEdge || !d.boardId) return

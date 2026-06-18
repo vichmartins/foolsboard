@@ -21,7 +21,8 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import * as api from '../api'
-import { KIND_COLORS, nodePreview, type StoryEdge, type StoryNode } from '../types'
+import { findNodeAt, nodeSize, snapToBorder } from '../edgeGeometry'
+import { KIND_COLORS, nodePreview, type Side, type StoryEdge, type StoryNode } from '../types'
 import ConfirmDialog from './ConfirmDialog'
 import ContextMenu from './ContextMenu'
 import ContextPanel from './ContextPanel'
@@ -73,7 +74,7 @@ function toRFEdge(e: StoryEdge): Edge {
 }
 
 function CanvasInner({ boardId }: { boardId: string }) {
-  const { screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition, getNodes } = useReactFlow()
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -83,6 +84,9 @@ function CanvasInner({ boardId }: { boardId: string }) {
   // Tracks whether an in-progress endpoint drag landed on a node (reconnect) or
   // on empty space (detach).
   const edgeReconnected = useRef(true)
+  // The node + side a freshly drawn connection started from, captured on
+  // connect-start so connect-end can build the edge from drop geometry.
+  const connectStart = useRef<{ nodeId: string; side: Side } | null>(null)
 
   // Load the whole board graph whenever the board changes.
   useEffect(() => {
@@ -115,22 +119,50 @@ function CanvasInner({ boardId }: { boardId: string }) {
     [boardId],
   )
 
-  // Drawing a connection creates a persisted edge, remembering which sides it
-  // attaches to.
-  const onConnect = useCallback(
-    async (conn: Connection) => {
-      if (!conn.source || !conn.target) return
+  // Drawing a connection: remember where it started...
+  const onConnectStart = useCallback(
+    (
+      _: unknown,
+      params: { nodeId: string | null; handleId: string | null },
+    ) => {
+      connectStart.current = params.nodeId
+        ? { nodeId: params.nodeId, side: (params.handleId as Side) ?? 'right' }
+        : null
+    },
+    [],
+  )
+
+  // ...and on release, attach it to the exact border point under the cursor.
+  // Dropping on empty space (no node) leaves nothing — the link just vanishes.
+  const onConnectEnd = useCallback(
+    async (event: MouseEvent | TouchEvent) => {
+      const start = connectStart.current
+      connectStart.current = null
+      if (!start) return
+
+      const point =
+        'changedTouches' in event ? event.changedTouches[0] : event
+      const flow = screenToFlowPosition({ x: point.clientX, y: point.clientY })
+      const target = findNodeAt(getNodes(), flow, start.nodeId)
+      if (!target) return
+
+      const { w, h } = nodeSize(target)
+      const snap = snapToBorder(
+        flow.x, flow.y, target.position.x, target.position.y, w, h,
+      )
       const created = await api.createEdge(
         boardId,
-        conn.source,
-        conn.target,
+        start.nodeId,
+        target.id,
         undefined,
-        conn.sourceHandle,
-        conn.targetHandle,
+        start.side,
+        snap.side,
+        0.5,
+        snap.t,
       )
       setEdges((eds) => addEdge(toRFEdge(created), eds))
     },
-    [boardId],
+    [boardId, screenToFlowPosition, getNodes],
   )
 
   // Right-click on empty canvas -> create a new object there (Agar.io style).
@@ -290,7 +322,8 @@ function CanvasInner({ boardId }: { boardId: string }) {
         connectionMode={ConnectionMode.Loose}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onConnectStart={onConnectStart}
+        onConnectEnd={onConnectEnd}
         onNodeDragStop={onNodeDragStop}
         onNodeClick={(_, n) => setSelectedId(n.id)}
         onPaneClick={() => setSelectedId(null)}

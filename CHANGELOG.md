@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.5.1
+
+- **One-shot connection placement** — drawing a link now attaches it to the
+  exact point on the target's border where you release the mouse, instead of
+  snapping to one of four fixed anchors and requiring a second drag. Release on
+  empty space and the link simply vanishes; a small latch margin attaches links
+  dropped just outside a node to the nearest border point.
+- Border-snap geometry is now shared (`edgeGeometry.ts`) between connection
+  creation and pin dragging, so both place points identically.
+
 ## v0.5.0
 
 - **Draggable connection points** — links now attach to a precise point on a

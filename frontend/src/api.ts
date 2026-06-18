@@ -62,18 +62,21 @@ export async function createEdge(
   label?: string,
   sourceHandle?: string | null,
   targetHandle?: string | null,
+  sourceT = 0.5,
+  targetT = 0.5,
 ): Promise<StoryEdge> {
   return (
     await http.post(`/boards/${boardId}/edges`, {
       source_id: sourceId,
       target_id: targetId,
       label,
-      // Which side of each node the link attaches to (persisted in edge.data).
+      // Which side of each node the link attaches to, and where along that side
+      // (t in 0..1). Persisted in edge.data, restored on reload.
       data: {
         sourceHandle: sourceHandle ?? null,
         targetHandle: targetHandle ?? null,
-        sourceT: 0.5,
-        targetT: 0.5,
+        sourceT,
+        targetT,
       },
     })
   ).data
