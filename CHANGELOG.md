@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.0
+
+- **Connect from any side** — every object now has connection handles on all
+  four sides, and React Flow runs in loose mode, so a link can start or end on
+  any side (top/right/bottom/left), in any direction.
+- The side a link attaches to is persisted (in `edge.data`) and restored on
+  reload. Links made before this update keep rendering (right→left fallback).
+
 ## v0.3.1
 
 - **Fix:** the connection right-click menu opened and instantly closed itself

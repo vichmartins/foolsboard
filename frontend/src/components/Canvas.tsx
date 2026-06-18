@@ -5,6 +5,7 @@ import {
   applyEdgeChanges,
   applyNodeChanges,
   Background,
+  ConnectionMode,
   Controls,
   MiniMap,
   ReactFlow,
@@ -56,7 +57,15 @@ function toRFNode(n: StoryNode): Node {
 }
 
 function toRFEdge(e: StoryEdge): Edge {
-  return { id: e.id, source: e.source_id, target: e.target_id, label: e.label ?? undefined }
+  return {
+    id: e.id,
+    source: e.source_id,
+    target: e.target_id,
+    // Default to right->left so links made before per-side handles still render.
+    sourceHandle: (e.data?.sourceHandle as string | undefined) ?? 'right',
+    targetHandle: (e.data?.targetHandle as string | undefined) ?? 'left',
+    label: e.label ?? undefined,
+  }
 }
 
 function CanvasInner({ boardId }: { boardId: string }) {
@@ -102,11 +111,19 @@ function CanvasInner({ boardId }: { boardId: string }) {
     [boardId],
   )
 
-  // Drawing a connection creates a persisted edge.
+  // Drawing a connection creates a persisted edge, remembering which sides it
+  // attaches to.
   const onConnect = useCallback(
-    async (conn: { source: string | null; target: string | null }) => {
+    async (conn: Connection) => {
       if (!conn.source || !conn.target) return
-      const created = await api.createEdge(boardId, conn.source, conn.target)
+      const created = await api.createEdge(
+        boardId,
+        conn.source,
+        conn.target,
+        undefined,
+        conn.sourceHandle,
+        conn.targetHandle,
+      )
       setEdges((eds) => addEdge(toRFEdge(created), eds))
     },
     [boardId],
@@ -230,7 +247,14 @@ function CanvasInner({ boardId }: { boardId: string }) {
       setEdges((eds) => reconnectEdge(oldEdge, conn, eds))
       const label = typeof oldEdge.label === 'string' ? oldEdge.label : undefined
       await api.deleteEdge(boardId, oldEdge.id).catch(() => {})
-      const created = await api.createEdge(boardId, conn.source, conn.target, label)
+      const created = await api.createEdge(
+        boardId,
+        conn.source,
+        conn.target,
+        label,
+        conn.sourceHandle,
+        conn.targetHandle,
+      )
       setEdges((eds) => eds.map((e) => (e.id === oldEdge.id ? toRFEdge(created) : e)))
     },
     [boardId],
@@ -258,6 +282,7 @@ function CanvasInner({ boardId }: { boardId: string }) {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        connectionMode={ConnectionMode.Loose}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}

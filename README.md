@@ -110,6 +110,7 @@ frontend/
 - [x] Delete confirmations (gradient overlay)
 - [x] Node card previews
 - [x] Connection editing: right-click menu (edit label / insert node / delete) + drag-to-reconnect / detach
+- [x] Connect from any side (handles on all four sides, loose mode)
 - [ ] Auth (when needed)
 
 See [CHANGELOG](CHANGELOG.md) for version history.
