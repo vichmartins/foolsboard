@@ -11,11 +11,26 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import update
 
 from .config import settings
+from .database import SessionLocal
+from .models import Asset
 from .routers import assets, boards, edges, nodes
 
 app = FastAPI(title="foolsboard API", version="0.4.0")
+
+
+@app.on_event("startup")
+def _clear_stuck_processing() -> None:
+    """A restart kills any in-flight background compression; clear the flag so
+    those assets don't show "optimizing" forever (they keep their originals)."""
+    db = SessionLocal()
+    try:
+        db.execute(update(Asset).where(Asset.processing.is_(True)).values(processing=False))
+        db.commit()
+    finally:
+        db.close()
 
 app.add_middleware(
     CORSMiddleware,

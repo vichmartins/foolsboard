@@ -99,10 +99,20 @@ export async function listAssets(nodeId: string): Promise<Asset[]> {
   return (await http.get(`/nodes/${nodeId}/assets`)).data
 }
 
-export async function uploadAsset(nodeId: string, file: File): Promise<Asset> {
+export async function uploadAsset(
+  nodeId: string,
+  file: File,
+  onProgress?: (pct: number) => void,
+): Promise<Asset> {
   const form = new FormData()
   form.append('file', file)
-  return (await http.post(`/nodes/${nodeId}/assets`, form)).data
+  return (
+    await http.post(`/nodes/${nodeId}/assets`, form, {
+      onUploadProgress: (e) => {
+        if (onProgress && e.total) onProgress(Math.round((100 * e.loaded) / e.total))
+      },
+    })
+  ).data
 }
 
 export async function deleteAsset(nodeId: string, assetId: string): Promise<void> {

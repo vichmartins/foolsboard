@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.8.0
+
+- **Background media optimization** — uploads now return as soon as the file is
+  stored, so video/audio appear immediately (playable original, with a thumbnail
+  and an "optimizing…" badge). The compressed version is built in the background
+  and swaps in automatically when ready. The swap is deferred while the file is
+  open in the gallery, so playback is never interrupted (the panel polls for the
+  finished version).
+- **Faster encodes** — video compression uses GPU decoding (`-hwaccel cuda`) and
+  a faster NVENC preset, with automatic fallback (nvenc → libx264) and an
+  upload-time check that skips files already in an efficient codec/bitrate.
+  Images still compress inline (they're fast).
+- **Upload progress** — the panel shows a per-file progress bar during the byte
+  transfer, then the "optimizing…" badge while the background pass runs.
+- New `processing` flag on assets (migration `c3e8a91f5b22`); a startup safeguard
+  clears it if the server restarts mid-encode so nothing sticks on "optimizing".
+
 ## v0.7.4
 
 - Media tiles in the object panel now show the file name beneath each tile

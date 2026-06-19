@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import BigInteger, ForeignKey, String
+from sqlalchemy import BigInteger, Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -40,5 +40,9 @@ class Asset(UUIDMixin, TimestampMixin, Base):
     # Optional generated preview image (video frame / audio cover art),
     # addressed by its own storage key. Null when none could be produced.
     thumbnail_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # True while a background compression pass is still running (the original is
+    # already usable; the optimized version swaps in when done).
+    processing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     node: Mapped["Node"] = relationship(back_populates="assets")

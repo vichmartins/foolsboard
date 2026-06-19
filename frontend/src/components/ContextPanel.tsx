@@ -51,6 +51,8 @@ export default function ContextPanel({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null)
   const [preview, setPreview] = useState<{ url: string; top: number } | null>(null)
+  // In-flight uploads: progress 0-100 (100 = bytes sent, server still processing).
+  const [uploads, setUploads] = useState<{ id: string; name: string; progress: number }[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Re-sync local state whenever a different node is selected.
@@ -79,12 +81,17 @@ export default function ContextPanel({
   }
 
   async function uploadFile(file: File) {
+    const uploadId = crypto.randomUUID()
+    setUploads((u) => [...u, { id: uploadId, name: file.name, progress: 0 }])
     setBusy(true)
     try {
-      const asset = await uploadAsset(node.id, file)
+      const asset = await uploadAsset(node.id, file, (pct) =>
+        setUploads((u) => u.map((x) => (x.id === uploadId ? { ...x, progress: pct } : x))),
+      )
       setAssets((prev) => [...prev, asset])
     } finally {
       setBusy(false)
+      setUploads((u) => u.filter((x) => x.id !== uploadId))
     }
   }
 
@@ -111,6 +118,18 @@ export default function ContextPanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [droppedFiles])
+
+  // While media is still being optimized in the background, poll for the
+  // finished version. Paused while the gallery is open so a swap never
+  // interrupts playback — it applies once the gallery is closed.
+  const hasProcessing = assets.some((a) => a.processing)
+  useEffect(() => {
+    if (!hasProcessing || galleryIndex !== null) return
+    const id = window.setInterval(() => {
+      listAssets(node.id).then(setAssets).catch(() => {})
+    }, 3000)
+    return () => window.clearInterval(id)
+  }, [hasProcessing, galleryIndex, node.id])
 
   async function removeAsset(id: string) {
     await deleteAsset(node.id, id)
@@ -194,9 +213,35 @@ export default function ContextPanel({
           <input ref={fileRef} type="file" hidden onChange={onUpload} />
         </div>
 
-        {assets.length === 0 ? (
+        {uploads.length > 0 && (
+          <div className="media-uploads">
+            {uploads.map((u) => (
+              <div key={u.id} className="media-upload">
+                <div className="media-upload__row">
+                  <span className="media-upload__name" title={u.name}>{u.name}</span>
+                  <span className="media-upload__pct">
+                    {u.progress < 100 ? `${u.progress}%` : 'processing…'}
+                  </span>
+                </div>
+                <div className="media-upload__bar">
+                  <div
+                    className={
+                      'media-upload__fill' +
+                      (u.progress >= 100 ? ' media-upload__fill--processing' : '')
+                    }
+                    style={{ width: `${u.progress}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {assets.length === 0 && uploads.length === 0 && (
           <p className="media-empty">No media yet</p>
-        ) : (
+        )}
+
+        {assets.length > 0 && (
           <div className="media-grid">
             {assets.map((a, i) => {
               const k = mediaKind(a)
@@ -237,6 +282,10 @@ export default function ContextPanel({
                       <span className="media-tile__file">
                         <span className="media-tile__ext">{fileExt(a.filename) || 'FILE'}</span>
                       </span>
+                    )}
+
+                    {a.processing && (
+                      <span className="media-tile__processing">optimizing…</span>
                     )}
 
                     <span

@@ -33,9 +33,13 @@ class Settings(BaseSettings):
     # Set compress_media=False to store uploads untouched.
     compress_media: bool = True
     image_webp_quality: int = 82      # 0-100; higher = better quality / larger
-    video_crf: int = 23               # x264 quality; lower = better/larger (~18-28)
-    video_preset: str = "fast"        # x264 speed/efficiency trade-off
+    video_crf: int = 23               # quality (x264 CRF / NVENC CQ); lower = better/larger
+    video_preset: str = "fast"        # x264 speed/efficiency trade-off (CPU fallback)
     audio_bitrate: str = "128k"       # Opus target bitrate
+    # Skip re-encoding media that's already in an efficient codec at/under these
+    # bitrates (avoids wasted work and needless quality loss). 0 disables skip.
+    video_skip_bitrate: int = 4_000_000   # ~4 Mbps
+    audio_skip_bitrate: int = 160_000     # 160 kbps
 
     @property
     def is_sqlite(self) -> bool:

@@ -12,12 +12,21 @@ import tempfile
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..compression import compress
-from ..database import get_db
+from ..config import settings
+from ..database import SessionLocal, get_db
 from ..models import Asset, Node
 from ..schemas import AssetOut
 from ..storage import storage
@@ -75,9 +84,44 @@ def list_assets(node_id: UUID, db: Session = Depends(get_db)) -> list[AssetOut]:
     return [_to_out(a) for a in assets]
 
 
+def _local_path(key: str) -> Path:
+    """Filesystem path of a stored object (local storage backend)."""
+    return Path(settings.storage_local_dir) / key
+
+
+def _process_compression(asset_id: UUID) -> None:
+    """Background pass: recompress an asset's stored file and swap it in when
+    smaller. Runs in its own DB session after the upload response was sent."""
+    db = SessionLocal()
+    try:
+        asset = db.get(Asset, asset_id)
+        if asset is None:
+            return
+        src = _local_path(asset.storage_key)
+        try:
+            result = compress(src, asset.content_type, asset.filename) if src.exists() else None
+        except Exception:
+            result = None
+        if result is not None:
+            data, cname, cct = result
+            if src.exists() and len(data) < src.stat().st_size:
+                old_key = asset.storage_key
+                asset.storage_key = storage.save(io.BytesIO(data), cname)
+                asset.filename = cname
+                asset.content_type = cct
+                asset.kind = _kind_from_content_type(cct)
+                asset.size = len(data)
+                storage.delete(old_key)
+        asset.processing = False
+        db.commit()
+    finally:
+        db.close()
+
+
 @router.post("", response_model=AssetOut, status_code=status.HTTP_201_CREATED)
 def upload_asset(
     node_id: UUID,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ) -> AssetOut:
@@ -85,46 +129,60 @@ def upload_asset(
 
     filename = file.filename or "upload.bin"
     content_type = _resolve_type(file.content_type or "", filename)
+    kind = _kind_from_content_type(content_type)
 
-    # Stage the upload on disk so ffmpeg/Pillow can read it by path. Try to
-    # recompress it; adopt the result only when it is actually smaller.
+    # Stage the upload so ffmpeg/Pillow can read it by path.
     with tempfile.TemporaryDirectory() as td:
         src_path = Path(td) / ("src" + Path(filename).suffix)
         with src_path.open("wb") as f:
             shutil.copyfileobj(file.file, f)
 
-        store_path, store_name, store_ct = src_path, filename, content_type
-        result = compress(src_path, content_type, filename)
-        if result is not None:
-            data, cname, cct = result
-            if len(data) < src_path.stat().st_size:
-                comp_path = Path(td) / cname
-                comp_path.write_bytes(data)
-                store_path, store_name, store_ct = comp_path, cname, cct
+        store_path, store_name, store_ct, store_kind = src_path, filename, content_type, kind
+        processing = False
 
-        kind = _kind_from_content_type(store_ct)
+        if kind == "image":
+            # Images compress quickly -> do it inline.
+            result = compress(src_path, content_type, filename)
+            if result is not None:
+                data, cname, cct = result
+                if len(data) < src_path.stat().st_size:
+                    comp_path = Path(td) / cname
+                    comp_path.write_bytes(data)
+                    store_path, store_name, store_ct = comp_path, cname, cct
+                    store_kind = _kind_from_content_type(cct)
+        elif kind in {"video", "audio"}:
+            # Slow to encode -> store the original now, optimize in the background.
+            processing = True
+
         with store_path.open("rb") as f:
             key = storage.save(f, store_name)
 
+        # Thumbnail synchronously (a single frame / cover art -- fast).
         thumbnail_key: str | None = None
-        if kind in {"video", "audio"}:
+        if store_kind in {"video", "audio"}:
             thumb = generate_thumbnail(store_path, store_ct)
             if thumb:
                 thumbnail_key = storage.save(io.BytesIO(thumb), "thumb.jpg")
 
         asset = Asset(
             node_id=node_id,
-            kind=kind,
+            kind=store_kind,
             filename=store_name,
             content_type=store_ct,
             size=store_path.stat().st_size,
             storage_key=key,
             thumbnail_key=thumbnail_key,
+            processing=processing,
         )
         db.add(asset)
         db.commit()
         db.refresh(asset)
-        return _to_out(asset)
+        asset_id = asset.id
+        out = _to_out(asset)
+
+    if processing:
+        background_tasks.add_task(_process_compression, asset_id)
+    return out
 
 
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)

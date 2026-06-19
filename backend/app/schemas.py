@@ -105,6 +105,7 @@ class AssetOut(ORMModel):
     content_type: str
     size: int
     storage_key: str
+    processing: bool
     created_at: datetime
 
     # Computed browser URLs (filled in by the router via the storage backend).

@@ -44,6 +44,7 @@ export interface Asset {
   storage_key: string
   url: string | null
   thumbnail_url: string | null
+  processing: boolean
   created_at: string
 }
 
