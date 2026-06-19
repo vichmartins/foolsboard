@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.6
+
+- **Fix:** the Save/Delete buttons no longer flicker when saving. Save now uses
+  an internal guard instead of the shared busy state (so it doesn't flash the
+  disabled styling), and button opacity changes transition smoothly.
+
 ## v0.8.5
 
 - **Fix:** top-bar buttons (New board, Merge, …) no longer turn near-black on

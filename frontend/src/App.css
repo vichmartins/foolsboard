@@ -119,7 +119,7 @@
   padding: 7px 12px;
   font-size: 14px;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.12s, border-color 0.12s, opacity 0.15s;
 }
 .btn:hover {
   background: var(--bg-hover);

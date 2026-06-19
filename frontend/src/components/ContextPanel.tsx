@@ -50,6 +50,7 @@ export default function ContextPanel({
   const [assets, setAssets] = useState<Asset[]>([])
   const [busy, setBusy] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
+  const savingRef = useRef(false)
   const savedTimer = useRef<number | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null)
@@ -80,8 +81,10 @@ export default function ContextPanel({
   }
 
   async function save() {
-    if (busy) return
-    setBusy(true)
+    // Guarded with a ref (not the visual `busy` state) so a fast save doesn't
+    // flash the buttons' disabled styling.
+    if (savingRef.current) return
+    savingRef.current = true
     try {
       const updated = await updateNode(boardId, node.id, { title, type, content })
       onChange(updated)
@@ -89,7 +92,7 @@ export default function ContextPanel({
       if (savedTimer.current) window.clearTimeout(savedTimer.current)
       savedTimer.current = window.setTimeout(() => setJustSaved(false), 1800)
     } finally {
-      setBusy(false)
+      savingRef.current = false
     }
   }
 
