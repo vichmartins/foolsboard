@@ -100,13 +100,97 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Custom board picker (themed + animated, replaces the native select) */
 .board-select {
+  position: relative;
+}
+.board-select__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 180px;
+  max-width: 280px;
   background: var(--bg-elev-2);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 7px 10px;
   font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.board-select__button:hover {
+  border-color: var(--accent);
+}
+.board-select__current {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-select__chevron {
+  font-size: 10px;
+  color: var(--text-dim);
+  transition: transform 0.15s;
+}
+.board-select__chevron--open {
+  transform: rotate(180deg);
+}
+.board-select__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  max-width: 320px;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  z-index: 50;
+  /* Smooth open AND close. */
+  transform-origin: top left;
+  opacity: 0;
+  transform: scale(0.96) translateY(-6px);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s cubic-bezier(0.2, 0.9, 0.25, 1.15),
+    visibility 0.14s;
+}
+.board-select__menu--open {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+.board-select__option {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.board-select__option:hover {
+  background: var(--bg-elev-2);
+}
+.board-select__option--active {
+  color: var(--accent);
+  font-weight: 600;
 }
 
 
@@ -1230,7 +1314,8 @@
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
   }
-  .brand-dropdown {
+  .brand-dropdown,
+  .board-select__menu {
     transition-duration: 0.01ms;
   }
   /* Keep the toast visible (no fade) rather than animating it away. */

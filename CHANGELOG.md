@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.7
+
+- Replaced the native board-picker `<select>` with a custom themed dropdown that
+  matches the rest of the UI (light/dark), animates open and closed, highlights
+  the active board, and respects reduced-motion.
+
 ## v0.8.6
 
 - **Fix:** the Save/Delete buttons no longer flicker when saving. Save now uses

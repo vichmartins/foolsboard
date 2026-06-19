@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import * as api from './api'
+import BoardSelect from './components/BoardSelect'
 import BrandMenu from './components/BrandMenu'
 import Canvas from './components/Canvas'
 import PromptDialog from './components/PromptDialog'
@@ -73,15 +74,7 @@ export default function App() {
       <header className="topbar">
         <BrandMenu />
 
-        <select
-          className="board-select"
-          value={activeId ?? ''}
-          onChange={(e) => setActiveId(e.target.value)}
-        >
-          {boards.map((b) => (
-            <option key={b.id} value={b.id}>{b.name}</option>
-          ))}
-        </select>
+        <BoardSelect boards={boards} activeId={activeId} onSelect={setActiveId} />
 
         <div className="board-actions">
           <button
