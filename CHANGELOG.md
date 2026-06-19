@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.16.0
+
+- Reorder the board list by dragging: each row in the board dropdown has a drag
+  handle, and the chosen order is saved per user (new boards.position column +
+  PATCH /boards/reorder). New boards land at the top; existing boards keep their
+  newest-first order until reordered.
+
 ## v0.15.5
 
 - Dragging a bundle over the Import dialog now makes the whole dialog a drop

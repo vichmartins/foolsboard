@@ -176,6 +176,11 @@ export async function deleteBoard(boardId: string): Promise<void> {
   await http.delete(`/boards/${boardId}`)
 }
 
+// Persist a manual board ordering (top to bottom). Ids not owned are ignored.
+export async function reorderBoards(boardIds: string[]): Promise<void> {
+  await http.patch('/boards/reorder', { board_ids: boardIds })
+}
+
 // Export selected boards as a .zip bundle (manifest + media). Returns the raw
 // archive bytes for the browser to download. The archive streams as it's built,
 // so `onProgress` ticks with the running byte count for a live indicator.

@@ -1,5 +1,6 @@
 // Themed, animated board picker — a custom dropdown replacing the native
-// <select> (which can't be styled or animated to match the app).
+// <select> (which can't be styled or animated to match the app). Rows can be
+// dragged to reorder the board list, which is persisted per user.
 import { useEffect, useRef, useState } from 'react'
 import type { Board } from '../types'
 
@@ -7,12 +8,21 @@ interface Props {
   boards: Board[]
   activeId: string | null
   onSelect: (id: string) => void
+  onReorder: (orderedIds: string[]) => void
 }
 
-export default function BoardSelect({ boards, activeId, onSelect }: Props) {
+export default function BoardSelect({ boards, activeId, onSelect, onReorder }: Props) {
   const [open, setOpen] = useState(false)
+  // Local copy so rows can shuffle live during a drag; resynced from props when
+  // not dragging.
+  const [items, setItems] = useState<Board[]>(boards)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const active = boards.find((b) => b.id === activeId)
+
+  useEffect(() => {
+    if (dragIndex === null) setItems(boards)
+  }, [boards, dragIndex])
 
   useEffect(() => {
     if (!open) return
@@ -34,6 +44,32 @@ export default function BoardSelect({ boards, activeId, onSelect }: Props) {
     }
   }, [open])
 
+  function handleDragStart(e: React.DragEvent, i: number) {
+    setDragIndex(i)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(i)) // required for Firefox to drag
+  }
+
+  function handleDragOver(e: React.DragEvent, i: number) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragIndex === null || dragIndex === i) return
+    setItems((cur) => {
+      const next = [...cur]
+      const [moved] = next.splice(dragIndex, 1)
+      next.splice(i, 0, moved)
+      return next
+    })
+    setDragIndex(i)
+  }
+
+  function handleDragEnd() {
+    if (dragIndex === null) return
+    setDragIndex(null)
+    const newIds = items.map((b) => b.id)
+    if (newIds.join() !== boards.map((b) => b.id).join()) onReorder(newIds)
+  }
+
   return (
     <div className="board-select" ref={ref}>
       <button
@@ -49,22 +85,31 @@ export default function BoardSelect({ boards, activeId, onSelect }: Props) {
       </button>
 
       <ul className={'board-select__menu' + (open ? ' board-select__menu--open' : '')} role="listbox">
-        {boards.map((b) => (
+        {items.map((b, i) => (
           <li key={b.id}>
             <button
               className={
                 'board-select__option' +
-                (b.id === activeId ? ' board-select__option--active' : '')
+                (b.id === activeId ? ' board-select__option--active' : '') +
+                (i === dragIndex ? ' board-select__option--dragging' : '')
               }
               role="option"
               aria-selected={b.id === activeId}
               tabIndex={open ? 0 : -1}
+              draggable
+              onDragStart={(e) => handleDragStart(e, i)}
+              onDragOver={(e) => handleDragOver(e, i)}
+              onDrop={(e) => e.preventDefault()}
+              onDragEnd={handleDragEnd}
               onClick={() => {
                 onSelect(b.id)
                 setOpen(false)
               }}
             >
-              {b.name}
+              <span className="board-select__grip" aria-hidden="true">
+                ⠿
+              </span>
+              <span className="board-select__name">{b.name}</span>
             </button>
           </li>
         ))}

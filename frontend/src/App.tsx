@@ -86,7 +86,19 @@ function Workspace() {
       <header className="topbar">
         <BrandMenu />
 
-        <BoardSelect boards={boards} activeId={activeId} onSelect={setActiveId} />
+        <BoardSelect
+          boards={boards}
+          activeId={activeId}
+          onSelect={setActiveId}
+          onReorder={(ids) => {
+            setBoards((bs) =>
+              ids
+                .map((id) => bs.find((b) => b.id === id))
+                .filter((b): b is Board => b !== undefined),
+            )
+            void api.reorderBoards(ids)
+          }}
+        />
 
         <div className="board-actions">
           <button

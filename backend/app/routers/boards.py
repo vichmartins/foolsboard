@@ -4,14 +4,14 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
 from ..models import Board, Edge, Node, User
-from ..schemas import BoardCreate, BoardGraph, BoardOut, BoardUpdate
+from ..schemas import BoardCreate, BoardGraph, BoardOut, BoardReorder, BoardUpdate
 
 router = APIRouter(prefix="/api/boards", tags=["boards"])
 
@@ -29,7 +29,9 @@ def list_boards(
 ) -> list[Board]:
     return list(
         db.scalars(
-            select(Board).where(Board.owner_id == user.id).order_by(Board.created_at.desc())
+            select(Board)
+            .where(Board.owner_id == user.id)
+            .order_by(Board.position.asc(), Board.created_at.desc())
         )
     )
 
@@ -38,7 +40,10 @@ def list_boards(
 def create_board(
     payload: BoardCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> Board:
-    board = Board(owner_id=user.id, **payload.model_dump())
+    # New boards land at the top of the list.
+    min_pos = db.scalar(select(func.min(Board.position)).where(Board.owner_id == user.id))
+    position = (min_pos - 1) if min_pos is not None else 0
+    board = Board(owner_id=user.id, position=position, **payload.model_dump())
     db.add(board)
     db.commit()
     db.refresh(board)
@@ -47,6 +52,25 @@ def create_board(
         entity_id=board.id, summary=f"created board “{board.name}”",
     )
     return board
+
+
+@router.patch("/reorder", status_code=status.HTTP_204_NO_CONTENT)
+def reorder_boards(
+    payload: BoardReorder,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> None:
+    # Rewrite positions to match the given order; ids not owned are ignored.
+    owned = {b.id: b for b in db.scalars(select(Board).where(Board.owner_id == user.id))}
+    for index, bid in enumerate(payload.board_ids):
+        board = owned.get(bid)
+        if board is not None:
+            board.position = index
+    db.commit()
+    log_event(
+        db, user=user, action="board.reorder",
+        summary=f"reordered {len(payload.board_ids)} boards",
+    )
 
 
 @router.get("/{board_id}", response_model=BoardOut)

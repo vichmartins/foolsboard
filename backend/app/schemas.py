@@ -26,6 +26,10 @@ class BoardUpdate(BaseModel):
     description: str | None = None
 
 
+class BoardReorder(BaseModel):
+    board_ids: list[UUID]
+
+
 class BoardOut(ORMModel):
     id: UUID
     name: str
