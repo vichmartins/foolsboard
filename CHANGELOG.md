@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.13.0
+
+- Node cards now show a chevron on hover that expands an in-card preview of the
+  node's content (its type fields, array-field counts, and reference count),
+  with a smooth eased height/fade animation. The toggle is isolated from node
+  selection/drag and the preview reflects saved content.
+
 ## v0.12.1
 
 - Nearby Nodes is now a bottom sheet pinned to the foot of the drawer that
