@@ -107,9 +107,7 @@ function Workspace() {
           >
             <TrashIcon />
           </button>
-        </div>
-
-        <div className="board-actions">
+          <span className="topbar-sep" aria-hidden="true" />
           <button
             className="icon-btn"
             onClick={() => setDialog('new')}

@@ -269,7 +269,17 @@
 
 .board-actions {
   display: flex;
+  align-items: center;
   gap: 2px;
+}
+/* Thin divider between the current-board icons and the workspace icons, with
+   symmetric spacing so the row reads as evenly-grouped rather than uneven. */
+.topbar-sep {
+  width: 1px;
+  align-self: stretch;
+  min-height: 18px;
+  margin: 0 5px;
+  background: var(--border);
 }
 
 .theme-toggle {
@@ -2970,12 +2980,14 @@
 }
 .impex-drop:hover {
   border-color: var(--accent);
+  color: var(--text);
 }
+/* While a file is dragged over the dialog: the same accent glow + gentle pulse
+   used when dragging media onto the side panel. */
 .impex-drop--over {
   border-color: var(--accent);
   background: rgba(99, 102, 241, 0.12);
   color: var(--text);
-  /* Mirror the media drop target: a soft accent glow + the same gentle pulse. */
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
   animation: drop-pulse 1.1s ease-in-out infinite;
 }
@@ -2984,6 +2996,18 @@
 }
 .impex-drop__text {
   font-size: 13px;
+}
+/* Dashed accent ring around the whole screen while dragging a bundle over the
+   import dialog -- same cue as the side-panel media drop. Interior is
+   transparent so the dialog and its pulsing drop box stay visible on top. */
+.impex-screen-drop {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  border: 3px dashed var(--accent);
+  border-radius: 6px;
+  box-shadow: inset 0 0 80px rgba(99, 102, 241, 0.12);
+  animation: overlay-in 0.14s ease;
 }
 .impex-progress {
   display: flex;

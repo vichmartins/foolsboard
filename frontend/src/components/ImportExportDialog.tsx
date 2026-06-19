@@ -1,7 +1,7 @@
 // Import / Export storyboards as a .zip bundle (board graph + attached media).
 // Export the selected boards to a file; import boards from such a bundle via the
-// file picker or by dropping it on the drop zone.
-import { useRef, useState } from 'react'
+// file picker or by dropping it anywhere on the dialog (full-screen drop target).
+import { useEffect, useRef, useState } from 'react'
 import * as api from '../api'
 import type { Board } from '../types'
 
@@ -15,6 +15,16 @@ type Tab = 'export' | 'import'
 
 function slug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'board'
+}
+
+// Only .zip bundles are importable. Browsers report zip as application/zip or
+// application/x-zip-compressed (and sometimes blank), so fall back to extension.
+function isZipBundle(file: File): boolean {
+  return (
+    file.name.toLowerCase().endsWith('.zip') ||
+    file.type === 'application/zip' ||
+    file.type === 'application/x-zip-compressed'
+  )
 }
 
 // Indeterminate progress bar, shown while exporting or importing.
@@ -34,7 +44,8 @@ export default function ImportExportDialog({ boards, onClose, onImported }: Prop
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
-  const [dragging, setDragging] = useState(false)
+  // A file is being dragged over the dialog (drives the full-screen drop overlay).
+  const [fileDragging, setFileDragging] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const allSelected = boards.length > 0 && selected.size === boards.length
@@ -74,6 +85,11 @@ export default function ImportExportDialog({ boards, onClose, onImported }: Prop
   }
 
   async function importFile(file: File) {
+    if (!isZipBundle(file)) {
+      setResult(null)
+      setError('Only .zip bundles exported from foolsboard can be imported.')
+      return
+    }
     setBusy(true)
     setError(null)
     setResult(null)
@@ -88,8 +104,53 @@ export default function ImportExportDialog({ boards, onClose, onImported }: Prop
     }
   }
 
+  // On the Import tab, make the whole dialog a drop target -- mirroring how
+  // dragging media onto the canvas shows a full-screen overlay. The app-level
+  // file-drag handler stands down while a modal is open, so there's no clash.
+  useEffect(() => {
+    if (tab !== 'import') return
+    const hasFiles = (e: DragEvent) =>
+      Array.from(e.dataTransfer?.types ?? []).includes('Files')
+    let depth = 0
+    const onEnter = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      depth += 1
+      setFileDragging(true)
+    }
+    const onOver = (e: DragEvent) => {
+      if (hasFiles(e)) e.preventDefault() // required to allow a drop
+    }
+    const onLeave = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      depth = Math.max(0, depth - 1)
+      if (depth === 0) setFileDragging(false)
+    }
+    const onDrop = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      depth = 0
+      setFileDragging(false)
+      const f = e.dataTransfer?.files?.[0]
+      if (f) void importFile(f)
+    }
+    window.addEventListener('dragenter', onEnter)
+    window.addEventListener('dragover', onOver)
+    window.addEventListener('dragleave', onLeave)
+    window.addEventListener('drop', onDrop)
+    return () => {
+      window.removeEventListener('dragenter', onEnter)
+      window.removeEventListener('dragover', onOver)
+      window.removeEventListener('dragleave', onLeave)
+      window.removeEventListener('drop', onDrop)
+      setFileDragging(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab])
+
   return (
     <div className="overlay" onMouseDown={onClose}>
+      {fileDragging && <div className="impex-screen-drop" aria-hidden="true" />}
       <div className="dialog impex" onMouseDown={(e) => e.stopPropagation()}>
         <div className="admin-panel__head">
           <h2 className="dialog__title">Import / Export</h2>
@@ -160,25 +221,16 @@ export default function ImportExportDialog({ boards, onClose, onImported }: Prop
                 Import boards from a .zip bundle — added as new boards, with their media.
               </p>
               <div
-                className={'impex-drop' + (dragging ? ' impex-drop--over' : '')}
+                className={'impex-drop' + (fileDragging ? ' impex-drop--over' : '')}
                 onClick={() => fileRef.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDragEnter={(e) => {
-                  e.preventDefault()
-                  setDragging(true)
-                }}
-                onDragLeave={() => setDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setDragging(false)
-                  const f = e.dataTransfer.files?.[0]
-                  if (f) void importFile(f)
-                }}
               >
                 <div className="impex-drop__icon">⬇</div>
                 <div className="impex-drop__text">
-                  {busy ? 'Importing…' : 'Drop a .zip bundle here, or click to browse'}
+                  {busy
+                    ? 'Importing…'
+                    : fileDragging
+                      ? 'Drop the bundle to import'
+                      : 'Drop a .zip bundle anywhere, or click to browse'}
                 </div>
               </div>
               {busy && <ProgressBar />}

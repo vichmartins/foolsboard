@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.15.5
+
+- Dragging a bundle over the Import dialog now makes the whole dialog a drop
+  target: the existing drop box lights up with the accent pulse/glow and a
+  dashed accent ring frames the screen (mirroring the side-panel media drop).
+- Imports are restricted to .zip bundles — the wrong file type is rejected up
+  front (by extension and MIME) on both the browse and drag-drop paths.
+- The top-bar action icons are evenly spaced, with a thin divider separating the
+  current-board icons (rename, delete) from the workspace icons (new, merge,
+  import/export).
+
 ## v0.15.4
 
 - The top-bar New board / Merge / Import-Export actions are now themed line
