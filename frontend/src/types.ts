@@ -78,7 +78,7 @@ export type NodeKind = (typeof NODE_TYPES)[number]
 
 // Default accent color per object kind.
 export const KIND_COLORS: Record<string, string> = {
-  scene: '#6366f1',
+  scene: '#0ea5e9',
   character: '#10b981',
   dialog: '#f59e0b',
   event: '#ef4444',

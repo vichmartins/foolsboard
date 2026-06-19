@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.9.2
+
+- Recolored Scene objects from indigo to sky-blue so they're distinguishable
+  from the purple selection highlight on the minimap (the highlight color is
+  unchanged).
+
 ## v0.9.1
 
 - The Media section can expand into a retractable drawer that slides out to the
