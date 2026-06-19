@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.5
+
+- **Click the minimap to navigate** — clicking anywhere on the minimap recenters
+  the canvas on that spot with a quick animated pan, keeping the current zoom.
+  Complements the existing drag-to-pan and scroll-to-zoom on the minimap.
+
 ## v0.5.4
 
 - Tuned the dark-mode minimap mask so the current viewport stands out a little

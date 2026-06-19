@@ -60,7 +60,7 @@ function toRFNode(n: StoryNode): Node {
 }
 
 function CanvasInner({ boardId }: { boardId: string }) {
-  const { screenToFlowPosition, getNodes } = useReactFlow()
+  const { screenToFlowPosition, getNodes, getZoom, setCenter } = useReactFlow()
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -100,6 +100,14 @@ function CanvasInner({ boardId }: { boardId: string }) {
       api.updateNode(boardId, node.id, { x: node.position.x, y: node.position.y })
     },
     [boardId],
+  )
+
+  // Click anywhere on the minimap to recenter the canvas there (keeping zoom).
+  const onMinimapClick = useCallback(
+    (_: MouseEvent, position: { x: number; y: number }) => {
+      setCenter(position.x, position.y, { zoom: getZoom(), duration: 200 })
+    },
+    [setCenter, getZoom],
   )
 
   // Drawing a connection: remember where it started...
@@ -293,6 +301,7 @@ function CanvasInner({ boardId }: { boardId: string }) {
         <MiniMap
           pannable
           zoomable
+          onClick={onMinimapClick}
           nodeColor={(n) => KIND_COLORS[(n.data?.kind as string) ?? 'note'] ?? '#64748b'}
         />
       </ReactFlow>
