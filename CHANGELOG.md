@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.6.6
+
+- **Fix:** the right-click context menu got stuck after its first use (a
+  re-render cleared the close timer, wedging it in a "closing" state). The
+  listeners now attach once and the timer survives re-renders, so the menu
+  reopens reliably.
+- The app version is now read from `package.json` through the module graph
+  instead of a build-time constant, so it updates on change without a
+  dev-server restart.
+
 ## v0.6.5
 
 - The object edit panel now slides in from the right when opened and slides back

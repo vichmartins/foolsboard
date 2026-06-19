@@ -1,6 +1,7 @@
 // Clickable logo that opens a dropdown: app actions (shortcuts reference) with
 // the current app version pinned to the bottom.
 import { useEffect, useRef, useState } from 'react'
+import { APP_VERSION } from '../version'
 import ShortcutsDialog from './ShortcutsDialog'
 
 export default function BrandMenu() {
@@ -55,7 +56,7 @@ export default function BrandMenu() {
         >
           Keyboard shortcuts
         </button>
-        <div className="brand-dropdown__footer">v{__APP_VERSION__}</div>
+        <div className="brand-dropdown__footer">v{APP_VERSION}</div>
       </div>
 
       {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}

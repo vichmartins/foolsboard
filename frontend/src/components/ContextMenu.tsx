@@ -39,14 +39,21 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
   const ref = useRef<HTMLUListElement>(null)
   const [closing, setClosing] = useState(false)
   const timer = useRef<number | null>(null)
+  // Latest props for the stable, mount-once handlers below.
+  const itemsRef = useRef(items)
+  itemsRef.current = items
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
-  // Play the exit animation, then actually close after it finishes.
+  // Play the exit animation, then actually close after it finishes. Stable
+  // (no deps) so re-renders never re-run the listener effect and clear the timer.
   const requestClose = useCallback(() => {
     if (timer.current !== null) return
     setClosing(true)
-    timer.current = window.setTimeout(onClose, CLOSE_MS)
-  }, [onClose])
+    timer.current = window.setTimeout(() => onCloseRef.current(), CLOSE_MS)
+  }, [])
 
+  // Attach the outside-close / keyboard listeners once, on mount.
   useEffect(() => {
     function onOutside(e: Event) {
       if (ref.current && !ref.current.contains(e.target as Node)) requestClose()
@@ -57,7 +64,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
         return
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return
-      const item = items.find(
+      const item = itemsRef.current.find(
         (it) => it.mnemonic && it.mnemonic.toLowerCase() === e.key.toLowerCase(),
       )
       if (item) {
@@ -78,9 +85,13 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
       window.removeEventListener('pointerdown', onOutside)
       window.removeEventListener('contextmenu', onOutside)
       window.removeEventListener('keydown', onKey)
-      if (timer.current !== null) clearTimeout(timer.current)
     }
-  }, [items, requestClose])
+  }, [requestClose])
+
+  // Clear a pending close timer only when the menu actually unmounts.
+  useEffect(() => () => {
+    if (timer.current !== null) clearTimeout(timer.current)
+  }, [])
 
   return (
     <ul
