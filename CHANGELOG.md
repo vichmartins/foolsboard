@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.12.0
+
+- The gallery drawer gained a "Nearby nodes" section: browse the galleries of
+  linked and spatially-close nodes, select their media and/or reference links,
+  and pull them into the node being edited with one button. Media is shared via
+  dedup (instant, added to Media); links are added to References. Nearby = linked
+  nodes first, then the nearest by canvas distance.
+
 ## v0.11.2
 
 - Backend: new POST /nodes/{id}/assets/reference endpoint attaches existing

@@ -103,6 +103,16 @@ export interface AnimationRow {
   name: string
 }
 
+// A node near the one being edited (linked and/or spatially close). Its
+// reference links are inlined; its media is fetched lazily when expanded.
+export interface NearbyNode {
+  id: string
+  title: string
+  type: string
+  connected: boolean
+  references: LinkRef[]
+}
+
 // A reference link with its fetched preview metadata (Open Graph / meta tags).
 // Stored per object under content.references. Available on every object kind.
 export interface LinkRef {

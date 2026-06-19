@@ -1,5 +1,5 @@
 // The infinite storyboard canvas, backed by React Flow and the REST API.
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addEdge,
   applyEdgeChanges,
@@ -33,7 +33,15 @@ import {
 import { clipboardHasContent, readClipboard, writeClipboard } from '../clipboard'
 import { findNodeAt, nodeSize, snapToBorder } from '../edgeGeometry'
 import { toRFEdge } from '../rfMappers'
-import { KIND_COLORS, nodePreview, type Side, type StoryEdge, type StoryNode } from '../types'
+import {
+  KIND_COLORS,
+  nodePreview,
+  type LinkRef,
+  type NearbyNode,
+  type Side,
+  type StoryEdge,
+  type StoryNode,
+} from '../types'
 import ConfirmDialog from './ConfirmDialog'
 import ContextMenu from './ContextMenu'
 import ContextPanel from './ContextPanel'
@@ -807,6 +815,38 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
   // Tracked in a ref so the (mount-once) drag listeners read the latest value.
   hasPanelRef.current = selectedStory !== null
 
+  // Nearby nodes for the panel drawer: linked nodes first, then nearest by
+  // canvas distance, capped so the list stays browsable.
+  const nearby = useMemo<NearbyNode[]>(() => {
+    if (!selectedId) return []
+    const cur = nodes.find((n) => n.id === selectedId)
+    if (!cur) return []
+    const connected = new Set<string>()
+    for (const e of edges) {
+      if (e.source === selectedId) connected.add(e.target)
+      if (e.target === selectedId) connected.add(e.source)
+    }
+    const dist = (n: Node) => {
+      const dx = n.position.x - cur.position.x
+      const dy = n.position.y - cur.position.y
+      return dx * dx + dy * dy
+    }
+    const others = nodes.filter((n) => n.id !== selectedId)
+    const linked = others.filter((n) => connected.has(n.id)).sort((a, b) => dist(a) - dist(b))
+    const rest = others.filter((n) => !connected.has(n.id)).sort((a, b) => dist(a) - dist(b))
+    return [...linked, ...rest].slice(0, 10).map((n) => {
+      const story = n.data?.story as StoryNode | undefined
+      const refs = story?.content?.references
+      return {
+        id: n.id,
+        title: story?.title ?? '',
+        type: story?.type ?? 'note',
+        connected: connected.has(n.id),
+        references: Array.isArray(refs) ? (refs as LinkRef[]) : [],
+      }
+    })
+  }, [nodes, edges, selectedId])
+
   return (
     <BoardIdContext.Provider value={boardId}>
     <div className="canvas-wrap">
@@ -865,6 +905,7 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
         <ContextPanel
           boardId={boardId}
           node={selectedStory}
+          nearby={nearby}
           closing={panelClosing}
           droppedFiles={droppedFiles}
           onDroppedConsumed={() => setDroppedFiles(null)}

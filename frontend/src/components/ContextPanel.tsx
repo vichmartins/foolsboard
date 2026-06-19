@@ -4,6 +4,7 @@ import {
   deleteAsset,
   deleteNode,
   listAssets,
+  referenceAssets,
   updateNode,
   uploadAsset,
 } from '../api'
@@ -14,17 +15,21 @@ import {
   NODE_TYPES,
   TYPE_FIELDS,
   type Asset,
+  type LinkRef,
+  type NearbyNode,
   type StoryNode,
 } from '../types'
 import AnimationsField from './AnimationsField'
 import ConfirmDialog from './ConfirmDialog'
 import Gallery from './Gallery'
+import NearbyNodes from './NearbyNodes'
 import ReferencesField from './ReferencesField'
 import Select from './Select'
 
 interface Props {
   boardId: string
   node: StoryNode
+  nearby: NearbyNode[]
   onChange: (node: StoryNode) => void
   onDelete: (nodeId: string) => void
   onClose: () => void
@@ -38,6 +43,7 @@ interface Props {
 export default function ContextPanel({
   boardId,
   node,
+  nearby,
   onChange,
   onDelete,
   onClose,
@@ -84,6 +90,23 @@ export default function ContextPanel({
 
   function setField(key: string, value: unknown) {
     setContent((c) => ({ ...c, [key]: value }))
+  }
+
+  // Pull media from a nearby node into this node's Media (shares the stored file
+  // via dedup -- instant, persisted immediately like an upload).
+  async function addReferencedMedia(assetIds: string[]) {
+    const added = await referenceAssets(node.id, assetIds)
+    setAssets((prev) => [...prev, ...added])
+  }
+
+  // Pull reference links from a nearby node into this node's References (saved
+  // with the node's content on Save). Skips links already present.
+  function addReferencedLinks(links: LinkRef[]) {
+    setContent((c) => {
+      const existing = Array.isArray(c.references) ? (c.references as LinkRef[]) : []
+      const seen = new Set(existing.map((r) => r.url))
+      return { ...c, references: [...existing, ...links.filter((l) => !seen.has(l.url))] }
+    })
   }
 
   async function save() {
@@ -368,7 +391,22 @@ export default function ContextPanel({
             <span className="media-expand media-expand--open">◀</span>
           </button>
         </div>
-        <div className="media-drawer__body">{mediaBody}</div>
+        <div className="media-drawer__body">
+          {mediaBody}
+          {nearby.length > 0 && (
+            <div className="nearby-section">
+              <h4 className="nearby-section__head">Nearby nodes</h4>
+              <p className="nearby-section__hint">
+                Browse linked &amp; close-by nodes, then add their media or links here.
+              </p>
+              <NearbyNodes
+                nodes={nearby}
+                onAddMedia={addReferencedMedia}
+                onAddLinks={addReferencedLinks}
+              />
+            </div>
+          )}
+        </div>
       </div>
     )}
     <aside className={'panel' + (closing ? ' panel--closing' : '')}>

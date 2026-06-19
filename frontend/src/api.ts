@@ -125,3 +125,9 @@ export async function uploadAsset(
 export async function deleteAsset(nodeId: string, assetId: string): Promise<void> {
   await http.delete(`/nodes/${nodeId}/assets/${assetId}`)
 }
+
+// Attach existing media (by id, e.g. from a nearby node) to a node, sharing the
+// stored file via dedup. Returns the newly-created assets on the target node.
+export async function referenceAssets(nodeId: string, assetIds: string[]): Promise<Asset[]> {
+  return (await http.post(`/nodes/${nodeId}/assets/reference`, { asset_ids: assetIds })).data
+}
