@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.5.4
+
+- Tuned the dark-mode minimap mask so the current viewport stands out a little
+  more clearly against the dimmed surrounding area.
+
 ## v0.5.3
 
 - **Light/dark theme toggle** — a new sun/moon button in the top bar switches
