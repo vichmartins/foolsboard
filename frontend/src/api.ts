@@ -37,7 +37,23 @@ export async function deleteBoard(boardId: string): Promise<void> {
   await http.delete(`/boards/${boardId}`)
 }
 
+// Prefetched graph requests, consumed once. Lets the app kick off the
+// last-opened board's graph in parallel with the board list (no load waterfall).
+const prefetchedGraphs = new Map<string, Promise<BoardGraph>>()
+
+export function prefetchGraph(boardId: string): void {
+  if (prefetchedGraphs.has(boardId)) return
+  const p = http.get(`/boards/${boardId}/graph`).then((r) => r.data as BoardGraph)
+  p.catch(() => {}) // suppress unhandled rejection if it's never consumed
+  prefetchedGraphs.set(boardId, p)
+}
+
 export async function getGraph(boardId: string): Promise<BoardGraph> {
+  const pre = prefetchedGraphs.get(boardId)
+  if (pre) {
+    prefetchedGraphs.delete(boardId)
+    return pre
+  }
   return (await http.get(`/boards/${boardId}/graph`)).data
 }
 

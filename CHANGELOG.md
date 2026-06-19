@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.13.3
+
+- Faster board load: the last-opened board's graph is now prefetched in parallel
+  with the board-list request (using the id saved in localStorage) and consumed
+  once by the canvas, removing the list -> graph round-trip waterfall.
+
 ## v0.13.2
 
 - Memory: React Flow now only renders nodes within the viewport

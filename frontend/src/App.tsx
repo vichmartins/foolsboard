@@ -21,13 +21,16 @@ export default function App() {
   // Load boards; bootstrap a first board if the workspace is empty. Restore the
   // board the user last had open (falling back to the first).
   useEffect(() => {
+    // Start the last-opened board's graph fetch immediately, in parallel with
+    // the board list, so the canvas doesn't wait on a second round trip.
+    const saved = localStorage.getItem('foolsboard:activeBoard')
+    if (saved) api.prefetchGraph(saved)
     api.listBoards().then(async (list) => {
       if (list.length === 0) {
         const first = await api.createBoard('My first storyboard')
         list = [first]
       }
       setBoards(list)
-      const saved = localStorage.getItem('foolsboard:activeBoard')
       setActiveId(saved && list.some((b) => b.id === saved) ? saved : list[0].id)
     })
   }, [])
