@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.8.8
+
+- Replaced the panel's native Type `<select>` with a reusable themed, animated
+  dropdown (`Select`) that matches the other fields and shows each type's color
+  as a dot. Respects reduced-motion.
+
 ## v0.8.7
 
 - Replaced the native board-picker `<select>` with a custom themed dropdown that

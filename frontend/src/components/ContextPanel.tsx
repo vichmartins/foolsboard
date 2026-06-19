@@ -18,6 +18,7 @@ import {
 } from '../types'
 import ConfirmDialog from './ConfirmDialog'
 import Gallery from './Gallery'
+import Select from './Select'
 
 interface Props {
   boardId: string
@@ -199,16 +200,19 @@ export default function ContextPanel({
         <button className="icon-btn" onClick={onClose} title="Close">✕</button>
       </div>
 
-      <label className="field">
+      <div className="field">
         <span>Type</span>
-        <select value={type} onChange={(e) => setType(e.target.value)}>
-          {NODE_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </option>
-          ))}
-        </select>
-      </label>
+        <Select
+          value={type}
+          ariaLabel="Type"
+          onChange={setType}
+          options={NODE_TYPES.map((t) => ({
+            value: t,
+            label: t.charAt(0).toUpperCase() + t.slice(1),
+            color: KIND_COLORS[t],
+          }))}
+        />
+      </div>
 
       <label className="field">
         <span>Title</span>
