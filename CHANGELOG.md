@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8.4
+
+- Added right padding in the Keyboard shortcuts dialog so the key chips no longer
+  crowd the scrollbar.
+
 ## v0.8.3
 
 - The edit panel header now shows the object's title and colored type tag once it

@@ -1138,6 +1138,8 @@
   gap: 18px 28px;
   max-height: 65vh;
   overflow-y: auto;
+  /* Keep the key chips clear of the scrollbar. */
+  padding-right: 12px;
 }
 .shortcuts__heading {
   margin: 0 0 8px;
