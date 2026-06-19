@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.5
+
+- The object edit panel now slides in from the right when opened and slides back
+  out when closed, instead of appearing/vanishing instantly. Respects
+  reduced-motion.
+
 ## v0.6.4
 
 - The right-click context menu now animates **closed** as well as open (it played

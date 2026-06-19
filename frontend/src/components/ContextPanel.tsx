@@ -16,9 +16,18 @@ interface Props {
   onChange: (node: StoryNode) => void
   onDelete: (nodeId: string) => void
   onClose: () => void
+  // True while the panel is sliding out (before it unmounts).
+  closing?: boolean
 }
 
-export default function ContextPanel({ boardId, node, onChange, onDelete, onClose }: Props) {
+export default function ContextPanel({
+  boardId,
+  node,
+  onChange,
+  onDelete,
+  onClose,
+  closing,
+}: Props) {
   const [title, setTitle] = useState(node.title)
   const [type, setType] = useState(node.type)
   // The whole content blob is held in state; per-type fields read/write keys in it
@@ -78,7 +87,7 @@ export default function ContextPanel({ boardId, node, onChange, onDelete, onClos
   }
 
   return (
-    <aside className="panel">
+    <aside className={'panel' + (closing ? ' panel--closing' : '')}>
       <div className="panel__head">
         <h2>Edit object</h2>
         <button className="icon-btn" onClick={onClose} title="Close">✕</button>

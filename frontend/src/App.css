@@ -420,6 +420,31 @@
   flex-direction: column;
   gap: 14px;
   box-shadow: -8px 0 24px rgba(0, 0, 0, 0.3);
+  /* Slide in from the right when opened. */
+  animation: panel-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.panel--closing {
+  animation: panel-out 0.2s ease forwards;
+}
+@keyframes panel-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0.5;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes panel-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0.5;
+  }
 }
 .panel__head {
   display: flex;
@@ -765,7 +790,8 @@
 @media (prefers-reduced-motion: reduce) {
   .overlay,
   .dialog,
-  .ctx-menu {
+  .ctx-menu,
+  .panel {
     animation-duration: 0.01ms;
   }
   .brand-dropdown {

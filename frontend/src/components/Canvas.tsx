@@ -87,6 +87,8 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [panelClosing, setPanelClosing] = useState(false)
+  const panelCloseTimer = useRef<number | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const [edgeMenu, setEdgeMenu] = useState<{ x: number; y: number; edge: Edge } | null>(null)
   const [nodeMenu, setNodeMenu] = useState<{ x: number; y: number } | null>(null)
@@ -654,6 +656,34 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Open/close the edit panel with a slide animation. Close keeps the panel
+  // mounted briefly so its exit animation can play before it unmounts.
+  const openPanel = useCallback((nodeId: string) => {
+    if (panelCloseTimer.current !== null) {
+      clearTimeout(panelCloseTimer.current)
+      panelCloseTimer.current = null
+    }
+    setPanelClosing(false)
+    setSelectedId(nodeId)
+  }, [])
+
+  const closePanel = useCallback(() => {
+    if (panelCloseTimer.current !== null) return
+    setPanelClosing(true)
+    panelCloseTimer.current = window.setTimeout(() => {
+      setSelectedId(null)
+      setPanelClosing(false)
+      panelCloseTimer.current = null
+    }, 210)
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (panelCloseTimer.current !== null) clearTimeout(panelCloseTimer.current)
+    },
+    [],
+  )
+
   const removeSelected = useCallback((nodeId: string) => {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId))
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId))
@@ -679,8 +709,10 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
         onConnectEnd={onConnectEnd}
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
-        onNodeDoubleClick={(_, n) => setSelectedId(n.id)}
-        onPaneClick={() => setSelectedId(null)}
+        onNodeDoubleClick={(_, n) => openPanel(n.id)}
+        onPaneClick={() => {
+          if (selectedId) closePanel()
+        }}
         onPaneContextMenu={onPaneContextMenu}
         onNodeContextMenu={onNodeContextMenu}
         onSelectionContextMenu={onSelectionContextMenu}
@@ -709,9 +741,10 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
         <ContextPanel
           boardId={boardId}
           node={selectedStory}
+          closing={panelClosing}
           onChange={applyNodeUpdate}
           onDelete={removeSelected}
-          onClose={() => setSelectedId(null)}
+          onClose={closePanel}
         />
       )}
 
