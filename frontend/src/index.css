@@ -9,7 +9,7 @@
   --accent: #6366f1;
   --danger: #ef4444;
   --bg-hover: #262b35;
-  --minimap-mask: rgba(11, 12, 16, 0.69);
+  --minimap-mask: rgba(11, 12, 16, 0.55);
   color-scheme: dark;
 }
 

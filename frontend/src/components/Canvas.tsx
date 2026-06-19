@@ -249,6 +249,14 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
     [boardId],
   )
 
+  // Select exactly the given nodes (deselecting the rest).
+  const selectNodes = useCallback((ids: string[]) => {
+    const set = new Set(ids)
+    setNodes((nds) =>
+      nds.map((n) => (n.selected === set.has(n.id) ? n : { ...n, selected: set.has(n.id) })),
+    )
+  }, [])
+
   // --- Node moves (drag) become undoable -----------------------------------
   const applyPositions = useCallback(
     (positions: Map<string, { x: number; y: number }>) => {
@@ -413,14 +421,16 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
           return acc
         }
         let live = await place()
+        selectNodes(live.nodeIds) // highlight the just-merged content
         pushUndo({
           undo: () => removeByIds(live.nodeIds, live.edgeIds),
           redo: async () => {
             live = await place()
+            selectNodes(live.nodeIds)
           },
         })
       }),
-    [runOp, getNodes, importPortableAt, removeByIds, pushUndo],
+    [runOp, getNodes, importPortableAt, removeByIds, pushUndo, selectNodes],
   )
 
   // Click anywhere on the minimap to recenter the canvas there (keeping zoom).
@@ -777,7 +787,13 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
           pannable
           zoomable
           onClick={onMinimapClick}
-          nodeColor={(n) => KIND_COLORS[(n.data?.kind as string) ?? 'note'] ?? '#64748b'}
+          nodeColor={(n) =>
+            n.selected
+              ? '#818cf8'
+              : KIND_COLORS[(n.data?.kind as string) ?? 'note'] ?? '#64748b'
+          }
+          nodeStrokeColor={(n) => (n.selected ? '#ffffff' : 'transparent')}
+          nodeStrokeWidth={4}
         />
       </ReactFlow>
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.8.9
+
+- Merged-in content now arrives selected/highlighted (click empty canvas to
+  deselect), and selected nodes are highlighted in the minimap (brighter indigo
+  + white ring). The dark-mode minimap mask was lightened a little so off-screen
+  highlights are visible.
+
 ## v0.8.8
 
 - Replaced the panel's native Type `<select>` with a reusable themed, animated
