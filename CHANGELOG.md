@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.14.3
+
+- Smoothed out the login error: it now lives inside the height-animated card
+  body so the card eases open/closed around it (no layout snap), fades with
+  opacity only, and no longer bounces because the error isn't cleared and reset
+  on every submit attempt.
+
 ## v0.14.2
 
 - The login error message now fades and slides in instead of appearing

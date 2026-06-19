@@ -21,15 +21,16 @@ export default function LoginScreen() {
   // Animate the swappable fields' container height as the mode changes.
   const bodyRef = useRef<HTMLDivElement>(null)
   const [bodyHeight, setBodyHeight] = useState<number | undefined>(undefined)
+  // Re-measure on mode AND error change so the card height eases to fit the
+  // error message instead of snapping.
   useLayoutEffect(() => {
     if (bodyRef.current) setBodyHeight(bodyRef.current.scrollHeight)
-  }, [mode])
+  }, [mode, error])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (busy) return
     setBusy(true)
-    setError(null)
     try {
       if (mode === 'login') {
         await login(identifier.trim(), password)
@@ -115,10 +116,10 @@ export default function LoginScreen() {
                 />
               </label>
             )}
+
+            {error && <div className="auth-error">{error}</div>}
           </div>
         </div>
-
-        {error && <div className="auth-error">{error}</div>}
 
         <button className="btn btn--primary auth-submit" type="submit" disabled={busy}>
           {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
