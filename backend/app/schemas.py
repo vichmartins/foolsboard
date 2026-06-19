@@ -107,8 +107,9 @@ class AssetOut(ORMModel):
     storage_key: str
     created_at: datetime
 
-    # Computed browser URL (filled in by the router via the storage backend).
+    # Computed browser URLs (filled in by the router via the storage backend).
     url: str | None = None
+    thumbnail_url: str | None = None
 
 
 # --- Aggregate --------------------------------------------------------------

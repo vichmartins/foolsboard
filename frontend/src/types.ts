@@ -43,7 +43,24 @@ export interface Asset {
   size: number
   storage_key: string
   url: string | null
+  thumbnail_url: string | null
   created_at: string
+}
+
+// Coarse media category used to pick a tile/gallery renderer.
+export type MediaKind = 'image' | 'video' | 'audio' | 'file'
+
+export function mediaKind(a: Asset): MediaKind {
+  const main = (a.content_type || '').split('/', 1)[0]
+  if (main === 'image') return 'image'
+  if (main === 'video') return 'video'
+  if (main === 'audio') return 'audio'
+  return 'file'
+}
+
+export function fileExt(filename: string): string {
+  const i = filename.lastIndexOf('.')
+  return i > 0 ? filename.slice(i + 1).toUpperCase() : ''
 }
 
 export interface BoardGraph {

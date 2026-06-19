@@ -7,8 +7,16 @@ import {
   updateNode,
   uploadAsset,
 } from '../api'
-import { NODE_TYPES, TYPE_FIELDS, type Asset, type StoryNode } from '../types'
+import {
+  fileExt,
+  mediaKind,
+  NODE_TYPES,
+  TYPE_FIELDS,
+  type Asset,
+  type StoryNode,
+} from '../types'
 import ConfirmDialog from './ConfirmDialog'
+import Gallery from './Gallery'
 
 interface Props {
   boardId: string
@@ -36,6 +44,8 @@ export default function ContextPanel({
   const [assets, setAssets] = useState<Asset[]>([])
   const [busy, setBusy] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [galleryIndex, setGalleryIndex] = useState<number | null>(null)
+  const [preview, setPreview] = useState<{ url: string; top: number } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Re-sync local state whenever a different node is selected.
@@ -84,6 +94,14 @@ export default function ContextPanel({
   async function removeNode() {
     await deleteNode(boardId, node.id)
     onDelete(node.id)
+  }
+
+  // Show an enlarged floating preview to the left of the panel on image hover.
+  function showPreview(e: React.MouseEvent, url: string | null) {
+    if (!url) return
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const top = Math.min(Math.max(8, r.top - 40), window.innerHeight - 320)
+    setPreview({ url, top })
   }
 
   return (
@@ -150,26 +168,84 @@ export default function ContextPanel({
           <input ref={fileRef} type="file" hidden onChange={onUpload} />
         </div>
 
-        <ul className="media-list">
-          {assets.map((a) => (
-            <li key={a.id} className="media-item">
-              {a.kind === 'image' && a.url ? (
-                <img src={a.url} alt={a.filename} />
-              ) : a.kind === 'video' && a.url ? (
-                <video src={a.url} controls />
-              ) : (
-                <a href={a.url ?? '#'} target="_blank" rel="noreferrer">
-                  📎 {a.filename}
-                </a>
-              )}
-              <button className="icon-btn" onClick={() => removeAsset(a.id)} title="Remove">
-                ✕
-              </button>
-            </li>
-          ))}
-          {assets.length === 0 && <li className="media-empty">No media yet</li>}
-        </ul>
+        {assets.length === 0 ? (
+          <p className="media-empty">No media yet</p>
+        ) : (
+          <div className="media-grid">
+            {assets.map((a, i) => {
+              const k = mediaKind(a)
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  className={`media-tile media-tile--${k}`}
+                  onClick={() => setGalleryIndex(i)}
+                  title={a.filename}
+                >
+                  {k === 'image' && (
+                    <img
+                      src={a.url ?? ''}
+                      alt={a.filename}
+                      className="media-tile__img"
+                      onMouseEnter={(e) => showPreview(e, a.url)}
+                      onMouseLeave={() => setPreview(null)}
+                    />
+                  )}
+
+                  {k === 'video' &&
+                    (a.thumbnail_url ? (
+                      <img src={a.thumbnail_url} alt={a.filename} className="media-tile__img" />
+                    ) : (
+                      <span className="media-tile__placeholder">🎬</span>
+                    ))}
+                  {k === 'video' && <span className="media-tile__badge">▶</span>}
+
+                  {k === 'audio' &&
+                    (a.thumbnail_url ? (
+                      <img src={a.thumbnail_url} alt={a.filename} className="media-tile__img" />
+                    ) : (
+                      <span className="media-tile__placeholder">♪</span>
+                    ))}
+
+                  {k === 'file' && (
+                    <span className="media-tile__file">
+                      <span className="media-tile__ext">{fileExt(a.filename) || 'FILE'}</span>
+                    </span>
+                  )}
+
+                  <span
+                    className="media-tile__remove"
+                    role="button"
+                    aria-label="Remove"
+                    title="Remove"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeAsset(a.id)
+                    }}
+                  >
+                    ✕
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
+
+      {preview && (
+        <div className="media-preview" style={{ top: preview.top }}>
+          <img src={preview.url} alt="" />
+        </div>
+      )}
+
+      {galleryIndex !== null && assets[galleryIndex] && (
+        <Gallery
+          assets={assets}
+          index={galleryIndex}
+          onIndexChange={setGalleryIndex}
+          onClose={() => setGalleryIndex(null)}
+        />
+      )}
 
       {confirmDelete && (
         <ConfirmDialog

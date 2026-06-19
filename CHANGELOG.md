@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.0
+
+- **Typed media + gallery** — the object panel now shows media as a grid of
+  typed tiles and opens a full-screen gallery on click:
+  - Images (incl. animated GIF/WEBP) render in place; hovering shows an enlarged
+    preview, and the gallery supports zoom + pan (wheel, drag, buttons, keys).
+  - Video and audio show a server-generated thumbnail (a video frame / embedded
+    cover art via ffmpeg) with a play badge; the gallery plays them.
+  - Any other file shows its extension on a tile and a download card in the
+    gallery.
+- Gallery supports keyboard navigation (←/→, Esc) and prev/next when a node has
+  multiple media.
+- Backend: assets gained a `thumbnail_key` (migration `b7f3c1d92a40`); thumbnails
+  are generated with ffmpeg on upload, and media type is inferred from the file
+  extension when the upload's MIME type is generic.
+
 ## v0.6.7
 
 - Removed the top-bar hint sentence and moved its guidance into the Keyboard

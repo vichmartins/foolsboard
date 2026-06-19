@@ -37,4 +37,8 @@ class Asset(UUIDMixin, TimestampMixin, Base):
     # Opaque key understood by the active storage backend.
     storage_key: Mapped[str] = mapped_column(String(500), nullable=False)
 
+    # Optional generated preview image (video frame / audio cover art),
+    # addressed by its own storage key. Null when none could be produced.
+    thumbnail_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     node: Mapped["Node"] = relationship(back_populates="assets")

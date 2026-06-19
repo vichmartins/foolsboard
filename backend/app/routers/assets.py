@@ -5,6 +5,12 @@ response includes a ready-to-use `url` resolved through the active backend.
 """
 from __future__ import annotations
 
+import io
+import mimetypes
+import os
+import shutil
+import tempfile
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
@@ -15,8 +21,20 @@ from ..database import get_db
 from ..models import Asset, Node
 from ..schemas import AssetOut
 from ..storage import storage
+from ..thumbnails import generate_thumbnail
 
 router = APIRouter(prefix="/api/nodes/{node_id}/assets", tags=["assets"])
+
+
+def _resolve_type(content_type: str, filename: str) -> str:
+    """Best-effort MIME type: fall back to the extension when the upload's type
+    is missing or generic, so media files still classify (and get thumbnails)."""
+    ct = (content_type or "").strip()
+    if not ct or ct == "application/octet-stream":
+        guessed, _ = mimetypes.guess_type(filename)
+        if guessed:
+            return guessed
+    return ct or "application/octet-stream"
 
 
 def _kind_from_content_type(content_type: str) -> str:
@@ -45,6 +63,8 @@ def _get_node(node_id: UUID, db: Session) -> Node:
 def _to_out(asset: Asset) -> AssetOut:
     out = AssetOut.model_validate(asset)
     out.url = storage.url_for(asset.storage_key)
+    if asset.thumbnail_key:
+        out.thumbnail_url = storage.url_for(asset.thumbnail_key)
     return out
 
 
@@ -63,20 +83,41 @@ def upload_asset(
 ) -> AssetOut:
     _get_node(node_id, db)
 
-    key = storage.save(file.file, file.filename or "upload.bin")
-    content_type = file.content_type or "application/octet-stream"
-    asset = Asset(
-        node_id=node_id,
-        kind=_kind_from_content_type(content_type),
-        filename=file.filename or "upload.bin",
-        content_type=content_type,
-        size=file.size or 0,
-        storage_key=key,
-    )
-    db.add(asset)
-    db.commit()
-    db.refresh(asset)
-    return _to_out(asset)
+    filename = file.filename or "upload.bin"
+    content_type = _resolve_type(file.content_type or "", filename)
+    kind = _kind_from_content_type(content_type)
+
+    # Stage the upload on disk so ffmpeg (thumbnail step) can read it by path,
+    # then persist the bytes (and any generated thumbnail) to storage.
+    suffix = Path(filename).suffix
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_path = Path(tmp.name)
+    try:
+        with tmp_path.open("rb") as f:
+            key = storage.save(f, filename)
+
+        thumbnail_key: str | None = None
+        if kind in {"video", "audio"}:
+            thumb = generate_thumbnail(tmp_path, content_type)
+            if thumb:
+                thumbnail_key = storage.save(io.BytesIO(thumb), "thumb.jpg")
+
+        asset = Asset(
+            node_id=node_id,
+            kind=kind,
+            filename=filename,
+            content_type=content_type,
+            size=tmp_path.stat().st_size,
+            storage_key=key,
+            thumbnail_key=thumbnail_key,
+        )
+        db.add(asset)
+        db.commit()
+        db.refresh(asset)
+        return _to_out(asset)
+    finally:
+        os.unlink(tmp_path)
 
 
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -87,5 +128,7 @@ def delete_asset(
     if asset is None or asset.node_id != node_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Asset not found")
     storage.delete(asset.storage_key)
+    if asset.thumbnail_key:
+        storage.delete(asset.thumbnail_key)
     db.delete(asset)
     db.commit()
