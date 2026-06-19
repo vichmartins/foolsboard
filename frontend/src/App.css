@@ -1055,8 +1055,13 @@
 }
 .shortcut__keys {
   display: inline-flex;
+  align-items: center;
   gap: 4px;
   flex-shrink: 0;
+}
+.shortcut__or {
+  font-size: 11px;
+  color: var(--text-dim);
 }
 .shortcut kbd {
   font-family: ui-monospace, Consolas, monospace;

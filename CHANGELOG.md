@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.3
+
+- The app now reopens the **last board you had open** after a refresh or restart
+  (remembered in localStorage), instead of always loading the first board.
+- The Keyboard shortcuts dialog shows **Del or Backspace** for Delete selection.
+
 ## v0.7.2
 
 - **Media compression on upload** — uploads are recompressed at high quality to

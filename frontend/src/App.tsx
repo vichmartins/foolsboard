@@ -17,7 +17,8 @@ export default function App() {
   // Source boards to merge into the active board; handed to Canvas to import.
   const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
 
-  // Load boards; bootstrap a first board if the workspace is empty.
+  // Load boards; bootstrap a first board if the workspace is empty. Restore the
+  // board the user last had open (falling back to the first).
   useEffect(() => {
     api.listBoards().then(async (list) => {
       if (list.length === 0) {
@@ -25,9 +26,15 @@ export default function App() {
         list = [first]
       }
       setBoards(list)
-      setActiveId(list[0].id)
+      const saved = localStorage.getItem('foolsboard:activeBoard')
+      setActiveId(saved && list.some((b) => b.id === saved) ? saved : list[0].id)
     })
   }, [])
+
+  // Remember the active board so a refresh/restart reopens it.
+  useEffect(() => {
+    if (activeId) localStorage.setItem('foolsboard:activeBoard', activeId)
+  }, [activeId])
 
   const activeBoard = boards.find((b) => b.id === activeId) ?? null
 

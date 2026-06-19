@@ -1,11 +1,18 @@
 // A reference card of the app's keyboard shortcuts and mouse gestures.
-import { useEffect } from 'react'
+import { Fragment, useEffect } from 'react'
 
 interface Props {
   onClose: () => void
 }
 
-const GROUPS: { title: string; items: { keys: string[]; desc: string }[] }[] = [
+interface Shortcut {
+  keys: string[]
+  desc: string
+  // When true the keys are alternatives ("Del or Backspace"), not a combo.
+  alt?: boolean
+}
+
+const GROUPS: { title: string; items: Shortcut[] }[] = [
   {
     title: 'Clipboard',
     items: [
@@ -31,7 +38,7 @@ const GROUPS: { title: string; items: { keys: string[]; desc: string }[] }[] = [
       { keys: ['Double-click'], desc: 'Open edit panel' },
       { keys: ['Shift', 'Drag'], desc: 'Select multiple' },
       { keys: ['Right-click'], desc: 'Object / selection menu' },
-      { keys: ['Del'], desc: 'Delete selection' },
+      { keys: ['Del', 'Backspace'], alt: true, desc: 'Delete selection' },
     ],
   },
   {
@@ -77,7 +84,10 @@ export default function ShortcutsDialog({ onClose }: Props) {
                     <span className="shortcut__desc">{it.desc}</span>
                     <span className="shortcut__keys">
                       {it.keys.map((k, j) => (
-                        <kbd key={j}>{k}</kbd>
+                        <Fragment key={j}>
+                          {j > 0 && it.alt && <span className="shortcut__or">or</span>}
+                          <kbd>{k}</kbd>
+                        </Fragment>
                       ))}
                     </span>
                   </li>
