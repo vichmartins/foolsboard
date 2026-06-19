@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.9.4
+
+- Character objects gained an "Animations" field: a repeatable list of rows,
+  each a numeric identifier plus the animation the character performs. Stored in
+  the node's content JSON, so no migration is needed.
+
 ## v0.9.3
 
 - Esc now also closes the media hover preview, as the first step of the panel's

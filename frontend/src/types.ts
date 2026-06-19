@@ -92,6 +92,15 @@ export interface FieldDef {
   label: string
   multiline?: boolean
   placeholder?: string
+  // Custom editor instead of a plain text input. 'animations' is a repeatable
+  // list of { id, name } rows (a numeric identifier + the animation it performs).
+  widget?: 'animations'
+}
+
+// One row of a Character's Animations field.
+export interface AnimationRow {
+  id: string
+  name: string
 }
 
 export const TYPE_FIELDS: Record<string, FieldDef[]> = {
@@ -104,6 +113,7 @@ export const TYPE_FIELDS: Record<string, FieldDef[]> = {
     { key: 'role', label: 'Role', placeholder: 'Protagonist, villain, mentor…' },
     { key: 'traits', label: 'Traits', placeholder: 'Brave, cunning, anxious…' },
     { key: 'description', label: 'Description', multiline: true, placeholder: 'Who are they?' },
+    { key: 'animations', label: 'Animations', widget: 'animations' },
   ],
   dialog: [
     { key: 'speaker', label: 'Speaker', placeholder: 'Who is talking?' },

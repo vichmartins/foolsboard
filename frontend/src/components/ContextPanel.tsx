@@ -16,6 +16,7 @@ import {
   type Asset,
   type StoryNode,
 } from '../types'
+import AnimationsField from './AnimationsField'
 import ConfirmDialog from './ConfirmDialog'
 import Gallery from './Gallery'
 import Select from './Select'
@@ -80,7 +81,7 @@ export default function ContextPanel({
   const hasContent = Object.values(content).some((v) => String(v ?? '').trim() !== '')
   const isExisting = (title.trim() !== '' && title.trim() !== 'New object') || hasContent
 
-  function setField(key: string, value: string) {
+  function setField(key: string, value: unknown) {
     setContent((c) => ({ ...c, [key]: value }))
   }
 
@@ -402,25 +403,35 @@ export default function ContextPanel({
       </label>
 
       {/* Dynamic, type-specific fields (stored in node.content). */}
-      {fields.map((f) => (
-        <label className="field" key={f.key}>
-          <span>{f.label}</span>
-          {f.multiline ? (
-            <textarea
-              rows={5}
-              placeholder={f.placeholder}
-              value={String(content[f.key] ?? '')}
-              onChange={(e) => setField(f.key, e.target.value)}
+      {fields.map((f) =>
+        f.widget === 'animations' ? (
+          <div className="field" key={f.key}>
+            <span>{f.label}</span>
+            <AnimationsField
+              value={content[f.key]}
+              onChange={(rows) => setField(f.key, rows)}
             />
-          ) : (
-            <input
-              placeholder={f.placeholder}
-              value={String(content[f.key] ?? '')}
-              onChange={(e) => setField(f.key, e.target.value)}
-            />
-          )}
-        </label>
-      ))}
+          </div>
+        ) : (
+          <label className="field" key={f.key}>
+            <span>{f.label}</span>
+            {f.multiline ? (
+              <textarea
+                rows={5}
+                placeholder={f.placeholder}
+                value={String(content[f.key] ?? '')}
+                onChange={(e) => setField(f.key, e.target.value)}
+              />
+            ) : (
+              <input
+                placeholder={f.placeholder}
+                value={String(content[f.key] ?? '')}
+                onChange={(e) => setField(f.key, e.target.value)}
+              />
+            )}
+          </label>
+        ),
+      )}
 
       <div className="panel__actions">
         <button className="btn btn--primary" onClick={save} disabled={busy}>

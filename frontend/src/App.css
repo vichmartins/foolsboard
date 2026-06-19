@@ -625,6 +625,38 @@
   border-color: var(--accent);
 }
 
+/* Animations field (Character): repeatable "id + animation" rows */
+.anim-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.anim-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.anim-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.anim-row__id {
+  width: 68px;
+  flex: none;
+  text-align: center;
+}
+.anim-row__name {
+  flex: 1;
+  min-width: 0;
+}
+.anim-row__remove {
+  flex: none;
+}
+.anim-field__add {
+  align-self: flex-start;
+}
+
 /* Themed, animated dropdown for form fields (Select component) */
 .select {
   position: relative;
