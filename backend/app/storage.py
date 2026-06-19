@@ -31,6 +31,9 @@ class Storage(Protocol):
     def url_for(self, key: str) -> str:
         """Return a browser-fetchable URL for a key."""
 
+    def open(self, key: str) -> BinaryIO:
+        """Open the stored object for reading (raises if missing)."""
+
 
 class LocalStorage:
     """Stores files under a local directory, served by a static mount."""
@@ -54,6 +57,9 @@ class LocalStorage:
 
     def url_for(self, key: str) -> str:
         return f"{self.public_url}/{key}"
+
+    def open(self, key: str) -> BinaryIO:
+        return (self.root / key).open("rb")
 
 
 def build_storage() -> Storage:

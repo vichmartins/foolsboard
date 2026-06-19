@@ -2903,6 +2903,130 @@
   overflow-x: auto;
 }
 
+/* --- Import / Export dialog ------------------------------------------------ */
+.impex {
+  width: min(520px, 94vw);
+  padding: 0;
+}
+.impex__body {
+  padding: 16px 20px 20px;
+}
+.impex-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.impex-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.impex-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elev-2);
+  cursor: pointer;
+}
+.impex-item:hover {
+  background: var(--bg-hover);
+}
+.impex-item__name {
+  font-size: 13.5px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.impex-all input,
+.impex-item input {
+  accent-color: var(--accent);
+}
+.impex-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 36px 20px;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  background: var(--bg-elev-2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.impex-drop:hover {
+  border-color: var(--accent);
+}
+.impex-drop--over {
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.1);
+  color: var(--text);
+}
+.impex-drop__icon {
+  font-size: 26px;
+}
+.impex-drop__text {
+  font-size: 13px;
+}
+.impex-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 14px;
+}
+.impex-progress__bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-elev-2);
+  overflow: hidden;
+}
+.impex-progress__fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: impex-slide 1.1s ease-in-out infinite;
+}
+@keyframes impex-slide {
+  0% {
+    left: -42%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+.impex-progress__label {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: reduce) {
+  .impex-progress__fill {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .overlay,
   .dialog,

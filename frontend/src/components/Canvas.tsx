@@ -790,15 +790,17 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
   useEffect(() => {
     const hasFiles = (e: DragEvent) =>
       Array.from(e.dataTransfer?.types ?? []).includes('Files')
+    // A modal (e.g. the import dialog) handles its own drops -- don't hijack them.
+    const modalOpen = () => document.querySelector('.overlay') !== null
     let depth = 0
     const onEnter = (e: DragEvent) => {
-      if (!hasFiles(e)) return
+      if (!hasFiles(e) || modalOpen()) return
       e.preventDefault()
       depth += 1
       setDragKind(hasPanelRef.current ? 'ready' : 'blocked')
     }
     const onOver = (e: DragEvent) => {
-      if (hasFiles(e)) e.preventDefault() // required to allow a drop
+      if (hasFiles(e) && !modalOpen()) e.preventDefault() // required to allow a drop
     }
     const onLeave = (e: DragEvent) => {
       if (!hasFiles(e)) return
@@ -806,7 +808,7 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
       if (depth === 0) setDragKind('none')
     }
     const onDrop = (e: DragEvent) => {
-      if (!hasFiles(e)) return
+      if (!hasFiles(e) || modalOpen()) return
       e.preventDefault() // stop the browser from opening the file
       depth = 0
       setDragKind('none')

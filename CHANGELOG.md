@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.15.3
+
+- Import / Export storyboards from a new top-bar button. Export bundles the
+  selected boards into a .zip (manifest of the board graph plus a media/ folder
+  with every attached file, built server-side with stdlib zipfile). Import reads
+  such a bundle via a file picker or by dropping it on the dialog's drop zone,
+  recreating the boards (with media) as new boards. The app-level file-drag is
+  suppressed while a modal is open so a dropped bundle can't be mistaken for a
+  media upload.
+- The export streams the archive as it's built and shows a live progress bar
+  with a running byte count, so large/media-heavy exports show their progress.
+
 ## v0.15.2
 
 - Admin panel gained an Errors view: unhandled server exceptions are captured

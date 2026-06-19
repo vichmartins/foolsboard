@@ -6,6 +6,7 @@ import AdminPanel from './components/AdminPanel'
 import BoardSelect from './components/BoardSelect'
 import BrandMenu from './components/BrandMenu'
 import Canvas from './components/Canvas'
+import ImportExportDialog from './components/ImportExportDialog'
 import LoginScreen from './components/LoginScreen'
 import ProfileMenu from './components/ProfileMenu'
 import PromptDialog from './components/PromptDialog'
@@ -22,6 +23,7 @@ function Workspace() {
   const [dialog, setDialog] = useState<'new' | 'rename' | 'delete' | 'merge' | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
+  const [impexOpen, setImpexOpen] = useState(false)
   // Source boards to merge into the active board; handed to Canvas to import.
   const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
 
@@ -116,6 +118,13 @@ function Workspace() {
         >
           Merge…
         </button>
+        <button
+          className="btn"
+          onClick={() => setImpexOpen(true)}
+          title="Import or export boards"
+        >
+          Import / Export
+        </button>
 
         <ThemeToggle />
         <ProfileMenu
@@ -184,6 +193,16 @@ function Workspace() {
 
       {accountOpen && <AccountDialog onClose={() => setAccountOpen(false)} />}
       {adminOpen && <AdminPanel onClose={() => setAdminOpen(false)} />}
+      {impexOpen && (
+        <ImportExportDialog
+          boards={boards}
+          onClose={() => setImpexOpen(false)}
+          onImported={(created) => {
+            setBoards((b) => [...created, ...b])
+            if (created.length) setActiveId(created[0].id)
+          }}
+        />
+      )}
     </div>
   )
 }

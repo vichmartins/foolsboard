@@ -19,7 +19,7 @@ from starlette.concurrency import run_in_threadpool
 from .config import settings
 from .database import SessionLocal
 from .models import Asset, ErrorLog, RequestLog
-from .routers import admin, assets, auth, boards, edges, invites, links, nodes
+from .routers import admin, assets, auth, boards, edges, invites, links, nodes, transfer
 from .security import decode_token
 
 app = FastAPI(title="foolsboard API", version="0.4.0")
@@ -146,6 +146,7 @@ app.include_router(auth.router)
 app.include_router(invites.router)
 app.include_router(admin.router)
 app.include_router(boards.router)
+app.include_router(transfer.router)
 app.include_router(nodes.router)
 app.include_router(edges.router)
 app.include_router(assets.router)

@@ -176,6 +176,32 @@ export async function deleteBoard(boardId: string): Promise<void> {
   await http.delete(`/boards/${boardId}`)
 }
 
+// Export selected boards as a .zip bundle (manifest + media). Returns the raw
+// archive bytes for the browser to download. The archive streams as it's built,
+// so `onProgress` ticks with the running byte count for a live indicator.
+export async function exportBoards(
+  boardIds: string[],
+  onProgress?: (loadedBytes: number) => void,
+): Promise<Blob> {
+  return (
+    await http.post(
+      '/boards/export',
+      { board_ids: boardIds },
+      {
+        responseType: 'blob',
+        onDownloadProgress: (e) => onProgress?.(e.loaded),
+      },
+    )
+  ).data
+}
+
+// Import boards from a .zip bundle; the server creates them and returns them.
+export async function importBoards(file: File): Promise<Board[]> {
+  const form = new FormData()
+  form.append('file', file)
+  return (await http.post('/boards/import', form)).data
+}
+
 // Prefetched graph requests, consumed once. Lets the app kick off the
 // last-opened board's graph in parallel with the board list (no load waterfall).
 const prefetchedGraphs = new Map<string, Promise<BoardGraph>>()
