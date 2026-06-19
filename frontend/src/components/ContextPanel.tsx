@@ -26,6 +26,9 @@ interface Props {
   onClose: () => void
   // True while the panel is sliding out (before it unmounts).
   closing?: boolean
+  // Files dropped onto the app while this panel was open (uploaded here).
+  droppedFiles?: File[] | null
+  onDroppedConsumed?: () => void
 }
 
 export default function ContextPanel({
@@ -35,6 +38,8 @@ export default function ContextPanel({
   onDelete,
   onClose,
   closing,
+  droppedFiles,
+  onDroppedConsumed,
 }: Props) {
   const [title, setTitle] = useState(node.title)
   const [type, setType] = useState(node.type)
@@ -73,18 +78,39 @@ export default function ContextPanel({
     }
   }
 
-  async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  async function uploadFile(file: File) {
     setBusy(true)
     try {
       const asset = await uploadAsset(node.id, file)
       setAssets((prev) => [...prev, asset])
     } finally {
       setBusy(false)
-      if (fileRef.current) fileRef.current.value = ''
     }
   }
+
+  async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    await uploadFile(file)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
+  // Upload files dropped onto the app (handed down from Canvas).
+  useEffect(() => {
+    if (!droppedFiles || droppedFiles.length === 0) return
+    let cancelled = false
+    ;(async () => {
+      for (const f of droppedFiles) {
+        if (cancelled) break
+        await uploadFile(f)
+      }
+      onDroppedConsumed?.()
+    })()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [droppedFiles])
 
   async function removeAsset(id: string) {
     await deleteAsset(node.id, id)

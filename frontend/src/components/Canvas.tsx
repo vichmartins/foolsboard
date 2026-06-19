@@ -89,6 +89,11 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [panelClosing, setPanelClosing] = useState(false)
   const panelCloseTimer = useRef<number | null>(null)
+  // File drag-and-drop: 'ready' = a panel is open (drop uploads), 'blocked' =
+  // none open (hint only). droppedFiles are handed to the panel to upload.
+  const [dragKind, setDragKind] = useState<'none' | 'ready' | 'blocked'>('none')
+  const [droppedFiles, setDroppedFiles] = useState<File[] | null>(null)
+  const hasPanelRef = useRef(false)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const [edgeMenu, setEdgeMenu] = useState<{ x: number; y: number; edge: Edge } | null>(null)
   const [nodeMenu, setNodeMenu] = useState<{ x: number; y: number } | null>(null)
@@ -684,6 +689,47 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
     [],
   )
 
+  // File drag-and-drop onto the app. While a panel is open, dropping uploads to
+  // that object; otherwise we only show a hint and never upload.
+  useEffect(() => {
+    const hasFiles = (e: DragEvent) =>
+      Array.from(e.dataTransfer?.types ?? []).includes('Files')
+    let depth = 0
+    const onEnter = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      depth += 1
+      setDragKind(hasPanelRef.current ? 'ready' : 'blocked')
+    }
+    const onOver = (e: DragEvent) => {
+      if (hasFiles(e)) e.preventDefault() // required to allow a drop
+    }
+    const onLeave = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      depth = Math.max(0, depth - 1)
+      if (depth === 0) setDragKind('none')
+    }
+    const onDrop = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault() // stop the browser from opening the file
+      depth = 0
+      setDragKind('none')
+      if (hasPanelRef.current && e.dataTransfer?.files.length) {
+        setDroppedFiles(Array.from(e.dataTransfer.files))
+      }
+    }
+    window.addEventListener('dragenter', onEnter)
+    window.addEventListener('dragover', onOver)
+    window.addEventListener('dragleave', onLeave)
+    window.addEventListener('drop', onDrop)
+    return () => {
+      window.removeEventListener('dragenter', onEnter)
+      window.removeEventListener('dragover', onOver)
+      window.removeEventListener('dragleave', onLeave)
+      window.removeEventListener('drop', onDrop)
+    }
+  }, [])
+
   const removeSelected = useCallback((nodeId: string) => {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId))
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId))
@@ -692,6 +738,8 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
 
   const selectedStory =
     (nodes.find((n) => n.id === selectedId)?.data?.story as StoryNode | undefined) ?? null
+  // Tracked in a ref so the (mount-once) drag listeners read the latest value.
+  hasPanelRef.current = selectedStory !== null
 
   return (
     <BoardIdContext.Provider value={boardId}>
@@ -742,10 +790,32 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
           boardId={boardId}
           node={selectedStory}
           closing={panelClosing}
+          droppedFiles={droppedFiles}
+          onDroppedConsumed={() => setDroppedFiles(null)}
           onChange={applyNodeUpdate}
           onDelete={removeSelected}
           onClose={closePanel}
         />
+      )}
+
+      {dragKind !== 'none' && (
+        <div className={'drop-overlay drop-overlay--' + dragKind}>
+          <div className="drop-overlay__card">
+            <div className="drop-overlay__icon">{dragKind === 'ready' ? '⬆' : '🚫'}</div>
+            {dragKind === 'ready' ? (
+              <div className="drop-overlay__text">
+                Drop to add media to “{selectedStory?.title || 'Untitled'}”
+              </div>
+            ) : (
+              <>
+                <div className="drop-overlay__text">Open an object to add media</div>
+                <div className="drop-overlay__sub">
+                  Double-click an object first, then drop your file
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
 
       {edgeMenu && (

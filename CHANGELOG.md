@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.7.1
+
+- **Drag-and-drop media** — drag files onto the app to add them. With an object's
+  panel open, an accent "Drop to add media" overlay appears and dropping uploads
+  to that object (thumbnails generated as usual). With no panel open, a hint
+  overlay explains to open an object first, and dropping uploads nothing. Only
+  reacts to file drags, and always blocks the browser from opening the file.
+
 ## v0.7.0
 
 - **Typed media + gallery** — the object panel now shows media as a grid of
