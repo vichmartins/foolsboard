@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.10.1
+
+- Gave the side panel's References and Media sections more separation, and the
+  Save/Delete buttons clear breathing room above and below. The standard form
+  fields keep their original spacing.
+
 ## v0.10.0
 
 - Added a "References" section to every object kind: paste a link and it renders

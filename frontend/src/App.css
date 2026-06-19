@@ -663,10 +663,11 @@
 /* References: its own section (matching the Media section's look) */
 .panel__refs {
   border-top: 1px solid var(--border);
-  padding-top: 12px;
+  margin-top: 4px;
+  padding-top: 22px;
 }
 .panel__refs-head {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   font-size: 14px;
 }
 
@@ -872,21 +873,24 @@
 
 .panel__actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  margin: 10px 0;
 }
 .panel__actions .btn {
   flex: 1;
+  padding: 11px;
 }
 
 .panel__media {
   border-top: 1px solid var(--border);
-  padding-top: 12px;
+  margin-top: 4px;
+  padding-top: 22px;
 }
 .panel__media-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .panel__media-head h3 {
   margin: 0;
