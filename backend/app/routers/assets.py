@@ -22,6 +22,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -34,6 +35,10 @@ from ..storage import storage
 from ..thumbnails import generate_thumbnail
 
 router = APIRouter(prefix="/api/nodes/{node_id}/assets", tags=["assets"])
+
+
+class AssetReferenceIn(BaseModel):
+    asset_ids: list[UUID]
 
 
 def _resolve_type(content_type: str, filename: str) -> str:
@@ -221,6 +226,42 @@ def upload_asset(
     if processing:
         background_tasks.add_task(_process_compression, asset_id)
     return out
+
+
+@router.post("/reference", response_model=list[AssetOut], status_code=status.HTTP_201_CREATED)
+def reference_assets(
+    node_id: UUID,
+    payload: AssetReferenceIn,
+    db: Session = Depends(get_db),
+) -> list[AssetOut]:
+    """Attach existing media (from other nodes) to this node by sharing their
+    stored files -- the dedup mechanism, keyed by asset id instead of an upload.
+    Lets the UI pull a nearby node's media into the node being edited instantly."""
+    _get_node(node_id, db)
+    created: list[Asset] = []
+    for source_id in payload.asset_ids:
+        src = db.get(Asset, source_id)
+        if src is None:
+            continue
+        created.append(
+            Asset(
+                node_id=node_id,
+                kind=src.kind,
+                filename=src.filename,
+                content_type=src.content_type,
+                size=src.size,
+                storage_key=src.storage_key,
+                thumbnail_key=src.thumbnail_key,
+                processing=False,
+                content_hash=src.content_hash,
+            )
+        )
+    for asset in created:
+        db.add(asset)
+    db.commit()
+    for asset in created:
+        db.refresh(asset)
+    return [_to_out(asset) for asset in created]
 
 
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)

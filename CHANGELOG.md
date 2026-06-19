@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.11.2
+
+- Backend: new POST /nodes/{id}/assets/reference endpoint attaches existing
+  media (by asset id) to a node by sharing the stored file (dedup) instead of
+  re-uploading. Foundation for pulling a nearby node's media into the node being
+  edited; the in-panel UI for it is still to come.
+
 ## v0.11.1
 
 - Backfill content hashes for media uploaded before dedup existed, so
