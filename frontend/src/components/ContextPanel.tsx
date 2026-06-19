@@ -58,6 +58,9 @@ export default function ContextPanel({
   const [preview, setPreview] = useState<{ url: string; top: number } | null>(null)
   // In-flight uploads: progress 0-100 (100 = bytes sent, server still processing).
   const [uploads, setUploads] = useState<{ id: string; name: string; progress: number }[]>([])
+  const [mediaExpanded, setMediaExpanded] = useState(false)
+  const [mediaClosing, setMediaClosing] = useState(false)
+  const mediaTimer = useRef<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Re-sync local state whenever a different node is selected.
@@ -186,7 +189,157 @@ export default function ContextPanel({
     setPreview({ url, top })
   }
 
+  // Expand the gallery into a retractable drawer that overlays the canvas to the
+  // left of the panel. Keep it mounted briefly while closing for the slide-out.
+  function toggleMedia() {
+    if (mediaTimer.current) {
+      window.clearTimeout(mediaTimer.current)
+      mediaTimer.current = null
+    }
+    if (mediaExpanded) {
+      setMediaExpanded(false)
+      setMediaClosing(true)
+      mediaTimer.current = window.setTimeout(() => setMediaClosing(false), 220)
+    } else {
+      setMediaClosing(false)
+      setMediaExpanded(true)
+    }
+  }
+
+  useEffect(
+    () => () => {
+      if (mediaTimer.current) window.clearTimeout(mediaTimer.current)
+    },
+    [],
+  )
+
+  // Esc retracts the expanded gallery first (capture phase + stopPropagation), so
+  // a single Esc only collapses the drawer rather than also closing the panel.
+  useEffect(() => {
+    if (!mediaExpanded) return
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      // Let an open lightbox/dialog/dropdown over the drawer consume Esc first.
+      if (document.querySelector('.overlay, .ctx-menu, .gallery, [aria-expanded="true"]'))
+        return
+      e.preventDefault()
+      e.stopPropagation()
+      setMediaExpanded(false)
+      setMediaClosing(true)
+      if (mediaTimer.current) window.clearTimeout(mediaTimer.current)
+      mediaTimer.current = window.setTimeout(() => setMediaClosing(false), 220)
+    }
+    window.addEventListener('keydown', onEsc, true)
+    return () => window.removeEventListener('keydown', onEsc, true)
+  }, [mediaExpanded])
+
+  const drawerMounted = mediaExpanded || mediaClosing
+
+  // The media list (uploads + grid). Rendered either inside the panel (compact)
+  // or inside the expanded drawer — never both, so it stays a single instance.
+  const mediaBody = (
+    <>
+      {uploads.length > 0 && (
+        <div className="media-uploads">
+          {uploads.map((u) => (
+            <div key={u.id} className="media-upload">
+              <div className="media-upload__row">
+                <span className="media-upload__name" title={u.name}>{u.name}</span>
+                <span className="media-upload__pct">
+                  {u.progress < 100 ? `${u.progress}%` : 'processing…'}
+                </span>
+              </div>
+              <div className="media-upload__bar">
+                <div
+                  className={
+                    'media-upload__fill' +
+                    (u.progress >= 100 ? ' media-upload__fill--processing' : '')
+                  }
+                  style={{ width: `${u.progress}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {assets.length === 0 && uploads.length === 0 && (
+        <p className="media-empty">No media yet</p>
+      )}
+
+      {assets.length > 0 && (
+        <div className="media-grid">
+          {assets.map((a, i) => {
+            const k = mediaKind(a)
+            return (
+              <div key={a.id} className="media-cell">
+                <button
+                  type="button"
+                  className={`media-tile media-tile--${k}`}
+                  onClick={() => setGalleryIndex(i)}
+                  title={a.filename}
+                >
+                  {k === 'image' && (
+                    <img
+                      src={a.url ?? ''}
+                      alt={a.filename}
+                      className="media-tile__img"
+                      onMouseEnter={(e) => showPreview(e, a.url)}
+                      onMouseLeave={() => setPreview(null)}
+                    />
+                  )}
+
+                  {k === 'video' &&
+                    (a.thumbnail_url ? (
+                      <img src={a.thumbnail_url} alt={a.filename} className="media-tile__img" />
+                    ) : (
+                      <span className="media-tile__placeholder">🎬</span>
+                    ))}
+                  {k === 'video' && <span className="media-tile__badge">▶</span>}
+
+                  {k === 'audio' &&
+                    (a.thumbnail_url ? (
+                      <img src={a.thumbnail_url} alt={a.filename} className="media-tile__img" />
+                    ) : (
+                      <span className="media-tile__placeholder">♪</span>
+                    ))}
+
+                  {k === 'file' && (
+                    <span className="media-tile__file">
+                      <span className="media-tile__ext">{fileExt(a.filename) || 'FILE'}</span>
+                    </span>
+                  )}
+
+                  {a.processing && (
+                    <span className="media-tile__processing">optimizing…</span>
+                  )}
+
+                  <span
+                    className="media-tile__remove"
+                    role="button"
+                    aria-label="Remove"
+                    title="Remove"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeAsset(a.id)
+                    }}
+                  >
+                    ✕
+                  </span>
+                </button>
+                <span className="media-name" title={a.filename}>
+                  {a.filename}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </>
+  )
+
   return (
+    <>
     <aside className={'panel' + (closing ? ' panel--closing' : '')}>
       <div className="panel__head">
         {isExisting ? (
@@ -256,107 +409,25 @@ export default function ContextPanel({
       <div className="panel__media">
         <div className="panel__media-head">
           <h3>Media</h3>
+          {assets.length > 0 && (
+            <button
+              className="icon-btn"
+              title={mediaExpanded ? 'Collapse gallery' : 'Expand gallery'}
+              aria-label={mediaExpanded ? 'Collapse gallery' : 'Expand gallery'}
+              onClick={toggleMedia}
+            >
+              <span className={'media-expand' + (mediaExpanded ? ' media-expand--open' : '')}>◀</span>
+            </button>
+          )}
           <button className="btn" onClick={() => fileRef.current?.click()} disabled={busy}>
             + Add
           </button>
           <input ref={fileRef} type="file" hidden onChange={onUpload} />
         </div>
 
-        {uploads.length > 0 && (
-          <div className="media-uploads">
-            {uploads.map((u) => (
-              <div key={u.id} className="media-upload">
-                <div className="media-upload__row">
-                  <span className="media-upload__name" title={u.name}>{u.name}</span>
-                  <span className="media-upload__pct">
-                    {u.progress < 100 ? `${u.progress}%` : 'processing…'}
-                  </span>
-                </div>
-                <div className="media-upload__bar">
-                  <div
-                    className={
-                      'media-upload__fill' +
-                      (u.progress >= 100 ? ' media-upload__fill--processing' : '')
-                    }
-                    style={{ width: `${u.progress}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {assets.length === 0 && uploads.length === 0 && (
-          <p className="media-empty">No media yet</p>
-        )}
-
-        {assets.length > 0 && (
-          <div className="media-grid">
-            {assets.map((a, i) => {
-              const k = mediaKind(a)
-              return (
-                <div key={a.id} className="media-cell">
-                  <button
-                    type="button"
-                    className={`media-tile media-tile--${k}`}
-                    onClick={() => setGalleryIndex(i)}
-                    title={a.filename}
-                  >
-                    {k === 'image' && (
-                      <img
-                        src={a.url ?? ''}
-                        alt={a.filename}
-                        className="media-tile__img"
-                        onMouseEnter={(e) => showPreview(e, a.url)}
-                        onMouseLeave={() => setPreview(null)}
-                      />
-                    )}
-
-                    {k === 'video' &&
-                      (a.thumbnail_url ? (
-                        <img src={a.thumbnail_url} alt={a.filename} className="media-tile__img" />
-                      ) : (
-                        <span className="media-tile__placeholder">🎬</span>
-                      ))}
-                    {k === 'video' && <span className="media-tile__badge">▶</span>}
-
-                    {k === 'audio' &&
-                      (a.thumbnail_url ? (
-                        <img src={a.thumbnail_url} alt={a.filename} className="media-tile__img" />
-                      ) : (
-                        <span className="media-tile__placeholder">♪</span>
-                      ))}
-
-                    {k === 'file' && (
-                      <span className="media-tile__file">
-                        <span className="media-tile__ext">{fileExt(a.filename) || 'FILE'}</span>
-                      </span>
-                    )}
-
-                    {a.processing && (
-                      <span className="media-tile__processing">optimizing…</span>
-                    )}
-
-                    <span
-                      className="media-tile__remove"
-                      role="button"
-                      aria-label="Remove"
-                      title="Remove"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removeAsset(a.id)
-                      }}
-                    >
-                      ✕
-                    </span>
-                  </button>
-                  <span className="media-name" title={a.filename}>
-                    {a.filename}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
+        {!drawerMounted && <div className="panel__media-body">{mediaBody}</div>}
+        {drawerMounted && (
+          <p className="media-collapsed-note">Gallery expanded in the drawer ◀</p>
         )}
       </div>
 
@@ -390,5 +461,23 @@ export default function ContextPanel({
         <div className="panel__saved" role="status">Saved ✓</div>
       )}
     </aside>
+
+    {drawerMounted && (
+      <div className={'media-drawer' + (mediaClosing || closing ? ' media-drawer--closing' : '')}>
+        <div className="media-drawer__head">
+          <h3 title={title || 'Media'}>{title || 'Media'}</h3>
+          <button
+            className="icon-btn"
+            title="Collapse gallery"
+            aria-label="Collapse gallery"
+            onClick={toggleMedia}
+          >
+            <span className="media-expand media-expand--open">◀</span>
+          </button>
+        </div>
+        <div className="media-drawer__body">{mediaBody}</div>
+      </div>
+    )}
+    </>
   )
 }

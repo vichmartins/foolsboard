@@ -736,6 +736,25 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
     [],
   )
 
+  // Esc cascade: the gallery drawer (handled in ContextPanel, which stops the
+  // event) takes priority; otherwise close the open panel; otherwise clear any
+  // node selection.
+  useEffect(() => {
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      // Let any open dialog, context menu, dropdown, or lightbox consume Esc first.
+      if (document.querySelector('.overlay, .ctx-menu, .gallery, [aria-expanded="true"]'))
+        return
+      if (hasPanelRef.current) {
+        closePanel()
+        return
+      }
+      if (getNodes().some((n) => n.selected)) selectNodes([])
+    }
+    window.addEventListener('keydown', onEsc)
+    return () => window.removeEventListener('keydown', onEsc)
+  }, [closePanel, selectNodes, getNodes])
+
   // File drag-and-drop onto the app. While a panel is open, dropping uploads to
   // that object; otherwise we only show a hint and never upload.
   useEffect(() => {

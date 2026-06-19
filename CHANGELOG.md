@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.9.1
+
+- The Media section can expand into a retractable drawer that slides out to the
+  left of the panel, overlaying the canvas, for browsing all of a node's files
+  in a roomy scrollable area. The toggle arrow points left to expand and rotates
+  to retract.
+- Closing the panel while the gallery is expanded now animates the drawer out in
+  sync with the panel instead of having it vanish.
+- Esc now cascades: it closes an open lightbox/dialog/dropdown first, then the
+  expanded gallery drawer, then the side panel, then clears any node selection.
+
 ## v0.9.0
 
 - The shift-drag selection rectangle is now mirrored live on the minimap (drawn
