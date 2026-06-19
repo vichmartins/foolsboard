@@ -83,8 +83,7 @@ function toRFNode(n: StoryNode): Node {
 }
 
 function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
-  const { screenToFlowPosition, getNodes, getEdges, getZoom, setCenter, deleteElements } =
-    useReactFlow()
+  const { screenToFlowPosition, getNodes, getEdges, getZoom, setCenter } = useReactFlow()
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -300,15 +299,6 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
     if (!ids.size) return
     writeClipboard(serializeSelection(getNodes(), getEdges(), ids, boardId))
   }, [boardId, getNodes, getEdges, selectedIds])
-
-  // Delete the current selection (objects and/or connections). Routes through
-  // React Flow's deleteElements so onBeforeDelete shows the confirm dialog.
-  const doDelete = useCallback(() => {
-    const ns = getNodes().filter((n) => n.selected).map((n) => ({ id: n.id }))
-    const es = getEdges().filter((e) => e.selected).map((e) => ({ id: e.id }))
-    if (!ns.length && !es.length) return
-    deleteElements({ nodes: ns, edges: es })
-  }, [getNodes, getEdges, deleteElements])
 
   // Where to drop pasted/merged content so it never lands on top of existing.
   const placementFor = useCallback(
@@ -755,11 +745,10 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
           items={[
             { label: 'Copy', mnemonic: 'C', onClick: () => doCopy() },
             { label: 'Cut', mnemonic: 't', onClick: () => void doCut() },
-            { label: 'Duplicate', mnemonic: 'u', onClick: () => void doDuplicate() },
+            { label: 'Duplicate', mnemonic: 'D', onClick: () => void doDuplicate() },
             ...(clipboardHasContent()
               ? [{ label: 'Paste', mnemonic: 'P', onClick: () => void doPaste() }]
               : []),
-            { label: 'Delete', mnemonic: 'D', danger: true, onClick: () => doDelete() },
           ]}
         />
       )}

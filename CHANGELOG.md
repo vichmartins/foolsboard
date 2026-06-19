@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.1
+
+- Removed the Delete item from the object right-click menu (deletion stays on
+  the Delete/Backspace key, with its confirmation). Duplicate's mnemonic is back
+  to `D`.
+
 ## v0.6.0
 
 - **Copy / cut / paste / duplicate** — right-click an object (or a multi-select
