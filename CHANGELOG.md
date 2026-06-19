@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.14.6
+
+- New objects are now created untyped instead of defaulting to Notes. An untyped
+  object shows a neutral "Object" tag (a lighter gray, distinct from Notes'
+  slate) on the card, in the panel header, and on the minimap; the Type dropdown
+  starts on a "Choose a type…" placeholder with no type-specific fields until a
+  type is picked. Existing objects keep their types.
+
 ## v0.14.5
 
 - The "Note" object type now displays as "Notes" (dropdown, panel tag, node-card

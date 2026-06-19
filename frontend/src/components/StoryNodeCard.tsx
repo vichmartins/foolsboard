@@ -15,6 +15,7 @@ import {
   fileExt,
   KIND_COLORS,
   mediaKind,
+  OBJECT_COLOR,
   TYPE_FIELDS,
   typeLabel,
   type Asset,
@@ -58,7 +59,7 @@ function fieldRows(kind: string, content: Record<string, unknown>): PreviewRow[]
 
 export default function StoryNodeCard({ data, selected }: NodeProps) {
   const d = data as StoryNodeData
-  const accent = KIND_COLORS[d.kind] ?? KIND_COLORS.note
+  const accent = KIND_COLORS[d.kind] ?? OBJECT_COLOR
   const [expanded, setExpanded] = useState(false)
   const [closing, setClosing] = useState(false)
   const [assets, setAssets] = useState<Asset[] | null>(null)

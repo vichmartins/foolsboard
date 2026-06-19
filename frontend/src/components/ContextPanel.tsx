@@ -13,6 +13,7 @@ import {
   KIND_COLORS,
   mediaKind,
   NODE_TYPES,
+  OBJECT_COLOR,
   TYPE_FIELDS,
   typeLabel,
   type Asset,
@@ -83,11 +84,12 @@ export default function ContextPanel({
     listAssets(node.id).then(setAssets).catch(() => setAssets([]))
   }, [node.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fields = TYPE_FIELDS[type] ?? TYPE_FIELDS.note
+  // Untyped (blank) objects show no type-specific fields until a type is chosen.
+  const fields = type ? TYPE_FIELDS[type] ?? TYPE_FIELDS.note : []
 
   // Once an object has real content (a title beyond the default, or any filled
   // field), show its title + colored type tag instead of a generic header.
-  const accent = KIND_COLORS[type] ?? KIND_COLORS.note
+  const accent = KIND_COLORS[type] ?? OBJECT_COLOR
   const hasContent = Object.values(content).some((v) => String(v ?? '').trim() !== '')
   const isExisting = (title.trim() !== '' && title.trim() !== 'New object') || hasContent
 
@@ -420,14 +422,15 @@ export default function ContextPanel({
     )}
     <aside className={'panel' + (closing ? ' panel--closing' : '')}>
       <div className="panel__head">
-        {isExisting ? (
-          <div className="panel__heading">
-            <span className="panel__kind" style={{ background: accent }}>{typeLabel(type)}</span>
-            <h2 className="panel__title" title={title || 'Untitled'}>{title || 'Untitled'}</h2>
-          </div>
-        ) : (
-          <h2>Edit Object</h2>
-        )}
+        <div className="panel__heading">
+          <span className="panel__kind" style={{ background: accent }}>{typeLabel(type)}</span>
+          <h2
+            className="panel__title"
+            title={isExisting ? title || 'Untitled' : 'Edit Object'}
+          >
+            {isExisting ? title || 'Untitled' : 'Edit Object'}
+          </h2>
+        </div>
         <button className="icon-btn" onClick={onClose} title="Close">✕</button>
       </div>
 
@@ -436,6 +439,7 @@ export default function ContextPanel({
         <Select
           value={type}
           ariaLabel="Type"
+          placeholder="Choose a type…"
           onChange={setType}
           options={NODE_TYPES.map((t) => ({
             value: t,

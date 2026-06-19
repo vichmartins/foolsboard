@@ -36,6 +36,7 @@ import { toRFEdge } from '../rfMappers'
 import {
   KIND_COLORS,
   nodePreview,
+  OBJECT_COLOR,
   type LinkRef,
   type NearbyNode,
   type Side,
@@ -559,7 +560,7 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
       event.preventDefault()
       const pos = screenToFlowPosition({ x: event.clientX, y: event.clientY })
       const created = await api.createNode(boardId, {
-        type: 'note',
+        type: '',
         title: 'New object',
         x: pos.x,
         y: pos.y,
@@ -654,7 +655,7 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
         y: (s.position.y + t.position.y) / 2,
       }
       const created = await api.createNode(boardId, {
-        type: 'note',
+        type: '',
         title: 'New step',
         x: mid.x,
         y: mid.y,
@@ -914,7 +915,7 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
           nodeColor={(n) =>
             n.selected
               ? '#818cf8'
-              : KIND_COLORS[(n.data?.kind as string) ?? 'note'] ?? '#64748b'
+              : KIND_COLORS[(n.data?.kind as string) ?? 'note'] ?? OBJECT_COLOR
           }
           nodeStrokeColor={(n) => (n.selected ? '#ffffff' : 'transparent')}
           nodeStrokeWidth={4}

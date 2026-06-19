@@ -14,9 +14,10 @@ interface Props {
   options: SelectOption[]
   onChange: (value: string) => void
   ariaLabel?: string
+  placeholder?: string
 }
 
-export default function Select({ value, options, onChange, ariaLabel }: Props) {
+export default function Select({ value, options, onChange, ariaLabel, placeholder }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const current = options.find((o) => o.value === value)
@@ -53,7 +54,9 @@ export default function Select({ value, options, onChange, ariaLabel }: Props) {
         {current?.color && (
           <span className="select__dot" style={{ background: current.color }} />
         )}
-        <span className="select__current">{current?.label ?? ''}</span>
+        <span className={'select__current' + (current ? '' : ' select__current--placeholder')}>
+          {current?.label ?? placeholder ?? ''}
+        </span>
         <span className={'select__chevron' + (open ? ' select__chevron--open' : '')}>▾</span>
       </button>
 

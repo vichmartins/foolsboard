@@ -94,7 +94,7 @@ export const NODE_TYPES = ['scene', 'character', 'dialog', 'event', 'note'] as c
 export type NodeKind = (typeof NODE_TYPES)[number]
 
 // Display label for an object kind (the stored type value stays unchanged).
-const TYPE_LABELS: Record<string, string> = { note: 'Notes' }
+const TYPE_LABELS: Record<string, string> = { note: 'Notes', '': 'Object' }
 export function typeLabel(type: string): string {
   return TYPE_LABELS[type] ?? type.charAt(0).toUpperCase() + type.slice(1)
 }
@@ -107,6 +107,10 @@ export const KIND_COLORS: Record<string, string> = {
   event: '#ef4444',
   note: '#64748b',
 }
+
+// Neutral tag color for an untyped ("Object") node -- a lighter gray, distinct
+// from the slate used by Notes.
+export const OBJECT_COLOR = '#94a3b8'
 
 // Structured fields shown in the context panel, per object kind. All values are
 // stored inside the node's `content` JSON, so adding a field needs no migration.

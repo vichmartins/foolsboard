@@ -1003,6 +1003,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.select__current--placeholder {
+  color: var(--text-dim);
+}
 .select__dot {
   width: 10px;
   height: 10px;
