@@ -1,4 +1,5 @@
-:root {
+:root,
+:root[data-theme='dark'] {
   --bg: #0f1115;
   --bg-elev: #171a21;
   --bg-elev-2: #1f232c;
@@ -7,9 +8,25 @@
   --text-dim: #9aa3b2;
   --accent: #6366f1;
   --danger: #ef4444;
-
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --minimap-mask: rgba(15, 17, 21, 0.6);
   color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --bg: #f4f6f9;
+  --bg-elev: #ffffff;
+  --bg-elev-2: #eef1f5;
+  --border: #d6dae2;
+  --text: #1b1f27;
+  --text-dim: #5a6472;
+  --accent: #6366f1;
+  --danger: #dc2626;
+  --minimap-mask: rgba(0, 0, 0, 0.12);
+  color-scheme: light;
+}
+
+:root {
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 

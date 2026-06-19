@@ -109,6 +109,46 @@
   gap: 2px;
 }
 
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 8px;
+}
+.theme-toggle svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+.theme-toggle__icon {
+  display: inline-flex;
+  /* Replays each time the icon swaps (the span is keyed by theme). */
+  animation: theme-icon-in 0.4s ease;
+}
+@keyframes theme-icon-in {
+  from {
+    transform: rotate(-90deg) scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* View Transition: circular wipe between themes (driven from ThemeToggle).
+   Disable the default cross-fade so only our expanding circle plays. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  z-index: 1;
+}
+::view-transition-old(root) {
+  z-index: 0;
+}
+
 /* --- Stage / canvas ------------------------------------------------------ */
 .stage {
   position: relative;
@@ -143,6 +183,38 @@
 /* React Flow surface tweaks */
 .react-flow {
   background: var(--bg);
+}
+
+/* Controls — themed to match the dark UI (defaults are bright white) */
+.react-flow__controls {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+.react-flow__controls-button {
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+  fill: var(--text-dim);
+}
+.react-flow__controls-button:hover {
+  background: var(--bg-elev-2);
+  color: var(--text);
+  fill: var(--text);
+}
+.react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+/* MiniMap — themed to match the dark UI */
+.react-flow__minimap {
+  background-color: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.react-flow__minimap-mask {
+  fill: var(--minimap-mask);
 }
 
 /* --- Story node card ----------------------------------------------------- */

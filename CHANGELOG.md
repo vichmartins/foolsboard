@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.5.3
+
+- **Light/dark theme toggle** — a new sun/moon button in the top bar switches
+  between a dark and a light palette. The choice is saved and restored, defaults
+  to your OS preference on first visit, and is applied before first paint so
+  there's no flash. Switching plays an animated circular wipe that expands from
+  the button (View Transitions API, with an instant fallback and reduced-motion
+  support); the icon spins as it swaps.
+- **Themed canvas chrome** — the React Flow controls and minimap now match the
+  app's palette in both themes instead of rendering bright white.
+
 ## v0.5.2
 
 - **Grab a link's endpoint to reposition, reassign, or delete it** — the

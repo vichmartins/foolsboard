@@ -3,6 +3,7 @@ import * as api from './api'
 import Canvas from './components/Canvas'
 import ConfirmDialog from './components/ConfirmDialog'
 import PromptDialog from './components/PromptDialog'
+import ThemeToggle from './components/ThemeToggle'
 import type { Board } from './types'
 import './App.css'
 
@@ -94,6 +95,8 @@ export default function App() {
         <span className="hint">
           Right-click canvas to add · drag handles to link · right-click a link to edit · Del to remove
         </span>
+
+        <ThemeToggle />
       </header>
 
       <main className="stage">
