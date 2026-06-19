@@ -6,6 +6,8 @@ imported; this single import point guarantees that.
 from .asset import Asset
 from .board import Board
 from .edge import Edge
+from .invite import InviteCode
 from .node import Node
+from .user import User
 
-__all__ = ["Asset", "Board", "Edge", "Node"]
+__all__ = ["Asset", "Board", "Edge", "InviteCode", "Node", "User"]

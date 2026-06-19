@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.14.0
+
+- Added user accounts. A Romm-style login/register screen gates the app; the
+  first account becomes the admin (no code), everyone after needs a single-use
+  invite code (admin generates them from the profile menu). Each user's boards
+  are private to them; the first account claims any pre-auth boards.
+- Top-right profile menu with avatar (initials fallback) and a dropdown:
+  account settings (username/email, profile photo, change password), invite
+  codes (admin), and sign out.
+- Backend: User + InviteCode models and Board.owner_id (new migration);
+  PBKDF2 password hashing + HS256 tokens using only the standard library; every
+  board/node/edge/asset/link endpoint now requires auth and enforces ownership.
+  Set JWT_SECRET in backend/.env for non-local use.
+
 ## v0.13.3
 
 - Faster board load: the last-opened board's graph is now prefetched in parallel

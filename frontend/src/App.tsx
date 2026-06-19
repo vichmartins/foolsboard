@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react'
 import * as api from './api'
+import { useAuth } from './auth'
+import AccountDialog from './components/AccountDialog'
 import BoardSelect from './components/BoardSelect'
 import BrandMenu from './components/BrandMenu'
 import Canvas from './components/Canvas'
+import InvitesDialog from './components/InvitesDialog'
+import LoginScreen from './components/LoginScreen'
+import ProfileMenu from './components/ProfileMenu'
 import PromptDialog from './components/PromptDialog'
 import MergeDialog from './components/MergeDialog'
 import TypeToConfirmDialog from './components/TypeToConfirmDialog'
@@ -11,10 +16,12 @@ import { PencilIcon, TrashIcon } from './components/icons'
 import type { Board } from './types'
 import './App.css'
 
-export default function App() {
+function Workspace() {
   const [boards, setBoards] = useState<Board[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'new' | 'rename' | 'delete' | 'merge' | null>(null)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [invitesOpen, setInvitesOpen] = useState(false)
   // Source boards to merge into the active board; handed to Canvas to import.
   const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
 
@@ -111,6 +118,10 @@ export default function App() {
         </button>
 
         <ThemeToggle />
+        <ProfileMenu
+          onOpenAccount={() => setAccountOpen(true)}
+          onOpenInvites={() => setInvitesOpen(true)}
+        />
       </header>
 
       <main className="stage">
@@ -170,6 +181,17 @@ export default function App() {
           onCancel={() => setDialog(null)}
         />
       )}
+
+      {accountOpen && <AccountDialog onClose={() => setAccountOpen(false)} />}
+      {invitesOpen && <InvitesDialog onClose={() => setInvitesOpen(false)} />}
     </div>
   )
+}
+
+// Gate the whole app on authentication: the workspace (and its data hooks) only
+// mounts once a user is signed in.
+export default function App() {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="auth-screen" />
+  return user ? <Workspace /> : <LoginScreen />
 }

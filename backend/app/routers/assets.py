@@ -29,7 +29,8 @@ from sqlalchemy.orm import Session
 from ..compression import compress
 from ..config import settings
 from ..database import SessionLocal, get_db
-from ..models import Asset, Node
+from ..deps import get_current_user, get_owned_node
+from ..models import Asset, Board, Node, User
 from ..schemas import AssetOut
 from ..storage import storage
 from ..thumbnails import generate_thumbnail
@@ -68,13 +69,6 @@ def _kind_from_content_type(content_type: str) -> str:
     return "file"
 
 
-def _get_node(node_id: UUID, db: Session) -> Node:
-    node = db.get(Node, node_id)
-    if node is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Node not found")
-    return node
-
-
 def _to_out(asset: Asset) -> AssetOut:
     out = AssetOut.model_validate(asset)
     out.url = storage.url_for(asset.storage_key)
@@ -84,9 +78,10 @@ def _to_out(asset: Asset) -> AssetOut:
 
 
 @router.get("", response_model=list[AssetOut])
-def list_assets(node_id: UUID, db: Session = Depends(get_db)) -> list[AssetOut]:
-    _get_node(node_id, db)
-    assets = db.scalars(select(Asset).where(Asset.node_id == node_id))
+def list_assets(
+    node: Node = Depends(get_owned_node), db: Session = Depends(get_db)
+) -> list[AssetOut]:
+    assets = db.scalars(select(Asset).where(Asset.node_id == node.id))
     return [_to_out(a) for a in assets]
 
 
@@ -135,12 +130,12 @@ def _process_compression(asset_id: UUID) -> None:
 
 @router.post("", response_model=AssetOut, status_code=status.HTTP_201_CREATED)
 def upload_asset(
-    node_id: UUID,
     background_tasks: BackgroundTasks,
+    node: Node = Depends(get_owned_node),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ) -> AssetOut:
-    _get_node(node_id, db)
+    node_id = node.id
 
     filename = file.filename or "upload.bin"
     content_type = _resolve_type(file.content_type or "", filename)
@@ -230,22 +225,29 @@ def upload_asset(
 
 @router.post("/reference", response_model=list[AssetOut], status_code=status.HTTP_201_CREATED)
 def reference_assets(
-    node_id: UUID,
     payload: AssetReferenceIn,
+    node: Node = Depends(get_owned_node),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[AssetOut]:
     """Attach existing media (from other nodes) to this node by sharing their
     stored files -- the dedup mechanism, keyed by asset id instead of an upload.
     Lets the UI pull a nearby node's media into the node being edited instantly."""
-    _get_node(node_id, db)
     created: list[Asset] = []
     for source_id in payload.asset_ids:
         src = db.get(Asset, source_id)
         if src is None:
             continue
+        # Only reference media the caller owns (the source node's board owner).
+        src_node = db.get(Node, src.node_id)
+        if src_node is None:
+            continue
+        src_board = db.get(Board, src_node.board_id)
+        if src_board is None or src_board.owner_id != user.id:
+            continue
         created.append(
             Asset(
-                node_id=node_id,
+                node_id=node.id,
                 kind=src.kind,
                 filename=src.filename,
                 content_type=src.content_type,
@@ -266,10 +268,10 @@ def reference_assets(
 
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_asset(
-    node_id: UUID, asset_id: UUID, db: Session = Depends(get_db)
+    asset_id: UUID, node: Node = Depends(get_owned_node), db: Session = Depends(get_db)
 ) -> None:
     asset = db.get(Asset, asset_id)
-    if asset is None or asset.node_id != node_id:
+    if asset is None or asset.node_id != node.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Asset not found")
     key, thumb = asset.storage_key, asset.thumbnail_key
     db.delete(asset)

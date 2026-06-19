@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ORMModel(BaseModel):
@@ -119,3 +119,62 @@ class BoardGraph(BaseModel):
     board: BoardOut
     nodes: list[NodeOut]
     edges: list[EdgeOut]
+
+
+# --- Auth / Users -----------------------------------------------------------
+class RegisterIn(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    username: str = Field(min_length=2, max_length=60)
+    password: str = Field(min_length=8, max_length=200)
+    invite_code: str | None = None
+
+    @field_validator("email")
+    @classmethod
+    def _email_ok(cls, v: str) -> str:
+        v = v.strip().lower()
+        if "@" not in v or "." not in v.rsplit("@", 1)[-1]:
+            raise ValueError("Enter a valid email address")
+        return v
+
+    @field_validator("username")
+    @classmethod
+    def _username_ok(cls, v: str) -> str:
+        return v.strip()
+
+
+class LoginIn(BaseModel):
+    identifier: str = Field(min_length=1)  # email or username
+    password: str = Field(min_length=1)
+
+
+class ProfileUpdate(BaseModel):
+    email: str | None = Field(default=None, min_length=3, max_length=320)
+    username: str | None = Field(default=None, min_length=2, max_length=60)
+
+
+class PasswordUpdate(BaseModel):
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=8, max_length=200)
+
+
+class UserOut(ORMModel):
+    id: UUID
+    email: str
+    username: str
+    is_admin: bool
+    created_at: datetime
+    avatar_url: str | None = None
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserOut
+
+
+class InviteOut(ORMModel):
+    id: UUID
+    code: str
+    created_at: datetime
+    used_by_id: UUID | None = None
+    used_at: datetime | None = None

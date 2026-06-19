@@ -20,10 +20,14 @@ from html.parser import HTMLParser
 from urllib.parse import unquote, urljoin, urlparse
 from urllib.request import Request, urlopen
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
-router = APIRouter(prefix="/api/links", tags=["links"])
+from ..deps import get_current_user
+
+router = APIRouter(
+    prefix="/api/links", tags=["links"], dependencies=[Depends(get_current_user)]
+)
 
 MAX_BYTES = 600_000
 TIMEOUT = 6

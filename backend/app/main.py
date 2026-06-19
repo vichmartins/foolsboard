@@ -16,7 +16,7 @@ from sqlalchemy import select, update
 from .config import settings
 from .database import SessionLocal
 from .models import Asset
-from .routers import assets, boards, edges, links, nodes
+from .routers import assets, auth, boards, edges, invites, links, nodes
 
 app = FastAPI(title="foolsboard API", version="0.4.0")
 
@@ -78,6 +78,8 @@ if settings.storage_backend == "local":
         name="media",
     )
 
+app.include_router(auth.router)
+app.include_router(invites.router)
 app.include_router(boards.router)
 app.include_router(nodes.router)
 app.include_router(edges.router)

@@ -2148,12 +2148,320 @@
 }
 
 /* Respect users who prefer minimal motion. */
+/* --- Auth screen (login / register) --------------------------------------- */
+.auth-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(
+      1100px 560px at 50% -10%,
+      rgba(99, 102, 241, 0.18),
+      transparent 60%
+    ),
+    var(--bg);
+}
+.auth-themetoggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 32px 28px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  animation: auth-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes auth-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.auth-brand {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+.auth-brand span {
+  color: var(--accent);
+}
+.auth-sub {
+  margin: -6px 0 8px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+.auth-field input {
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.auth-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.auth-error {
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: 13px;
+}
+.auth-submit {
+  margin-top: 4px;
+  padding: 11px;
+  font-size: 14px;
+}
+.auth-toggle {
+  padding: 4px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.auth-toggle:hover {
+  color: var(--text);
+}
+
+/* --- Profile menu ---------------------------------------------------------- */
+.profile {
+  position: relative;
+}
+.profile__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.profile__avatar:hover {
+  border-color: var(--accent);
+}
+.profile__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 70;
+  min-width: 210px;
+  padding: 6px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  transform-origin: top right;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.profile__menu--open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.profile__head {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.profile__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.profile__email {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile__item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.profile__item:hover {
+  background: var(--bg-hover);
+}
+.profile__item--danger {
+  color: var(--danger);
+}
+.profile__item--danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+/* --- Account dialog -------------------------------------------------------- */
+.dialog__text {
+  margin: -4px 0 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.account-avatar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+.account-avatar__img,
+.account-avatar__ph {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 50%;
+}
+.account-avatar__img {
+  object-fit: cover;
+}
+.account-avatar__ph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.account-avatar__actions {
+  display: flex;
+  gap: 8px;
+}
+.account-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.account-section .btn--primary {
+  align-self: flex-start;
+}
+.account-h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.account-msg {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+
+/* --- Invites dialog -------------------------------------------------------- */
+.invites {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.invites__empty {
+  padding: 6px 2px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.invite {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elev-2);
+}
+.invite--used {
+  opacity: 0.6;
+}
+.invite__code {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.invite__used {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.invite__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.invite__copy {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .overlay,
   .dialog,
   .ctx-menu,
   .panel,
   .media-drawer,
+  .auth-card,
   .drop-overlay,
   .drop-overlay__card,
   .media-upload__fill--processing,
@@ -2169,7 +2477,8 @@
   .nearby-section__caret,
   .story-node__more,
   .story-node__more-inner,
-  .story-node__toggle {
+  .story-node__toggle,
+  .profile__menu {
     transition-duration: 0.01ms;
   }
   /* Keep the toast visible (no fade) rather than animating it away. */

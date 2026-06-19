@@ -1,4 +1,4 @@
-"""Edge endpoints, scoped under a board."""
+"""Edge endpoints, scoped under a board the caller owns."""
 from __future__ import annotations
 
 from uuid import UUID
@@ -8,15 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
+from ..deps import get_owned_board
 from ..models import Board, Edge, Node
 from ..schemas import EdgeCreate, EdgeOut, EdgeUpdate
 
 router = APIRouter(prefix="/api/boards/{board_id}/edges", tags=["edges"])
-
-
-def _ensure_board(board_id: UUID, db: Session) -> None:
-    if db.get(Board, board_id) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Board not found")
 
 
 def _get_edge(board_id: UUID, edge_id: UUID, db: Session) -> Edge:
@@ -36,19 +32,21 @@ def _validate_endpoint(board_id: UUID, node_id: UUID, db: Session) -> None:
 
 
 @router.get("", response_model=list[EdgeOut])
-def list_edges(board_id: UUID, db: Session = Depends(get_db)) -> list[Edge]:
-    _ensure_board(board_id, db)
-    return list(db.scalars(select(Edge).where(Edge.board_id == board_id)))
+def list_edges(
+    board: Board = Depends(get_owned_board), db: Session = Depends(get_db)
+) -> list[Edge]:
+    return list(db.scalars(select(Edge).where(Edge.board_id == board.id)))
 
 
 @router.post("", response_model=EdgeOut, status_code=status.HTTP_201_CREATED)
 def create_edge(
-    board_id: UUID, payload: EdgeCreate, db: Session = Depends(get_db)
+    payload: EdgeCreate,
+    board: Board = Depends(get_owned_board),
+    db: Session = Depends(get_db),
 ) -> Edge:
-    _ensure_board(board_id, db)
-    _validate_endpoint(board_id, payload.source_id, db)
-    _validate_endpoint(board_id, payload.target_id, db)
-    edge = Edge(board_id=board_id, **payload.model_dump())
+    _validate_endpoint(board.id, payload.source_id, db)
+    _validate_endpoint(board.id, payload.target_id, db)
+    edge = Edge(board_id=board.id, **payload.model_dump())
     db.add(edge)
     db.commit()
     db.refresh(edge)
@@ -57,12 +55,12 @@ def create_edge(
 
 @router.patch("/{edge_id}", response_model=EdgeOut)
 def update_edge(
-    board_id: UUID,
     edge_id: UUID,
     payload: EdgeUpdate,
+    board: Board = Depends(get_owned_board),
     db: Session = Depends(get_db),
 ) -> Edge:
-    edge = _get_edge(board_id, edge_id, db)
+    edge = _get_edge(board.id, edge_id, db)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(edge, field, value)
     db.commit()
@@ -71,7 +69,9 @@ def update_edge(
 
 
 @router.delete("/{edge_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_edge(board_id: UUID, edge_id: UUID, db: Session = Depends(get_db)) -> None:
-    edge = _get_edge(board_id, edge_id, db)
+def delete_edge(
+    edge_id: UUID, board: Board = Depends(get_owned_board), db: Session = Depends(get_db)
+) -> None:
+    edge = _get_edge(board.id, edge_id, db)
     db.delete(edge)
     db.commit()

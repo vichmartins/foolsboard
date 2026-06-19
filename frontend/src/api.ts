@@ -4,12 +4,111 @@ import type {
   Asset,
   Board,
   BoardGraph,
+  Invite,
   LinkRef,
   StoryEdge,
   StoryNode,
+  User,
 } from './types'
 
 const http = axios.create({ baseURL: '/api' })
+
+// --- Auth tokens -----------------------------------------------------------
+const TOKEN_KEY = 'foolsboard:token'
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY)
+}
+export function setToken(token: string | null): void {
+  if (token) localStorage.setItem(TOKEN_KEY, token)
+  else localStorage.removeItem(TOKEN_KEY)
+}
+
+http.interceptors.request.use((config) => {
+  const token = getToken()
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+// Pull a human-readable message out of a FastAPI error response.
+export function apiError(e: unknown, fallback: string): string {
+  const detail = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail) && typeof detail[0]?.msg === 'string') return detail[0].msg as string
+  return fallback
+}
+
+let onUnauthorized: (() => void) | null = null
+export function setUnauthorizedHandler(fn: () => void): void {
+  onUnauthorized = fn
+}
+http.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err?.response?.status === 401) {
+      setToken(null)
+      onUnauthorized?.()
+    }
+    return Promise.reject(err)
+  },
+)
+
+interface AuthResult {
+  access_token: string
+  user: User
+}
+
+export async function register(data: {
+  email: string
+  username: string
+  password: string
+  invite_code?: string
+}): Promise<User> {
+  const res = await http.post<AuthResult>('/auth/register', data)
+  setToken(res.data.access_token)
+  return res.data.user
+}
+
+export async function login(identifier: string, password: string): Promise<User> {
+  const res = await http.post<AuthResult>('/auth/login', { identifier, password })
+  setToken(res.data.access_token)
+  return res.data.user
+}
+
+export async function getMe(): Promise<User> {
+  return (await http.get('/auth/me')).data
+}
+export async function updateProfile(data: { email?: string; username?: string }): Promise<User> {
+  return (await http.patch('/auth/me', data)).data
+}
+export async function updatePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await http.patch('/auth/me/password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+}
+export async function uploadAvatar(file: File): Promise<User> {
+  const form = new FormData()
+  form.append('file', file)
+  return (await http.post('/auth/me/avatar', form)).data
+}
+export async function deleteAvatar(): Promise<User> {
+  return (await http.delete('/auth/me/avatar')).data
+}
+export function logout(): void {
+  setToken(null)
+}
+
+// --- Invites (admin) -------------------------------------------------------
+export async function listInvites(): Promise<Invite[]> {
+  return (await http.get('/invites')).data
+}
+export async function createInvite(): Promise<Invite> {
+  return (await http.post('/invites')).data
+}
+export async function deleteInvite(id: string): Promise<void> {
+  await http.delete(`/invites/${id}`)
+}
 
 // --- Links -----------------------------------------------------------------
 // Fetch Open Graph / meta preview for a URL (server-side, to dodge CORS).

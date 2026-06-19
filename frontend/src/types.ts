@@ -8,6 +8,23 @@ export interface Board {
   updated_at: string
 }
 
+export interface User {
+  id: string
+  email: string
+  username: string
+  is_admin: boolean
+  created_at: string
+  avatar_url: string | null
+}
+
+export interface Invite {
+  id: string
+  code: string
+  created_at: string
+  used_by_id: string | null
+  used_at: string | null
+}
+
 export interface StoryNode {
   id: string
   board_id: string

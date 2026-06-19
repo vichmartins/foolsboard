@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     # Frontend origins allowed to call the API (Vite dev server by default).
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    # --- Auth ---
+    # Secret for signing access tokens. CHANGE THIS via JWT_SECRET in .env for
+    # any real deployment; the default only exists so dev works out of the box.
+    jwt_secret: str = "dev-insecure-change-me-please"
+    jwt_expire_minutes: int = 60 * 24 * 14  # 14 days
+    # PBKDF2-HMAC-SHA256 iterations for password hashing.
+    password_iterations: int = 210_000
+
     # --- Media compression (applied on upload; result kept only if smaller) ---
     # Set compress_media=False to store uploads untouched.
     compress_media: bool = True
