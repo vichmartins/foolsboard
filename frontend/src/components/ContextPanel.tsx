@@ -201,57 +201,61 @@ export default function ContextPanel({
             {assets.map((a, i) => {
               const k = mediaKind(a)
               return (
-                <button
-                  key={a.id}
-                  type="button"
-                  className={`media-tile media-tile--${k}`}
-                  onClick={() => setGalleryIndex(i)}
-                  title={a.filename}
-                >
-                  {k === 'image' && (
-                    <img
-                      src={a.url ?? ''}
-                      alt={a.filename}
-                      className="media-tile__img"
-                      onMouseEnter={(e) => showPreview(e, a.url)}
-                      onMouseLeave={() => setPreview(null)}
-                    />
-                  )}
-
-                  {k === 'video' &&
-                    (a.thumbnail_url ? (
-                      <img src={a.thumbnail_url} alt={a.filename} className="media-tile__img" />
-                    ) : (
-                      <span className="media-tile__placeholder">🎬</span>
-                    ))}
-                  {k === 'video' && <span className="media-tile__badge">▶</span>}
-
-                  {k === 'audio' &&
-                    (a.thumbnail_url ? (
-                      <img src={a.thumbnail_url} alt={a.filename} className="media-tile__img" />
-                    ) : (
-                      <span className="media-tile__placeholder">♪</span>
-                    ))}
-
-                  {k === 'file' && (
-                    <span className="media-tile__file">
-                      <span className="media-tile__ext">{fileExt(a.filename) || 'FILE'}</span>
-                    </span>
-                  )}
-
-                  <span
-                    className="media-tile__remove"
-                    role="button"
-                    aria-label="Remove"
-                    title="Remove"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      removeAsset(a.id)
-                    }}
+                <div key={a.id} className="media-cell">
+                  <button
+                    type="button"
+                    className={`media-tile media-tile--${k}`}
+                    onClick={() => setGalleryIndex(i)}
+                    title={a.filename}
                   >
-                    ✕
+                    {k === 'image' && (
+                      <img
+                        src={a.url ?? ''}
+                        alt={a.filename}
+                        className="media-tile__img"
+                        onMouseEnter={(e) => showPreview(e, a.url)}
+                        onMouseLeave={() => setPreview(null)}
+                      />
+                    )}
+
+                    {k === 'video' &&
+                      (a.thumbnail_url ? (
+                        <img src={a.thumbnail_url} alt={a.filename} className="media-tile__img" />
+                      ) : (
+                        <span className="media-tile__placeholder">🎬</span>
+                      ))}
+                    {k === 'video' && <span className="media-tile__badge">▶</span>}
+
+                    {k === 'audio' &&
+                      (a.thumbnail_url ? (
+                        <img src={a.thumbnail_url} alt={a.filename} className="media-tile__img" />
+                      ) : (
+                        <span className="media-tile__placeholder">♪</span>
+                      ))}
+
+                    {k === 'file' && (
+                      <span className="media-tile__file">
+                        <span className="media-tile__ext">{fileExt(a.filename) || 'FILE'}</span>
+                      </span>
+                    )}
+
+                    <span
+                      className="media-tile__remove"
+                      role="button"
+                      aria-label="Remove"
+                      title="Remove"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeAsset(a.id)
+                      }}
+                    >
+                      ✕
+                    </span>
+                  </button>
+                  <span className="media-name" title={a.filename}>
+                    {a.filename}
                   </span>
-                </button>
+                </div>
               )
             })}
           </div>

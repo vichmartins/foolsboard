@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.4
+
+- Media tiles in the object panel now show the file name beneath each tile
+  (truncated to two lines, full name still on hover), so audio and other files
+  are identifiable at a glance.
+
 ## v0.7.3
 
 - The app now reopens the **last board you had open** after a refresh or restart
