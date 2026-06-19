@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.13.1
+
+- The node-card content preview now shows real media thumbnails and link
+  preview cards, and clicking a thumbnail opens the full lightbox (image
+  zoom/pan, video and audio playback, file download) -- portaled to the body so
+  it isn't scaled by the canvas. Capped at 8 thumbnails (a "+N" tile opens the
+  lightbox at the rest) and 4 link previews (with a "+N more" line).
+- Double-clicking the preview chevron no longer also opens the edit panel.
+
 ## v0.13.0
 
 - Node cards now show a chevron on hover that expands an in-card preview of the
