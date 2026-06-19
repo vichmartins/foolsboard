@@ -5,6 +5,7 @@ response includes a ready-to-use `url` resolved through the active backend.
 """
 from __future__ import annotations
 
+import hashlib
 import io
 import mimetypes
 import shutil
@@ -89,6 +90,15 @@ def _local_path(key: str) -> Path:
     return Path(settings.storage_local_dir) / key
 
 
+def _hash_file(path: Path) -> str:
+    """SHA-256 of a file, streamed so large videos don't load fully in memory."""
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        while chunk := f.read(1024 * 1024):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def _process_compression(asset_id: UUID) -> None:
     """Background pass: recompress an asset's stored file and swap it in when
     smaller. Runs in its own DB session after the upload response was sent."""
@@ -137,6 +147,33 @@ def upload_asset(
         with src_path.open("wb") as f:
             shutil.copyfileobj(file.file, f)
 
+        # Deduplicate: if this exact content was already uploaded and processed,
+        # point the new node's asset at the same stored file (instant, no
+        # re-compression). Only match finished assets so we never reference a
+        # storage_key that a background pass is still about to swap.
+        content_hash = _hash_file(src_path)
+        existing = db.scalars(
+            select(Asset)
+            .where(Asset.content_hash == content_hash, Asset.processing.is_(False))
+            .order_by(Asset.created_at)
+        ).first()
+        if existing is not None:
+            asset = Asset(
+                node_id=node_id,
+                kind=existing.kind,
+                filename=existing.filename,
+                content_type=existing.content_type,
+                size=existing.size,
+                storage_key=existing.storage_key,
+                thumbnail_key=existing.thumbnail_key,
+                processing=False,
+                content_hash=content_hash,
+            )
+            db.add(asset)
+            db.commit()
+            db.refresh(asset)
+            return _to_out(asset)
+
         store_path, store_name, store_ct, store_kind = src_path, filename, content_type, kind
         processing = False
 
@@ -173,6 +210,7 @@ def upload_asset(
             storage_key=key,
             thumbnail_key=thumbnail_key,
             processing=processing,
+            content_hash=content_hash,
         )
         db.add(asset)
         db.commit()
@@ -192,8 +230,11 @@ def delete_asset(
     asset = db.get(Asset, asset_id)
     if asset is None or asset.node_id != node_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Asset not found")
-    storage.delete(asset.storage_key)
-    if asset.thumbnail_key:
-        storage.delete(asset.thumbnail_key)
+    key, thumb = asset.storage_key, asset.thumbnail_key
     db.delete(asset)
     db.commit()
+    # Files may be shared with other nodes via dedup -- only remove the last ref.
+    if db.scalars(select(Asset.id).where(Asset.storage_key == key)).first() is None:
+        storage.delete(key)
+    if thumb and db.scalars(select(Asset.id).where(Asset.thumbnail_key == thumb)).first() is None:
+        storage.delete(thumb)

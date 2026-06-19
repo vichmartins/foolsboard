@@ -45,4 +45,10 @@ class Asset(UUIDMixin, TimestampMixin, Base):
     # already usable; the optimized version swaps in when done).
     processing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
+    # SHA-256 of the *original* uploaded bytes. Used to deduplicate identical
+    # uploads: a matching already-processed asset's stored file is reused instead
+    # of storing and re-compressing the same content again. Multiple assets may
+    # therefore share a storage_key / thumbnail_key.
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+
     node: Mapped["Node"] = relationship(back_populates="assets")

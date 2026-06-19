@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.11.0
+
+- Media uploads are now deduplicated by content. Uploading the same file to a
+  second node reuses the already-stored (and already-optimized) file instead of
+  storing and re-compressing a copy, so it's instant. Assets carry a SHA-256
+  content_hash (new migration); file deletion is reference-counted so a shared
+  file is only removed when the last node referencing it drops it.
+
 ## v0.10.1
 
 - Gave the side panel's References and Media sections more separation, and the
