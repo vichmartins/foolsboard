@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.6.2
+
+- A single click on an object now just selects it; the editing panel opens on
+  double-click instead.
+
 ## v0.6.1
 
 - Removed the Delete item from the object right-click menu (deletion stays on

@@ -679,7 +679,7 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
         onConnectEnd={onConnectEnd}
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
-        onNodeClick={(_, n) => setSelectedId(n.id)}
+        onNodeDoubleClick={(_, n) => setSelectedId(n.id)}
         onPaneClick={() => setSelectedId(null)}
         onPaneContextMenu={onPaneContextMenu}
         onNodeContextMenu={onNodeContextMenu}
