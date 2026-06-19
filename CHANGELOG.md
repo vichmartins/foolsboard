@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.6.3
+
+- The right-click context menu now opens with a quick pop that grows from the
+  cursor (fast, with a slight overshoot), and respects reduced-motion.
+
 ## v0.6.2
 
 - A single click on an object now just selects it; the editing panel opens on

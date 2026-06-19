@@ -515,7 +515,19 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-  animation: ctx-in 0.12s ease;
+  /* Quick pop that grows from the cursor, with a slight overshoot. */
+  transform-origin: top left;
+  animation: ctx-menu-in 0.15s cubic-bezier(0.2, 0.9, 0.25, 1.15);
+}
+@keyframes ctx-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 @keyframes ctx-in {
   from { opacity: 0; transform: scale(0.97); }
@@ -727,7 +739,8 @@
 /* Respect users who prefer minimal motion. */
 @media (prefers-reduced-motion: reduce) {
   .overlay,
-  .dialog {
+  .dialog,
+  .ctx-menu {
     animation-duration: 0.01ms;
   }
 }
