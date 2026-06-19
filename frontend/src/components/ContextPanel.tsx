@@ -49,6 +49,8 @@ export default function ContextPanel({
   const [content, setContent] = useState<Record<string, unknown>>(node.content ?? {})
   const [assets, setAssets] = useState<Asset[]>([])
   const [busy, setBusy] = useState(false)
+  const [justSaved, setJustSaved] = useState(false)
+  const savedTimer = useRef<number | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null)
   const [preview, setPreview] = useState<{ url: string; top: number } | null>(null)
@@ -83,10 +85,17 @@ export default function ContextPanel({
     try {
       const updated = await updateNode(boardId, node.id, { title, type, content })
       onChange(updated)
+      setJustSaved(true)
+      if (savedTimer.current) window.clearTimeout(savedTimer.current)
+      savedTimer.current = window.setTimeout(() => setJustSaved(false), 1800)
     } finally {
       setBusy(false)
     }
   }
+
+  useEffect(() => () => {
+    if (savedTimer.current) window.clearTimeout(savedTimer.current)
+  }, [])
 
   // Ctrl/Cmd+S saves while the panel is open (reads the latest save via a ref).
   const saveRef = useRef(save)
@@ -368,6 +377,10 @@ export default function ContextPanel({
           onConfirm={removeNode}
           onCancel={() => setConfirmDelete(false)}
         />
+      )}
+
+      {justSaved && (
+        <div className="panel__saved" role="status">Saved ✓</div>
       )}
     </aside>
   )

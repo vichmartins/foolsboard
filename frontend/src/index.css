@@ -8,6 +8,7 @@
   --text-dim: #9aa3b2;
   --accent: #6366f1;
   --danger: #ef4444;
+  --bg-hover: #262b35;
   --minimap-mask: rgba(11, 12, 16, 0.69);
   color-scheme: dark;
 }
@@ -21,6 +22,7 @@
   --text-dim: #5a6472;
   --accent: #6366f1;
   --danger: #dc2626;
+  --bg-hover: #e2e6ec;
   --minimap-mask: rgba(0, 0, 0, 0.12);
   color-scheme: light;
 }

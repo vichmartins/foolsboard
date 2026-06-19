@@ -122,7 +122,7 @@
   transition: background 0.12s, border-color 0.12s;
 }
 .btn:hover {
-  background: #262b35;
+  background: var(--bg-hover);
 }
 .btn--primary {
   background: var(--accent);
@@ -477,6 +477,29 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Transient "Saved" toast inside the panel (fades in, holds, fades out). */
+.panel__saved {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 60;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  animation: saved-toast 1.8s ease both;
+}
+@keyframes saved-toast {
+  0% { opacity: 0; transform: translateY(8px); }
+  12% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
 }
 
 .field {
@@ -1209,5 +1232,9 @@
   }
   .brand-dropdown {
     transition-duration: 0.01ms;
+  }
+  /* Keep the toast visible (no fade) rather than animating it away. */
+  .panel__saved {
+    animation: none;
   }
 }

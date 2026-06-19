@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.8.5
+
+- **Fix:** top-bar buttons (New board, Merge, …) no longer turn near-black on
+  hover in light mode — hover now uses a theme-aware `--bg-hover` token.
+- Saving an object (Save button or Ctrl/Cmd+S) shows a brief "Saved ✓" toast in
+  the panel instead of updating silently. Respects reduced-motion.
+
 ## v0.8.4
 
 - Added right padding in the Keyboard shortcuts dialog so the key chips no longer
