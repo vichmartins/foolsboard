@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import io
 import mimetypes
-import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -17,6 +16,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..compression import compress
 from ..database import get_db
 from ..models import Asset, Node
 from ..schemas import AssetOut
@@ -85,30 +85,39 @@ def upload_asset(
 
     filename = file.filename or "upload.bin"
     content_type = _resolve_type(file.content_type or "", filename)
-    kind = _kind_from_content_type(content_type)
 
-    # Stage the upload on disk so ffmpeg (thumbnail step) can read it by path,
-    # then persist the bytes (and any generated thumbnail) to storage.
-    suffix = Path(filename).suffix
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        shutil.copyfileobj(file.file, tmp)
-        tmp_path = Path(tmp.name)
-    try:
-        with tmp_path.open("rb") as f:
-            key = storage.save(f, filename)
+    # Stage the upload on disk so ffmpeg/Pillow can read it by path. Try to
+    # recompress it; adopt the result only when it is actually smaller.
+    with tempfile.TemporaryDirectory() as td:
+        src_path = Path(td) / ("src" + Path(filename).suffix)
+        with src_path.open("wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        store_path, store_name, store_ct = src_path, filename, content_type
+        result = compress(src_path, content_type, filename)
+        if result is not None:
+            data, cname, cct = result
+            if len(data) < src_path.stat().st_size:
+                comp_path = Path(td) / cname
+                comp_path.write_bytes(data)
+                store_path, store_name, store_ct = comp_path, cname, cct
+
+        kind = _kind_from_content_type(store_ct)
+        with store_path.open("rb") as f:
+            key = storage.save(f, store_name)
 
         thumbnail_key: str | None = None
         if kind in {"video", "audio"}:
-            thumb = generate_thumbnail(tmp_path, content_type)
+            thumb = generate_thumbnail(store_path, store_ct)
             if thumb:
                 thumbnail_key = storage.save(io.BytesIO(thumb), "thumb.jpg")
 
         asset = Asset(
             node_id=node_id,
             kind=kind,
-            filename=filename,
-            content_type=content_type,
-            size=tmp_path.stat().st_size,
+            filename=store_name,
+            content_type=store_ct,
+            size=store_path.stat().st_size,
             storage_key=key,
             thumbnail_key=thumbnail_key,
         )
@@ -116,8 +125,6 @@ def upload_asset(
         db.commit()
         db.refresh(asset)
         return _to_out(asset)
-    finally:
-        os.unlink(tmp_path)
 
 
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     # Frontend origins allowed to call the API (Vite dev server by default).
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    # --- Media compression (applied on upload; result kept only if smaller) ---
+    # Set compress_media=False to store uploads untouched.
+    compress_media: bool = True
+    image_webp_quality: int = 82      # 0-100; higher = better quality / larger
+    video_crf: int = 23               # x264 quality; lower = better/larger (~18-28)
+    video_preset: str = "fast"        # x264 speed/efficiency trade-off
+    audio_bitrate: str = "128k"       # Opus target bitrate
+
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")

@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.7.2
+
+- **Media compression on upload** — uploads are recompressed at high quality to
+  shrink the storage footprint, keeping the result only when it's actually
+  smaller (already-efficient files are left untouched):
+  - Images → WebP (animated GIFs → animated WebP) via Pillow.
+  - Video → H.264/AAC MP4, audio → Opus/Ogg via ffmpeg.
+  - Any encode failure falls back to storing the original, so uploads never
+    break. Tunable via config (`image_webp_quality`, `video_crf`, `video_preset`,
+    `audio_bitrate`, `compress_media`). Applies to new uploads only.
+
 ## v0.7.1
 
 - **Drag-and-drop media** — drag files onto the app to add them. With an object's
