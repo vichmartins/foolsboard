@@ -13,8 +13,40 @@ export interface User {
   email: string
   username: string
   is_admin: boolean
+  is_active: boolean
   created_at: string
   avatar_url: string | null
+}
+
+export interface AdminUser {
+  id: string
+  email: string
+  username: string
+  is_admin: boolean
+  is_active: boolean
+  created_at: string
+}
+
+export interface ActivityLog {
+  id: string
+  user_id: string | null
+  username: string | null
+  action: string
+  entity_type: string | null
+  entity_id: string | null
+  summary: string
+  created_at: string
+}
+
+export interface RequestLog {
+  id: string
+  user_id: string | null
+  method: string
+  path: string
+  status_code: number
+  duration_ms: number
+  ip: string | null
+  created_at: string
 }
 
 export interface Invite {

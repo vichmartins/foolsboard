@@ -5,10 +5,10 @@ import { useAuth } from '../auth'
 
 interface Props {
   onOpenAccount: () => void
-  onOpenInvites: () => void
+  onOpenAdmin: () => void
 }
 
-export default function ProfileMenu({ onOpenAccount, onOpenInvites }: Props) {
+export default function ProfileMenu({ onOpenAccount, onOpenAdmin }: Props) {
   const { user, logout } = useAuth()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -71,10 +71,10 @@ export default function ProfileMenu({ onOpenAccount, onOpenInvites }: Props) {
             role="menuitem"
             onClick={() => {
               setOpen(false)
-              onOpenInvites()
+              onOpenAdmin()
             }}
           >
-            Invite codes
+            Admin panel
           </button>
         )}
         <button

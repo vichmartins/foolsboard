@@ -1,11 +1,14 @@
 // Thin typed wrapper around the backend REST API.
 import axios from 'axios'
 import type {
+  ActivityLog,
+  AdminUser,
   Asset,
   Board,
   BoardGraph,
   Invite,
   LinkRef,
+  RequestLog,
   StoryEdge,
   StoryNode,
   User,
@@ -95,7 +98,9 @@ export async function uploadAvatar(file: File): Promise<User> {
 export async function deleteAvatar(): Promise<User> {
   return (await http.delete('/auth/me/avatar')).data
 }
-export function logout(): void {
+export async function logout(): Promise<void> {
+  // Record the sign-out server-side (best effort), then drop the token.
+  await http.post('/auth/logout').catch(() => {})
   setToken(null)
 }
 
@@ -108,6 +113,34 @@ export async function createInvite(): Promise<Invite> {
 }
 export async function deleteInvite(id: string): Promise<void> {
   await http.delete(`/invites/${id}`)
+}
+
+// --- Admin -----------------------------------------------------------------
+export async function listUsers(): Promise<AdminUser[]> {
+  return (await http.get('/admin/users')).data
+}
+export async function updateUser(
+  id: string,
+  patch: { is_admin?: boolean; is_active?: boolean },
+): Promise<AdminUser> {
+  return (await http.patch(`/admin/users/${id}`, patch)).data
+}
+export async function deleteUser(id: string): Promise<void> {
+  await http.delete(`/admin/users/${id}`)
+}
+export async function listActivityLogs(params: {
+  limit?: number
+  offset?: number
+  action?: string
+}): Promise<ActivityLog[]> {
+  return (await http.get('/admin/logs/events', { params })).data
+}
+export async function listRequestLogs(params: {
+  limit?: number
+  offset?: number
+  status_code?: number
+}): Promise<RequestLog[]> {
+  return (await http.get('/admin/logs/requests', { params })).data
 }
 
 // --- Links -----------------------------------------------------------------

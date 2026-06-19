@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import * as api from './api'
 import { useAuth } from './auth'
 import AccountDialog from './components/AccountDialog'
+import AdminPanel from './components/AdminPanel'
 import BoardSelect from './components/BoardSelect'
 import BrandMenu from './components/BrandMenu'
 import Canvas from './components/Canvas'
-import InvitesDialog from './components/InvitesDialog'
 import LoginScreen from './components/LoginScreen'
 import ProfileMenu from './components/ProfileMenu'
 import PromptDialog from './components/PromptDialog'
@@ -21,7 +21,7 @@ function Workspace() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'new' | 'rename' | 'delete' | 'merge' | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
-  const [invitesOpen, setInvitesOpen] = useState(false)
+  const [adminOpen, setAdminOpen] = useState(false)
   // Source boards to merge into the active board; handed to Canvas to import.
   const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
 
@@ -120,7 +120,7 @@ function Workspace() {
         <ThemeToggle />
         <ProfileMenu
           onOpenAccount={() => setAccountOpen(true)}
-          onOpenInvites={() => setInvitesOpen(true)}
+          onOpenAdmin={() => setAdminOpen(true)}
         />
       </header>
 
@@ -183,7 +183,7 @@ function Workspace() {
       )}
 
       {accountOpen && <AccountDialog onClose={() => setAccountOpen(false)} />}
-      {invitesOpen && <InvitesDialog onClose={() => setInvitesOpen(false)} />}
+      {adminOpen && <AdminPanel onClose={() => setAdminOpen(false)} />}
     </div>
   )
 }

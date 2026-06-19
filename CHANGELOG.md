@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.15.1
+
+- Admin panel (admins only), opened from the profile menu, with tabs: Users
+  (list accounts, toggle admin role, suspend/activate, delete — with self and
+  last-admin guards), Invites (generate/copy/revoke codes, moved here from the
+  standalone dialog), and Logs (the activity stream and the raw request log,
+  each with a quick filter and load-more paging). Sign-out is now recorded
+  server-side.
+
 ## v0.15.0
 
 - Admin + logging backend (UI to follow). Accounts gained an active/suspended
