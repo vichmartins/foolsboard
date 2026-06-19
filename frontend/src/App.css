@@ -60,7 +60,22 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   padding: 5px;
   z-index: 50;
-  animation: ctx-in 0.12s ease;
+  /* Smooth open AND close, both directions handled by the transition. */
+  transform-origin: top left;
+  opacity: 0;
+  transform: scale(0.96) translateY(-6px);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.14s ease,
+    transform 0.14s cubic-bezier(0.2, 0.9, 0.25, 1.15),
+    visibility 0.14s;
+}
+.brand-dropdown--open {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  visibility: visible;
+  pointer-events: auto;
 }
 .brand-dropdown__item {
   width: 100%;
@@ -517,7 +532,11 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   /* Quick pop that grows from the cursor, with a slight overshoot. */
   transform-origin: top left;
-  animation: ctx-menu-in 0.15s cubic-bezier(0.2, 0.9, 0.25, 1.15);
+  animation: ctx-menu-in 0.14s cubic-bezier(0.2, 0.9, 0.25, 1.15);
+}
+.ctx-menu--closing {
+  animation: ctx-menu-out 0.12s ease forwards;
+  pointer-events: none;
 }
 @keyframes ctx-menu-in {
   from {
@@ -529,9 +548,15 @@
     transform: scale(1) translateY(0);
   }
 }
-@keyframes ctx-in {
-  from { opacity: 0; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
+@keyframes ctx-menu-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9) translateY(-4px);
+  }
 }
 .ctx-menu__item {
   width: 100%;
@@ -742,5 +767,8 @@
   .dialog,
   .ctx-menu {
     animation-duration: 0.01ms;
+  }
+  .brand-dropdown {
+    transition-duration: 0.01ms;
   }
 }

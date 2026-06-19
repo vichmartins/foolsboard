@@ -1,6 +1,9 @@
 // A small floating context menu anchored at a screen position.
-// Closes on outside click, another right-click, or Escape.
-import { useEffect, useRef } from 'react'
+// Closes on outside click, another right-click, or Escape — with a brief
+// exit animation before it actually unmounts.
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+const CLOSE_MS = 120
 
 export interface MenuItem {
   label: string
@@ -34,15 +37,23 @@ function renderLabel(label: string, mnemonic?: string) {
 
 export default function ContextMenu({ x, y, items, onClose }: Props) {
   const ref = useRef<HTMLUListElement>(null)
+  const [closing, setClosing] = useState(false)
+  const timer = useRef<number | null>(null)
+
+  // Play the exit animation, then actually close after it finishes.
+  const requestClose = useCallback(() => {
+    if (timer.current !== null) return
+    setClosing(true)
+    timer.current = window.setTimeout(onClose, CLOSE_MS)
+  }, [onClose])
 
   useEffect(() => {
-    // Close only when the interaction is outside the menu.
     function onOutside(e: Event) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+      if (ref.current && !ref.current.contains(e.target as Node)) requestClose()
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        onClose()
+        requestClose()
         return
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return
@@ -52,7 +63,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
       if (item) {
         e.preventDefault()
         item.onClick()
-        onClose()
+        requestClose()
       }
     }
     // Defer attaching by a frame: the very contextmenu event that opened this
@@ -67,13 +78,14 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
       window.removeEventListener('pointerdown', onOutside)
       window.removeEventListener('contextmenu', onOutside)
       window.removeEventListener('keydown', onKey)
+      if (timer.current !== null) clearTimeout(timer.current)
     }
-  }, [items, onClose])
+  }, [items, requestClose])
 
   return (
     <ul
       ref={ref}
-      className="ctx-menu"
+      className={'ctx-menu' + (closing ? ' ctx-menu--closing' : '')}
       style={{ top: y, left: x }}
       onContextMenu={(e) => e.preventDefault()}
     >
@@ -83,7 +95,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
             className={'ctx-menu__item' + (it.danger ? ' ctx-menu__item--danger' : '')}
             onClick={() => {
               it.onClick()
-              onClose()
+              requestClose()
             }}
           >
             {renderLabel(it.label, it.mnemonic)}

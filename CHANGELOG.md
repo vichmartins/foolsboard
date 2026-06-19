@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.4
+
+- The right-click context menu now animates **closed** as well as open (it played
+  no exit before), and the logo dropdown eases both open and close. Both respect
+  reduced-motion.
+
 ## v0.6.3
 
 - The right-click context menu now opens with a quick pop that grows from the

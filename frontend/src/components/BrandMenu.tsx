@@ -40,21 +40,23 @@ export default function BrandMenu() {
         <span className={'brand__chevron' + (open ? ' brand__chevron--open' : '')}>▾</span>
       </button>
 
-      {open && (
-        <div className="brand-dropdown" role="menu">
-          <button
-            className="brand-dropdown__item"
-            role="menuitem"
-            onClick={() => {
-              setShowShortcuts(true)
-              setOpen(false)
-            }}
-          >
-            Keyboard shortcuts
-          </button>
-          <div className="brand-dropdown__footer">v{__APP_VERSION__}</div>
-        </div>
-      )}
+      <div
+        className={'brand-dropdown' + (open ? ' brand-dropdown--open' : '')}
+        role="menu"
+      >
+        <button
+          className="brand-dropdown__item"
+          role="menuitem"
+          tabIndex={open ? 0 : -1}
+          onClick={() => {
+            setShowShortcuts(true)
+            setOpen(false)
+          }}
+        >
+          Keyboard shortcuts
+        </button>
+        <div className="brand-dropdown__footer">v{__APP_VERSION__}</div>
+      </div>
 
       {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
     </div>
