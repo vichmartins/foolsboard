@@ -2652,9 +2652,35 @@
   display: flex;
   gap: 6px;
 }
-.admin-user__actions .btn {
-  padding: 6px 10px;
+.admin-action {
+  padding: 6px 11px;
   font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  border: 1px solid transparent;
+}
+.admin-action--admin,
+.admin-action--admin:hover:not(:disabled) {
+  background: var(--accent);
+}
+.admin-action--suspend,
+.admin-action--suspend:hover:not(:disabled) {
+  background: #f59e0b;
+}
+.admin-action--activate,
+.admin-action--activate:hover:not(:disabled) {
+  background: #10b981;
+}
+.admin-action--delete,
+.admin-action--delete:hover:not(:disabled) {
+  background: var(--danger);
+}
+.admin-action:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+.admin-action:disabled {
+  opacity: 0.4;
+  filter: none;
 }
 
 /* Invites tab */
@@ -2820,6 +2846,61 @@
 }
 .admin-logs__more {
   align-self: center;
+}
+
+/* Errors sub-tab: a clickable row that expands to its stack trace */
+.log-error {
+  border-top: 1px solid var(--border);
+}
+.log-error:first-child {
+  border-top: none;
+}
+.log-row--error {
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: none;
+  cursor: pointer;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.log-row--error:hover {
+  background: var(--bg-hover);
+}
+.log-method--err {
+  flex: none;
+  width: 52px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--danger);
+}
+.log-errmsg {
+  flex: 1;
+  min-width: 0;
+  color: var(--danger);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.log-caret {
+  flex: none;
+  width: 12px;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.log-trace {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  line-height: 1.45;
+  white-space: pre;
+  overflow-x: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -6,6 +6,7 @@ import type {
   Asset,
   Board,
   BoardGraph,
+  ErrorLog,
   Invite,
   LinkRef,
   RequestLog,
@@ -141,6 +142,12 @@ export async function listRequestLogs(params: {
   status_code?: number
 }): Promise<RequestLog[]> {
   return (await http.get('/admin/logs/requests', { params })).data
+}
+export async function listErrorLogs(params: {
+  limit?: number
+  offset?: number
+}): Promise<ErrorLog[]> {
+  return (await http.get('/admin/logs/errors', { params })).data
 }
 
 // --- Links -----------------------------------------------------------------

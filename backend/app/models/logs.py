@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, Integer, String, Uuid
+from sqlalchemy import ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -41,3 +41,17 @@ class RequestLog(UUIDMixin, TimestampMixin, Base):
     status_code: Mapped[int] = mapped_column(Integer, nullable=False)
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class ErrorLog(UUIDMixin, TimestampMixin, Base):
+    """An unhandled server exception, captured with its stack trace."""
+
+    __tablename__ = "error_logs"
+
+    user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    method: Mapped[str] = mapped_column(String(10), nullable=False)
+    path: Mapped[str] = mapped_column(String(500), nullable=False)
+    message: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    traceback: Mapped[str] = mapped_column(Text, nullable=False, default="")

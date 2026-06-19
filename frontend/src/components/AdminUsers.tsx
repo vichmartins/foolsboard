@@ -76,7 +76,7 @@ export default function AdminUsers() {
               </div>
               <div className="admin-user__actions">
                 <button
-                  className="btn"
+                  className="btn admin-action admin-action--admin"
                   disabled={self || busy}
                   title={u.is_admin ? 'Remove admin' : 'Make admin'}
                   onClick={() => patch(u, { is_admin: !u.is_admin })}
@@ -84,14 +84,17 @@ export default function AdminUsers() {
                   {u.is_admin ? 'Remove admin' : 'Make admin'}
                 </button>
                 <button
-                  className="btn"
+                  className={
+                    'btn admin-action ' +
+                    (u.is_active ? 'admin-action--suspend' : 'admin-action--activate')
+                  }
                   disabled={self || busy}
                   onClick={() => patch(u, { is_active: !u.is_active })}
                 >
                   {u.is_active ? 'Suspend' : 'Activate'}
                 </button>
                 <button
-                  className="btn btn--danger"
+                  className="btn admin-action admin-action--delete"
                   disabled={self || busy}
                   onClick={() => setConfirmDelete(u)}
                 >

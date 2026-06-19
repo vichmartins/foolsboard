@@ -49,6 +49,16 @@ export interface RequestLog {
   created_at: string
 }
 
+export interface ErrorLog {
+  id: string
+  user_id: string | null
+  method: string
+  path: string
+  message: string
+  traceback: string
+  created_at: string
+}
+
 export interface Invite {
   id: string
   code: string

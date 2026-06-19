@@ -12,8 +12,14 @@ from sqlalchemy.orm import Session
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_admin
-from ..models import ActivityLog, RequestLog, User
-from ..schemas import ActivityLogOut, AdminUserOut, AdminUserUpdate, RequestLogOut
+from ..models import ActivityLog, ErrorLog, RequestLog, User
+from ..schemas import (
+    ActivityLogOut,
+    AdminUserOut,
+    AdminUserUpdate,
+    ErrorLogOut,
+    RequestLogOut,
+)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -115,4 +121,15 @@ def list_requests(
         q = q.where(RequestLog.user_id == user_id)
     if status_code:
         q = q.where(RequestLog.status_code == status_code)
+    return list(db.scalars(q.limit(limit).offset(offset)))
+
+
+@router.get("/logs/errors", response_model=list[ErrorLogOut])
+def list_errors(
+    _: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> list[ErrorLog]:
+    q = select(ErrorLog).order_by(ErrorLog.created_at.desc())
     return list(db.scalars(q.limit(limit).offset(offset)))

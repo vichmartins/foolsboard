@@ -7,6 +7,7 @@ head` before first use.
 from __future__ import annotations
 
 import time
+import traceback
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -17,7 +18,7 @@ from starlette.concurrency import run_in_threadpool
 
 from .config import settings
 from .database import SessionLocal
-from .models import Asset, RequestLog
+from .models import Asset, ErrorLog, RequestLog
 from .routers import admin, assets, auth, boards, edges, invites, links, nodes
 from .security import decode_token
 
@@ -25,20 +26,30 @@ app = FastAPI(title="foolsboard API", version="0.4.0")
 
 
 def _write_request_log(
-    method: str, path: str, status_code: int, duration_ms: int, user_id, ip: str | None
+    method: str,
+    path: str,
+    status_code: int,
+    duration_ms: int,
+    user_id,
+    ip: str | None,
+    error: tuple[str, str] | None = None,
 ) -> None:
     db = SessionLocal()
     try:
         db.add(
             RequestLog(
-                method=method,
-                path=path[:500],
-                status_code=status_code,
-                duration_ms=duration_ms,
-                user_id=user_id,
-                ip=ip,
+                method=method, path=path[:500], status_code=status_code,
+                duration_ms=duration_ms, user_id=user_id, ip=ip,
             )
         )
+        if error is not None:
+            message, tb = error
+            db.add(
+                ErrorLog(
+                    method=method, path=path[:500], user_id=user_id,
+                    message=message[:500], traceback=tb,
+                )
+            )
         db.commit()
     except Exception:
         db.rollback()
@@ -48,22 +59,28 @@ def _write_request_log(
 
 @app.middleware("http")
 async def _log_requests(request: Request, call_next):
-    """Record every API request (skipping the log-viewing endpoints themselves)."""
+    """Record every API request, and capture unhandled exceptions (with their
+    stack trace) before re-raising. Skips the log-viewing endpoints themselves."""
     start = time.monotonic()
-    response = await call_next(request)
     path = request.url.path
-    if path.startswith("/api") and not path.startswith("/api/admin/logs"):
-        header = request.headers.get("Authorization", "")
-        user_id = decode_token(header[7:]) if header.startswith("Bearer ") else None
-        ip = request.client.host if request.client else None
+    logged = path.startswith("/api") and not path.startswith("/api/admin/logs")
+    header = request.headers.get("Authorization", "")
+    user_id = decode_token(header[7:]) if header.startswith("Bearer ") else None
+    ip = request.client.host if request.client else None
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        if logged:
+            await run_in_threadpool(
+                _write_request_log, request.method, path, 500,
+                int((time.monotonic() - start) * 1000), user_id, ip,
+                (f"{type(exc).__name__}: {exc}", traceback.format_exc()),
+            )
+        raise
+    if logged:
         await run_in_threadpool(
-            _write_request_log,
-            request.method,
-            path,
-            response.status_code,
-            int((time.monotonic() - start) * 1000),
-            user_id,
-            ip,
+            _write_request_log, request.method, path, response.status_code,
+            int((time.monotonic() - start) * 1000), user_id, ip,
         )
     return response
 

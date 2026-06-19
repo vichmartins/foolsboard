@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.15.2
+
+- Admin panel gained an Errors view: unhandled server exceptions are captured
+  with their stack trace (a middleware logs them before the 500), stored in a
+  new error_logs table, and shown in Logs > Errors as expandable rows. New
+  migration.
+- The user-management action buttons are now color-coded: admin (indigo),
+  suspend (amber), activate (green), delete (red).
+
 ## v0.15.1
 
 - Admin panel (admins only), opened from the profile menu, with tabs: Users

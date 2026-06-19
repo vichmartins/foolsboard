@@ -203,6 +203,16 @@ class RequestLogOut(ORMModel):
     created_at: datetime
 
 
+class ErrorLogOut(ORMModel):
+    id: UUID
+    user_id: UUID | None
+    method: str
+    path: str
+    message: str
+    traceback: str
+    created_at: datetime
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
