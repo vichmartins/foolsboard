@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.11.1
+
+- Backfill content hashes for media uploaded before dedup existed, so
+  re-uploading already-stored media can deduplicate against it. Runs once on
+  startup; best-effort (matches when the stored bytes equal a fresh upload).
+
 ## v0.11.0
 
 - Media uploads are now deduplicated by content. Uploading the same file to a

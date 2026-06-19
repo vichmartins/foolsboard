@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import update
+from sqlalchemy import select, update
 
 from .config import settings
 from .database import SessionLocal
@@ -29,6 +29,34 @@ def _clear_stuck_processing() -> None:
     try:
         db.execute(update(Asset).where(Asset.processing.is_(True)).values(processing=False))
         db.commit()
+    finally:
+        db.close()
+
+
+@app.on_event("startup")
+def _backfill_content_hashes() -> None:
+    """Assets created before content-hash dedup have no hash, so re-uploading the
+    same media can't dedup against them. Hash each one's stored file once so it
+    becomes dedup-capable. Best-effort: it matches a fresh upload when the stored
+    bytes equal the original (uncompressed media, or video whose recompression
+    was skipped)."""
+    if settings.storage_backend != "local":
+        return
+    db = SessionLocal()
+    try:
+        pending = db.scalars(select(Asset).where(Asset.content_hash.is_(None))).all()
+        changed = False
+        for asset in pending:
+            path = assets._local_path(asset.storage_key)
+            if not path.exists():
+                continue
+            try:
+                asset.content_hash = assets._hash_file(path)
+                changed = True
+            except OSError:
+                continue
+        if changed:
+            db.commit()
     finally:
         db.close()
 
