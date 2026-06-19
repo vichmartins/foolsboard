@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.14.5
+
+- The "Note" object type now displays as "Notes" (dropdown, panel tag, node-card
+  tag) via a display-label mapping. The stored type value stays "note", so no
+  migration is needed and existing objects relabel instantly.
+
 ## v0.14.4
 
 - Signing in/out now plays a smooth gradient "curtain" transition between the

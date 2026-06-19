@@ -16,6 +16,7 @@ import {
   KIND_COLORS,
   mediaKind,
   TYPE_FIELDS,
+  typeLabel,
   type Asset,
   type LinkRef,
   type StoryNode,
@@ -138,7 +139,7 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
       </button>
 
       <span className="story-node__kind" style={{ background: accent }}>
-        {d.kind}
+        {typeLabel(d.kind)}
       </span>
       <span className="story-node__title">{d.title || 'Untitled'}</span>
       {d.preview && <span className="story-node__preview">{d.preview}</span>}

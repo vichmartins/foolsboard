@@ -93,6 +93,12 @@ export type Side = 'top' | 'right' | 'bottom' | 'left'
 export const NODE_TYPES = ['scene', 'character', 'dialog', 'event', 'note'] as const
 export type NodeKind = (typeof NODE_TYPES)[number]
 
+// Display label for an object kind (the stored type value stays unchanged).
+const TYPE_LABELS: Record<string, string> = { note: 'Notes' }
+export function typeLabel(type: string): string {
+  return TYPE_LABELS[type] ?? type.charAt(0).toUpperCase() + type.slice(1)
+}
+
 // Default accent color per object kind.
 export const KIND_COLORS: Record<string, string> = {
   scene: '#0ea5e9',

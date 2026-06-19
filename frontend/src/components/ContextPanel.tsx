@@ -14,6 +14,7 @@ import {
   mediaKind,
   NODE_TYPES,
   TYPE_FIELDS,
+  typeLabel,
   type Asset,
   type LinkRef,
   type NearbyNode,
@@ -421,7 +422,7 @@ export default function ContextPanel({
       <div className="panel__head">
         {isExisting ? (
           <div className="panel__heading">
-            <span className="panel__kind" style={{ background: accent }}>{type}</span>
+            <span className="panel__kind" style={{ background: accent }}>{typeLabel(type)}</span>
             <h2 className="panel__title" title={title || 'Untitled'}>{title || 'Untitled'}</h2>
           </div>
         ) : (
@@ -438,7 +439,7 @@ export default function ContextPanel({
           onChange={setType}
           options={NODE_TYPES.map((t) => ({
             value: t,
-            label: t.charAt(0).toUpperCase() + t.slice(1),
+            label: typeLabel(t),
             color: KIND_COLORS[t],
           }))}
         />
