@@ -19,6 +19,15 @@ export default function NearbyNodes({ nodes, onAddMedia, onAddLinks }: Props) {
   const [selMedia, setSelMedia] = useState<Set<string>>(new Set())
   const [selLinks, setSelLinks] = useState<Record<string, LinkRef>>({})
   const [busy, setBusy] = useState(false)
+  const [query, setQuery] = useState('')
+  const [limit, setLimit] = useState(() => Math.min(10, nodes.length))
+
+  // Search filters across all nodes by their text; otherwise show the closest
+  // `limit` (slider) of the ranked list.
+  const q = query.trim().toLowerCase()
+  const shown = q ? nodes.filter((n) => n.search.includes(q)) : nodes.slice(0, limit)
+  const sliderMax = Math.max(1, nodes.length)
+  const sliderVal = Math.min(limit, sliderMax)
 
   async function toggleOpen(id: string) {
     if (openId === id) {
@@ -78,8 +87,32 @@ export default function NearbyNodes({ nodes, onAddMedia, onAddLinks }: Props) {
 
   return (
     <div className="nearby">
+      <div className="nearby__controls">
+        <input
+          className="nearby__search"
+          type="search"
+          placeholder="Search nodes…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <div className="nearby__slider" title="How many nearby nodes to show">
+          <input
+            type="range"
+            min={1}
+            max={sliderMax}
+            value={sliderVal}
+            disabled={!!q}
+            aria-label="Number of nearby nodes to show"
+            onChange={(e) => setLimit(Number(e.target.value))}
+          />
+          <span className="nearby__slider-val">{q ? `${shown.length}` : sliderVal}</span>
+        </div>
+      </div>
       <div className="nearby__list">
-        {nodes.map((n) => {
+        {shown.length === 0 && (
+          <p className="nearby-node__empty">No matching nodes</p>
+        )}
+        {shown.map((n) => {
           const open = openId === n.id
           const media = mediaByNode[n.id] ?? []
           const isLoading = loading.has(n.id)

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.12.1
+
+- Nearby Nodes is now a bottom sheet pinned to the foot of the drawer that
+  slides up to take half the height when toggled (smooth animation, no content
+  reflow). Added a slider to control how many ranked nodes are shown, and a
+  search box that filters across all nodes by their text (title, fields, link
+  titles/URLs) to jump straight to a specific node.
+
 ## v0.12.0
 
 - The gallery drawer gained a "Nearby nodes" section: browse the galleries of

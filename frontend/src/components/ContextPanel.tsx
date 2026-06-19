@@ -68,6 +68,7 @@ export default function ContextPanel({
   const [uploads, setUploads] = useState<{ id: string; name: string; progress: number }[]>([])
   const [mediaExpanded, setMediaExpanded] = useState(false)
   const [mediaClosing, setMediaClosing] = useState(false)
+  const [showNearby, setShowNearby] = useState(false)
   const mediaTimer = useRef<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -77,6 +78,7 @@ export default function ContextPanel({
     setType(node.type)
     setContent(node.content ?? {})
     setConfirmDelete(false)
+    setShowNearby(false)
     listAssets(node.id).then(setAssets).catch(() => setAssets([]))
   }, [node.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -391,22 +393,28 @@ export default function ContextPanel({
             <span className="media-expand media-expand--open">◀</span>
           </button>
         </div>
-        <div className="media-drawer__body">
-          {mediaBody}
-          {nearby.length > 0 && (
-            <div className="nearby-section">
-              <h4 className="nearby-section__head">Nearby nodes</h4>
-              <p className="nearby-section__hint">
-                Browse linked &amp; close-by nodes, then add their media or links here.
-              </p>
+        <div className="media-drawer__body">{mediaBody}</div>
+        {nearby.length > 0 && (
+          <div className={'nearby-sheet' + (showNearby ? ' nearby-sheet--open' : '')}>
+            <button
+              type="button"
+              className={'nearby-sheet__toggle' + (showNearby ? ' nearby-sheet__toggle--open' : '')}
+              onClick={() => setShowNearby((v) => !v)}
+            >
+              <span className="nearby-sheet__title">Nearby Nodes</span>
+              <span className="nearby-section__count">{nearby.length}</span>
+              <span className="nearby-section__caret">▾</span>
+            </button>
+            <div className="nearby-sheet__body">
               <NearbyNodes
+                key={node.id}
                 nodes={nearby}
                 onAddMedia={addReferencedMedia}
                 onAddLinks={addReferencedLinks}
               />
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     )}
     <aside className={'panel' + (closing ? ' panel--closing' : '')}>

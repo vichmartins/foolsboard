@@ -78,6 +78,27 @@ function countLabel(n: number, singular: string) {
 const nodeTypes = { story: StoryNodeCard }
 const edgeTypes = { floating: FloatingEdge }
 
+// Flatten a node's text (title, type, field values, link titles/urls) into one
+// lowercased string for the Nearby Nodes search box. content.references is an
+// array of objects, so the array branch covers reference links too.
+function nodeSearchText(story: StoryNode | undefined): string {
+  const parts: string[] = [story?.title ?? '', story?.type ?? '']
+  for (const v of Object.values(story?.content ?? {})) {
+    if (typeof v === 'string') parts.push(v)
+    else if (Array.isArray(v)) {
+      for (const item of v) {
+        if (typeof item === 'string') parts.push(item)
+        else if (item && typeof item === 'object') {
+          for (const val of Object.values(item)) {
+            if (typeof val === 'string') parts.push(val)
+          }
+        }
+      }
+    }
+  }
+  return parts.join(' ').toLowerCase()
+}
+
 function toRFNode(n: StoryNode): Node {
   return {
     id: n.id,
@@ -834,15 +855,17 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
     const others = nodes.filter((n) => n.id !== selectedId)
     const linked = others.filter((n) => connected.has(n.id)).sort((a, b) => dist(a) - dist(b))
     const rest = others.filter((n) => !connected.has(n.id)).sort((a, b) => dist(a) - dist(b))
-    return [...linked, ...rest].slice(0, 10).map((n) => {
+    return [...linked, ...rest].map((n) => {
       const story = n.data?.story as StoryNode | undefined
       const refs = story?.content?.references
+      const references = Array.isArray(refs) ? (refs as LinkRef[]) : []
       return {
         id: n.id,
         title: story?.title ?? '',
         type: story?.type ?? 'note',
         connected: connected.has(n.id),
-        references: Array.isArray(refs) ? (refs as LinkRef[]) : [],
+        references,
+        search: nodeSearchText(story),
       }
     })
   }, [nodes, edges, selectedId])

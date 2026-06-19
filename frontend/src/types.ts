@@ -111,6 +111,9 @@ export interface NearbyNode {
   type: string
   connected: boolean
   references: LinkRef[]
+  // Lowercased blob of the node's text (title, type, field values, link titles)
+  // for the search box to match against.
+  search: string
 }
 
 // A reference link with its fetched preview metadata (Open Graph / meta tags).
