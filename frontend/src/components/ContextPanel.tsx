@@ -9,6 +9,7 @@ import {
 } from '../api'
 import {
   fileExt,
+  KIND_COLORS,
   mediaKind,
   NODE_TYPES,
   TYPE_FIELDS,
@@ -66,11 +67,18 @@ export default function ContextPanel({
 
   const fields = TYPE_FIELDS[type] ?? TYPE_FIELDS.note
 
+  // Once an object has real content (a title beyond the default, or any filled
+  // field), show its title + colored type tag instead of a generic header.
+  const accent = KIND_COLORS[type] ?? KIND_COLORS.note
+  const hasContent = Object.values(content).some((v) => String(v ?? '').trim() !== '')
+  const isExisting = (title.trim() !== '' && title.trim() !== 'New object') || hasContent
+
   function setField(key: string, value: string) {
     setContent((c) => ({ ...c, [key]: value }))
   }
 
   async function save() {
+    if (busy) return
     setBusy(true)
     try {
       const updated = await updateNode(boardId, node.id, { title, type, content })
@@ -79,6 +87,22 @@ export default function ContextPanel({
       setBusy(false)
     }
   }
+
+  // Ctrl/Cmd+S saves while the panel is open (reads the latest save via a ref).
+  const saveRef = useRef(save)
+  useEffect(() => {
+    saveRef.current = save
+  })
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        saveRef.current()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   async function uploadFile(file: File) {
     const uploadId = crypto.randomUUID()
@@ -152,7 +176,14 @@ export default function ContextPanel({
   return (
     <aside className={'panel' + (closing ? ' panel--closing' : '')}>
       <div className="panel__head">
-        <h2>Edit Object</h2>
+        {isExisting ? (
+          <div className="panel__heading">
+            <span className="panel__kind" style={{ background: accent }}>{type}</span>
+            <h2 className="panel__title" title={title || 'Untitled'}>{title || 'Untitled'}</h2>
+          </div>
+        ) : (
+          <h2>Edit Object</h2>
+        )}
         <button className="icon-btn" onClick={onClose} title="Close">✕</button>
       </div>
 

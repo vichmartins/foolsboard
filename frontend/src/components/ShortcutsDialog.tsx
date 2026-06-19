@@ -36,6 +36,7 @@ const GROUPS: { title: string; items: Shortcut[] }[] = [
       { keys: ['Right-click'], desc: 'New object (empty canvas)' },
       { keys: ['Click'], desc: 'Select object' },
       { keys: ['Double-click'], desc: 'Open edit panel' },
+      { keys: ['Ctrl', 'S'], desc: 'Save object (in panel)' },
       { keys: ['Shift', 'Drag'], desc: 'Select multiple' },
       { keys: ['Right-click'], desc: 'Object / selection menu' },
       { keys: ['Del', 'Backspace'], alt: true, desc: 'Delete selection' },

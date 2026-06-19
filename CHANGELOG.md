@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.8.3
+
+- The edit panel header now shows the object's title and colored type tag once it
+  has real content (a non-default title or any filled field); a pristine new
+  object still shows "Edit Object".
+- **Ctrl/Cmd+S** saves while the panel is open (also listed in the shortcuts
+  dialog).
+
 ## v0.8.2
 
 - Capitalized the side panel header to "Edit Object".
