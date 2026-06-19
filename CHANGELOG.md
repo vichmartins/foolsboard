@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.14.1
+
+- The login screen now animates between Sign In and Register: the card height
+  eases between layouts while the changed fields fade/slide in, instead of
+  snapping. Respects reduced-motion.
+
 ## v0.14.0
 
 - Added user accounts. A Romm-style login/register screen gates the app; the

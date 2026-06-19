@@ -2207,6 +2207,26 @@
   font-size: 13px;
   color: var(--text-dim);
 }
+.auth-body {
+  overflow: hidden;
+  transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.auth-body-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: auth-fields-in 0.3s ease;
+}
+@keyframes auth-fields-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 .auth-field {
   display: flex;
   flex-direction: column;
@@ -2478,8 +2498,12 @@
   .story-node__more,
   .story-node__more-inner,
   .story-node__toggle,
-  .profile__menu {
+  .profile__menu,
+  .auth-body {
     transition-duration: 0.01ms;
+  }
+  .auth-body-inner {
+    animation-duration: 0.01ms;
   }
   /* Keep the toast visible (no fade) rather than animating it away. */
   .panel__saved {

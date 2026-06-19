@@ -1,7 +1,8 @@
 // Romm-inspired auth screen: a centered card on the themed background with a
 // login / register toggle. Registration needs an invite code unless this is the
-// very first account.
-import { useState } from 'react'
+// very first account. Switching mode animates the card height and fades the
+// changed fields in.
+import { useLayoutEffect, useRef, useState } from 'react'
 import { apiError } from '../api'
 import { useAuth } from '../auth'
 import ThemeToggle from './ThemeToggle'
@@ -16,6 +17,13 @@ export default function LoginScreen() {
   const [invite, setInvite] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Animate the swappable fields' container height as the mode changes.
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [bodyHeight, setBodyHeight] = useState<number | undefined>(undefined)
+  useLayoutEffect(() => {
+    if (bodyRef.current) setBodyHeight(bodyRef.current.scrollHeight)
+  }, [mode])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -52,59 +60,63 @@ export default function LoginScreen() {
           {mode === 'login' ? 'Sign in to your storyboards' : 'Create your account'}
         </p>
 
-        {mode === 'login' ? (
-          <label className="auth-field">
-            <span>Email or username</span>
-            <input
-              value={identifier}
-              autoFocus
-              autoComplete="username"
-              onChange={(e) => setIdentifier(e.target.value)}
-            />
-          </label>
-        ) : (
-          <>
+        <div className="auth-body" style={{ height: bodyHeight }}>
+          <div className="auth-body-inner" ref={bodyRef} key={mode}>
+            {mode === 'login' ? (
+              <label className="auth-field">
+                <span>Email or username</span>
+                <input
+                  value={identifier}
+                  autoFocus
+                  autoComplete="username"
+                  onChange={(e) => setIdentifier(e.target.value)}
+                />
+              </label>
+            ) : (
+              <>
+                <label className="auth-field">
+                  <span>Email</span>
+                  <input
+                    type="email"
+                    value={email}
+                    autoFocus
+                    autoComplete="email"
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </label>
+                <label className="auth-field">
+                  <span>Username</span>
+                  <input
+                    value={username}
+                    autoComplete="nickname"
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
+                </label>
+              </>
+            )}
+
             <label className="auth-field">
-              <span>Email</span>
+              <span>Password</span>
               <input
-                type="email"
-                value={email}
-                autoFocus
-                autoComplete="email"
-                onChange={(e) => setEmail(e.target.value)}
+                type="password"
+                value={password}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </label>
-            <label className="auth-field">
-              <span>Username</span>
-              <input
-                value={username}
-                autoComplete="nickname"
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </label>
-          </>
-        )}
 
-        <label className="auth-field">
-          <span>Password</span>
-          <input
-            type="password"
-            value={password}
-            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </label>
-
-        {mode === 'register' && (
-          <label className="auth-field">
-            <span>Invite code</span>
-            <input
-              value={invite}
-              placeholder="Required (blank only for the first account)"
-              onChange={(e) => setInvite(e.target.value)}
-            />
-          </label>
-        )}
+            {mode === 'register' && (
+              <label className="auth-field">
+                <span>Invite code</span>
+                <input
+                  value={invite}
+                  placeholder="Required (blank only for the first account)"
+                  onChange={(e) => setInvite(e.target.value)}
+                />
+              </label>
+            )}
+          </div>
+        </div>
 
         {error && <div className="auth-error">{error}</div>}
 
@@ -120,7 +132,7 @@ export default function LoginScreen() {
             setError(null)
           }}
         >
-          {mode === 'login' ? "Need an account? Register" : 'Have an account? Sign in'}
+          {mode === 'login' ? 'Need an account? Register' : 'Have an account? Sign in'}
         </button>
       </form>
     </div>
