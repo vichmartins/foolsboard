@@ -6,6 +6,9 @@ export interface MenuItem {
   label: string
   onClick: () => void
   danger?: boolean
+  // Single character that triggers this item while the menu is open. The first
+  // matching letter in the label is underlined.
+  mnemonic?: string
 }
 
 interface Props {
@@ -13,6 +16,20 @@ interface Props {
   y: number
   items: MenuItem[]
   onClose: () => void
+}
+
+// Render the label with its mnemonic letter underlined (first match).
+function renderLabel(label: string, mnemonic?: string) {
+  if (!mnemonic) return label
+  const idx = label.toLowerCase().indexOf(mnemonic.toLowerCase())
+  if (idx === -1) return label
+  return (
+    <>
+      {label.slice(0, idx)}
+      <u>{label.slice(idx, idx + 1)}</u>
+      {label.slice(idx + 1)}
+    </>
+  )
 }
 
 export default function ContextMenu({ x, y, items, onClose }: Props) {
@@ -24,7 +41,19 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose()
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const item = items.find(
+        (it) => it.mnemonic && it.mnemonic.toLowerCase() === e.key.toLowerCase(),
+      )
+      if (item) {
+        e.preventDefault()
+        item.onClick()
+        onClose()
+      }
     }
     // Defer attaching by a frame: the very contextmenu event that opened this
     // menu is still bubbling to window, and we must not let it self-close us.
@@ -39,7 +68,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
       window.removeEventListener('contextmenu', onOutside)
       window.removeEventListener('keydown', onKey)
     }
-  }, [onClose])
+  }, [items, onClose])
 
   return (
     <ul
@@ -57,7 +86,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
               onClose()
             }}
           >
-            {it.label}
+            {renderLabel(it.label, it.mnemonic)}
           </button>
         </li>
       ))}

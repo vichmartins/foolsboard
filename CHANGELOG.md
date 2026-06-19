@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.6.0
+
+- **Copy / cut / paste / duplicate** — right-click an object (or a multi-select
+  box) for a clipboard menu, or use `Ctrl+C/X/V/D`. Menu items have underlined
+  keyboard mnemonics. The clipboard persists in `localStorage`, so you can copy
+  on one board and paste on another; internal connections come along too.
+- **Merge boards** — a `Merge…` button in the top bar opens a dialog to pick one
+  or more boards whose content is appended into the current board. Pasted/merged
+  content is placed beside what's already there, never on top.
+- **Undo / redo** — `Ctrl+Z` / `Ctrl+Shift+Z` (and `Ctrl+Y`) reverse paste, cut,
+  duplicate, merge, and object moves.
+- **Delete from the keyboard** — `Delete` / `Backspace` removes the selected
+  objects *and* connections, always behind the confirmation dialog (which now
+  also covers connection-only deletions). A `Delete` item was added to the
+  object menu too.
+- **Safer board deletion** — deleting a board now requires typing its exact name
+  to confirm (pasting allowed).
+- **Logo menu** — the foolsboard logo is now a dropdown with a keyboard-shortcut
+  reference and the app version pinned at the bottom (version sourced from
+  `package.json`).
+- **Polish** — themed line icons for the rename/delete board buttons (replacing
+  emoji), and themed clipboard menus.
+
 ## v0.5.6
 
 - Themed the shift-drag selection box (and the bounding box around selected

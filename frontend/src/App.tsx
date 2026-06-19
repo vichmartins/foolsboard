@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react'
 import * as api from './api'
+import BrandMenu from './components/BrandMenu'
 import Canvas from './components/Canvas'
-import ConfirmDialog from './components/ConfirmDialog'
 import PromptDialog from './components/PromptDialog'
+import MergeDialog from './components/MergeDialog'
+import TypeToConfirmDialog from './components/TypeToConfirmDialog'
 import ThemeToggle from './components/ThemeToggle'
+import { PencilIcon, TrashIcon } from './components/icons'
 import type { Board } from './types'
 import './App.css'
 
 export default function App() {
   const [boards, setBoards] = useState<Board[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [dialog, setDialog] = useState<'new' | 'rename' | 'delete' | null>(null)
+  const [dialog, setDialog] = useState<'new' | 'rename' | 'delete' | 'merge' | null>(null)
+  // Source boards to merge into the active board; handed to Canvas to import.
+  const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
 
   // Load boards; bootstrap a first board if the workspace is empty.
   useEffect(() => {
@@ -59,7 +64,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">fools<span>board</span></div>
+        <BrandMenu />
 
         <select
           className="board-select"
@@ -75,22 +80,32 @@ export default function App() {
           <button
             className="icon-btn"
             title="Rename board"
+            aria-label="Rename board"
             onClick={() => setDialog('rename')}
             disabled={!activeBoard}
           >
-            ✎
+            <PencilIcon />
           </button>
           <button
             className="icon-btn icon-btn--danger"
             title="Delete board"
+            aria-label="Delete board"
             onClick={() => setDialog('delete')}
             disabled={!activeBoard}
           >
-            🗑
+            <TrashIcon />
           </button>
         </div>
 
         <button className="btn" onClick={() => setDialog('new')}>+ New board</button>
+        <button
+          className="btn"
+          onClick={() => setDialog('merge')}
+          disabled={boards.length < 2}
+          title="Merge other boards into this one"
+        >
+          Merge…
+        </button>
 
         <span className="hint">
           Right-click canvas to add · drag handles to link · right-click a link to edit · Del to remove
@@ -101,7 +116,12 @@ export default function App() {
 
       <main className="stage">
         {activeId ? (
-          <Canvas key={activeId} boardId={activeId} />
+          <Canvas
+            key={activeId}
+            boardId={activeId}
+            mergeSourceIds={mergeSourceIds}
+            onMergeHandled={() => setMergeSourceIds(null)}
+          />
         ) : (
           <div className="loading">Loading…</div>
         )}
@@ -130,12 +150,24 @@ export default function App() {
       )}
 
       {dialog === 'delete' && activeBoard && (
-        <ConfirmDialog
+        <TypeToConfirmDialog
           title="Delete storyboard?"
           message={`"${activeBoard.name}" and all of its objects, links, and media will be permanently deleted. This can't be undone.`}
+          requiredText={activeBoard.name}
           confirmLabel="Delete board"
           danger
           onConfirm={deleteBoard}
+          onCancel={() => setDialog(null)}
+        />
+      )}
+
+      {dialog === 'merge' && (
+        <MergeDialog
+          boards={boards.filter((b) => b.id !== activeId)}
+          onConfirm={(ids) => {
+            setMergeSourceIds(ids)
+            setDialog(null)
+          }}
           onCancel={() => setDialog(null)}
         />
       )}

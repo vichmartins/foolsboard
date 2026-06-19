@@ -20,15 +20,38 @@ import '@xyflow/react/dist/style.css'
 
 import * as api from '../api'
 import { BoardIdContext } from '../boardContext'
+import {
+  besideOffset,
+  graphToPortable,
+  portableBox,
+  rfNodesBox,
+  serializeSelection,
+  unionBox,
+  type Portable,
+} from '../boardOps'
+import { clipboardHasContent, readClipboard, writeClipboard } from '../clipboard'
 import { findNodeAt, nodeSize, snapToBorder } from '../edgeGeometry'
 import { toRFEdge } from '../rfMappers'
-import { KIND_COLORS, nodePreview, type Side, type StoryNode } from '../types'
+import { KIND_COLORS, nodePreview, type Side, type StoryEdge, type StoryNode } from '../types'
 import ConfirmDialog from './ConfirmDialog'
 import ContextMenu from './ContextMenu'
 import ContextPanel from './ContextPanel'
 import FloatingEdge from './FloatingEdge'
 import PromptDialog from './PromptDialog'
 import StoryNodeCard from './StoryNodeCard'
+
+interface UndoEntry {
+  undo: () => Promise<void> | void
+  redo: () => Promise<void> | void
+}
+
+interface CanvasProps {
+  boardId: string
+  mergeSourceIds?: string[] | null
+  onMergeHandled?: () => void
+}
+
+const PASTE_OFFSET = 48 // px nudge when pasting/duplicating within the same board
 
 // What React Flow hands to onBeforeDelete, plus a resolver we keep so the
 // confirm dialog's buttons can answer the (async) deletion request.
@@ -59,17 +82,25 @@ function toRFNode(n: StoryNode): Node {
   }
 }
 
-function CanvasInner({ boardId }: { boardId: string }) {
-  const { screenToFlowPosition, getNodes, getZoom, setCenter } = useReactFlow()
+function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
+  const { screenToFlowPosition, getNodes, getEdges, getZoom, setCenter, deleteElements } =
+    useReactFlow()
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const [edgeMenu, setEdgeMenu] = useState<{ x: number; y: number; edge: Edge } | null>(null)
+  const [nodeMenu, setNodeMenu] = useState<{ x: number; y: number } | null>(null)
   const [editEdge, setEditEdge] = useState<Edge | null>(null)
   // The node + side a freshly drawn connection started from, captured on
   // connect-start so connect-end can build the edge from drop geometry.
   const connectStart = useRef<{ nodeId: string; side: Side } | null>(null)
+  // Undo/redo stacks of invertible operations; opLock serializes async ops.
+  const undoStack = useRef<UndoEntry[]>([])
+  const redoStack = useRef<UndoEntry[]>([])
+  const opLock = useRef(false)
+  // Positions captured at drag start, so a finished move can be undone.
+  const dragStartPos = useRef<Map<string, { x: number; y: number }> | null>(null)
 
   // Load the whole board graph whenever the board changes.
   useEffect(() => {
@@ -94,12 +125,305 @@ function CanvasInner({ boardId }: { boardId: string }) {
     [],
   )
 
-  // Persist position only when a drag finishes (not on every frame).
-  const onNodeDragStop = useCallback(
-    (_: unknown, node: Node) => {
-      api.updateNode(boardId, node.id, { x: node.position.x, y: node.position.y })
+  // --- Undo / redo ---------------------------------------------------------
+  const pushUndo = useCallback((entry: UndoEntry) => {
+    undoStack.current.push(entry)
+    redoStack.current = []
+  }, [])
+
+  const undo = useCallback(async () => {
+    if (opLock.current) return
+    const entry = undoStack.current.pop()
+    if (!entry) return
+    opLock.current = true
+    try {
+      await entry.undo()
+    } finally {
+      opLock.current = false
+    }
+    redoStack.current.push(entry)
+  }, [])
+
+  const redo = useCallback(async () => {
+    if (opLock.current) return
+    const entry = redoStack.current.pop()
+    if (!entry) return
+    opLock.current = true
+    try {
+      await entry.redo()
+    } finally {
+      opLock.current = false
+    }
+    undoStack.current.push(entry)
+  }, [])
+
+  // Run a mutating op exclusively (prevents overlap with undo/redo or each other).
+  const runOp = useCallback(async (fn: () => Promise<void>) => {
+    if (opLock.current) return
+    opLock.current = true
+    try {
+      await fn()
+    } finally {
+      opLock.current = false
+    }
+  }, [])
+
+  // --- Create / remove primitives (used by paste, duplicate, merge, undo) ---
+  // Create a Portable's nodes+edges translated by (dx,dy); returns created ids.
+  const importPortableAt = useCallback(
+    async (p: Portable, dx: number, dy: number, select: boolean) => {
+      const createdNodes = await Promise.all(
+        p.nodes.map((pn) =>
+          api.createNode(boardId, {
+            type: pn.type,
+            title: pn.title,
+            content: pn.content,
+            x: pn.x + dx,
+            y: pn.y + dy,
+            width: pn.width ?? undefined,
+            height: pn.height ?? undefined,
+            color: pn.color ?? undefined,
+          }),
+        ),
+      )
+      const idMap = new Map<string, string>()
+      p.nodes.forEach((pn, i) => idMap.set(pn.tempId, createdNodes[i].id))
+
+      const edgeResults = await Promise.all(
+        p.edges.map(async (pe) => {
+          const s = idMap.get(pe.source) ?? pe.source
+          const t = idMap.get(pe.target) ?? pe.target
+          try {
+            return await api.createEdge(
+              boardId,
+              s,
+              t,
+              pe.label ?? undefined,
+              pe.data.sourceHandle as string | undefined,
+              pe.data.targetHandle as string | undefined,
+              typeof pe.data.sourceT === 'number' ? pe.data.sourceT : 0.5,
+              typeof pe.data.targetT === 'number' ? pe.data.targetT : 0.5,
+            )
+          } catch {
+            return null
+          }
+        }),
+      )
+      const createdEdges = edgeResults.filter((e): e is StoryEdge => e !== null)
+
+      const rfNew = createdNodes.map(toRFNode)
+      const rfNewEdges = createdEdges.map(toRFEdge)
+      setNodes((nds) => {
+        const base = select ? nds.map((n) => (n.selected ? { ...n, selected: false } : n)) : nds
+        return [...base, ...rfNew.map((n) => (select ? { ...n, selected: true } : n))]
+      })
+      setEdges((eds) => [...eds, ...rfNewEdges])
+      return {
+        nodeIds: createdNodes.map((n) => n.id),
+        edgeIds: createdEdges.map((e) => e.id),
+      }
     },
     [boardId],
+  )
+
+  const removeByIds = useCallback(
+    async (nodeIds: string[], edgeIds: string[]) => {
+      const nodeSet = new Set(nodeIds)
+      setNodes((nds) => nds.filter((n) => !nodeSet.has(n.id)))
+      setEdges((eds) =>
+        eds.filter(
+          (e) => !edgeIds.includes(e.id) && !nodeSet.has(e.source) && !nodeSet.has(e.target),
+        ),
+      )
+      await Promise.all([
+        ...edgeIds.map((id) => api.deleteEdge(boardId, id).catch(() => {})),
+        ...nodeIds.map((id) => api.deleteNode(boardId, id).catch(() => {})),
+      ])
+    },
+    [boardId],
+  )
+
+  // --- Node moves (drag) become undoable -----------------------------------
+  const applyPositions = useCallback(
+    (positions: Map<string, { x: number; y: number }>) => {
+      setNodes((nds) =>
+        nds.map((n) => (positions.has(n.id) ? { ...n, position: { ...positions.get(n.id)! } } : n)),
+      )
+      positions.forEach((pos, id) => api.updateNode(boardId, id, pos).catch(() => {}))
+    },
+    [boardId],
+  )
+
+  const onNodeDragStart = useCallback(
+    (_: unknown, node: Node) => {
+      const moving = getNodes().filter((n) => n.selected || n.id === node.id)
+      dragStartPos.current = new Map(moving.map((n) => [n.id, { x: n.position.x, y: n.position.y }]))
+    },
+    [getNodes],
+  )
+
+  const onNodeDragStop = useCallback(
+    (_: unknown, node: Node) => {
+      const before = dragStartPos.current
+      dragStartPos.current = null
+      const ids = before ? [...before.keys()] : [node.id]
+      const after = new Map<string, { x: number; y: number }>()
+      getNodes().forEach((n) => {
+        if (ids.includes(n.id)) after.set(n.id, { x: n.position.x, y: n.position.y })
+      })
+      after.forEach((pos, id) => api.updateNode(boardId, id, pos).catch(() => {}))
+      if (before) {
+        const moved = [...after].some(([id, pos]) => {
+          const b = before.get(id)
+          return b && (b.x !== pos.x || b.y !== pos.y)
+        })
+        if (moved) {
+          const beforeSnap = before
+          pushUndo({
+            undo: () => applyPositions(beforeSnap),
+            redo: () => applyPositions(after),
+          })
+        }
+      }
+    },
+    [boardId, getNodes, pushUndo, applyPositions],
+  )
+
+  // --- Clipboard actions (copy / cut / paste / duplicate) ------------------
+  const selectedIds = useCallback(
+    () => new Set(getNodes().filter((n) => n.selected).map((n) => n.id)),
+    [getNodes],
+  )
+
+  const doCopy = useCallback(() => {
+    const ids = selectedIds()
+    if (!ids.size) return
+    writeClipboard(serializeSelection(getNodes(), getEdges(), ids, boardId))
+  }, [boardId, getNodes, getEdges, selectedIds])
+
+  // Delete the current selection (objects and/or connections). Routes through
+  // React Flow's deleteElements so onBeforeDelete shows the confirm dialog.
+  const doDelete = useCallback(() => {
+    const ns = getNodes().filter((n) => n.selected).map((n) => ({ id: n.id }))
+    const es = getEdges().filter((e) => e.selected).map((e) => ({ id: e.id }))
+    if (!ns.length && !es.length) return
+    deleteElements({ nodes: ns, edges: es })
+  }, [getNodes, getEdges, deleteElements])
+
+  // Where to drop pasted/merged content so it never lands on top of existing.
+  const placementFor = useCallback(
+    (p: Portable, sameBoard: boolean) => {
+      const incBox = portableBox(p.nodes)
+      if (!incBox) return { dx: 0, dy: 0 }
+      const existing = getNodes()
+      if (!existing.length) return { dx: -incBox.minX, dy: -incBox.minY }
+      if (sameBoard) return { dx: PASTE_OFFSET, dy: PASTE_OFFSET }
+      return besideOffset(incBox, rfNodesBox(existing)!)
+    },
+    [getNodes],
+  )
+
+  const doPaste = useCallback(
+    () =>
+      runOp(async () => {
+        const p = readClipboard()
+        if (!p) return
+        const { dx, dy } = placementFor(p, p.sourceBoardId === boardId)
+        let live = await importPortableAt(p, dx, dy, true)
+        pushUndo({
+          undo: () => removeByIds(live.nodeIds, live.edgeIds),
+          redo: async () => {
+            live = await importPortableAt(p, dx, dy, true)
+          },
+        })
+      }),
+    [runOp, boardId, placementFor, importPortableAt, removeByIds, pushUndo],
+  )
+
+  const doDuplicate = useCallback(
+    () =>
+      runOp(async () => {
+        const ids = selectedIds()
+        if (!ids.size) return
+        const p = serializeSelection(getNodes(), getEdges(), ids, boardId)
+        let live = await importPortableAt(p, PASTE_OFFSET, PASTE_OFFSET, true)
+        pushUndo({
+          undo: () => removeByIds(live.nodeIds, live.edgeIds),
+          redo: async () => {
+            live = await importPortableAt(p, PASTE_OFFSET, PASTE_OFFSET, true)
+          },
+        })
+      }),
+    [runOp, selectedIds, getNodes, getEdges, boardId, importPortableAt, removeByIds, pushUndo],
+  )
+
+  const doCut = useCallback(
+    () =>
+      runOp(async () => {
+        const ids = selectedIds()
+        if (!ids.size) return
+        // Clipboard keeps internal edges; undo capture keeps touching edges too.
+        writeClipboard(serializeSelection(getNodes(), getEdges(), ids, boardId))
+        const capture = serializeSelection(getNodes(), getEdges(), ids, boardId, {
+          edgesTouching: true,
+        })
+        await removeByIds([...ids], [])
+        const live = { nodeIds: [...ids], edgeIds: [] as string[] }
+        pushUndo({
+          undo: async () => {
+            const r = await importPortableAt(capture, 0, 0, false)
+            live.nodeIds = r.nodeIds
+            live.edgeIds = r.edgeIds
+          },
+          redo: () => removeByIds(live.nodeIds, live.edgeIds),
+        })
+      }),
+    [runOp, selectedIds, getNodes, getEdges, boardId, importPortableAt, removeByIds, pushUndo],
+  )
+
+  // Merge whole boards: place each beside the (growing) content, one undo step.
+  const doMerge = useCallback(
+    (portables: Portable[]) =>
+      runOp(async () => {
+        const place = async () => {
+          let runBox = rfNodesBox(getNodes())
+          const acc = { nodeIds: [] as string[], edgeIds: [] as string[] }
+          for (const p of portables) {
+            const incBox = portableBox(p.nodes)
+            let dx = 0
+            let dy = 0
+            if (incBox && runBox) {
+              const o = besideOffset(incBox, runBox)
+              dx = o.dx
+              dy = o.dy
+            } else if (incBox) {
+              dx = -incBox.minX
+              dy = -incBox.minY
+            }
+            const r = await importPortableAt(p, dx, dy, false)
+            acc.nodeIds.push(...r.nodeIds)
+            acc.edgeIds.push(...r.edgeIds)
+            if (incBox) {
+              const placed = {
+                minX: incBox.minX + dx,
+                minY: incBox.minY + dy,
+                maxX: incBox.maxX + dx,
+                maxY: incBox.maxY + dy,
+              }
+              runBox = runBox ? unionBox(runBox, placed) : placed
+            }
+          }
+          return acc
+        }
+        let live = await place()
+        pushUndo({
+          undo: () => removeByIds(live.nodeIds, live.edgeIds),
+          redo: async () => {
+            live = await place()
+          },
+        })
+      }),
+    [runOp, getNodes, importPortableAt, removeByIds, pushUndo],
   )
 
   // Click anywhere on the minimap to recenter the canvas there (keeping zoom).
@@ -173,11 +497,10 @@ function CanvasInner({ boardId }: { boardId: string }) {
     [boardId, screenToFlowPosition],
   )
 
-  // Gate keyboard/programmatic deletion behind a confirm dialog when objects
-  // are involved. Edge-only deletions stay instant (low-risk, easily redrawn).
+  // Gate every deletion (objects and/or connections) behind a confirm dialog.
   const onBeforeDelete = useCallback(
     ({ nodes: delNodes, edges: delEdges }: { nodes: Node[]; edges: Edge[] }) => {
-      if (delNodes.length === 0) return Promise.resolve(true)
+      if (delNodes.length === 0 && delEdges.length === 0) return Promise.resolve(true)
       return new Promise<boolean>((resolve) =>
         setPendingDelete({ nodes: delNodes, edges: delEdges, resolve }),
       )
@@ -210,9 +533,25 @@ function CanvasInner({ boardId }: { boardId: string }) {
     setEdgeMenu({ x: event.clientX, y: event.clientY, edge })
   }, [])
 
-  // Suppress the browser menu on nodes (pane right-click still creates objects).
-  const onNodeContextMenu = useCallback((event: React.MouseEvent) => {
+  // Right-click a node -> clipboard menu. If it isn't part of the current
+  // selection, select just it so the action targets what was clicked.
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault()
+      const isSelected = getNodes().find((n) => n.id === node.id)?.selected
+      if (!isSelected) {
+        setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === node.id })))
+      }
+      setNodeMenu({ x: event.clientX, y: event.clientY })
+    },
+    [getNodes],
+  )
+
+  // Right-click the multi-selection bounding box -> same menu (acts on the
+  // whole selection). React Flow's overlay intercepts the per-node handler.
+  const onSelectionContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault()
+    setNodeMenu({ x: event.clientX, y: event.clientY })
   }, [])
 
   const deleteEdgeById = useCallback(
@@ -262,6 +601,69 @@ function CanvasInner({ boardId }: { boardId: string }) {
     [boardId, nodes],
   )
 
+  // Merge requested from the top bar: fetch each source board and import it.
+  useEffect(() => {
+    if (!mergeSourceIds || !mergeSourceIds.length) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const graphs = await Promise.all(mergeSourceIds.map((sid) => api.getGraph(sid)))
+        if (cancelled) return
+        const portables = graphs.map((g) => graphToPortable(g.board.id, g.nodes, g.edges))
+        await doMerge(portables)
+      } finally {
+        if (!cancelled) onMergeHandled?.()
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mergeSourceIds])
+
+  // Global keyboard shortcuts (read latest action closures via a ref).
+  const actionsRef = useRef({ doCopy, doCut, doPaste, doDuplicate, undo, redo })
+  useEffect(() => {
+    actionsRef.current = { doCopy, doCut, doPaste, doDuplicate, undo, redo }
+  })
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (
+        t &&
+        (t.tagName === 'INPUT' ||
+          t.tagName === 'TEXTAREA' ||
+          t.tagName === 'SELECT' ||
+          t.isContentEditable)
+      )
+        return
+      if (!(e.ctrlKey || e.metaKey)) return
+      const k = e.key.toLowerCase()
+      const a = actionsRef.current
+      if (k === 'c') {
+        a.doCopy()
+      } else if (k === 'x') {
+        e.preventDefault()
+        a.doCut()
+      } else if (k === 'v') {
+        e.preventDefault()
+        a.doPaste()
+      } else if (k === 'd') {
+        e.preventDefault()
+        a.doDuplicate()
+      } else if (k === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) a.redo()
+        else a.undo()
+      } else if (k === 'y') {
+        e.preventDefault()
+        a.redo()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const removeSelected = useCallback((nodeId: string) => {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId))
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId))
@@ -280,15 +682,18 @@ function CanvasInner({ boardId }: { boardId: string }) {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         connectionMode={ConnectionMode.Loose}
+        deleteKeyCode={['Delete', 'Backspace']}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnectStart={onConnectStart}
         onConnectEnd={onConnectEnd}
+        onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onNodeClick={(_, n) => setSelectedId(n.id)}
         onPaneClick={() => setSelectedId(null)}
         onPaneContextMenu={onPaneContextMenu}
         onNodeContextMenu={onNodeContextMenu}
+        onSelectionContextMenu={onSelectionContextMenu}
         onEdgeContextMenu={onEdgeContextMenu}
         onBeforeDelete={onBeforeDelete}
         onNodesDelete={onNodesDelete}
@@ -326,13 +731,35 @@ function CanvasInner({ boardId }: { boardId: string }) {
           y={edgeMenu.y}
           onClose={() => setEdgeMenu(null)}
           items={[
-            { label: 'Edit label…', onClick: () => setEditEdge(edgeMenu.edge) },
-            { label: 'Insert node', onClick: () => insertNodeOnEdge(edgeMenu.edge) },
+            { label: 'Edit label…', mnemonic: 'E', onClick: () => setEditEdge(edgeMenu.edge) },
+            {
+              label: 'Insert node',
+              mnemonic: 'I',
+              onClick: () => insertNodeOnEdge(edgeMenu.edge),
+            },
             {
               label: 'Delete connection',
+              mnemonic: 'D',
               danger: true,
               onClick: () => deleteEdgeById(edgeMenu.edge),
             },
+          ]}
+        />
+      )}
+
+      {nodeMenu && (
+        <ContextMenu
+          x={nodeMenu.x}
+          y={nodeMenu.y}
+          onClose={() => setNodeMenu(null)}
+          items={[
+            { label: 'Copy', mnemonic: 'C', onClick: () => doCopy() },
+            { label: 'Cut', mnemonic: 't', onClick: () => void doCut() },
+            { label: 'Duplicate', mnemonic: 'u', onClick: () => void doDuplicate() },
+            ...(clipboardHasContent()
+              ? [{ label: 'Paste', mnemonic: 'P', onClick: () => void doPaste() }]
+              : []),
+            { label: 'Delete', mnemonic: 'D', danger: true, onClick: () => doDelete() },
           ]}
         />
       )}
@@ -353,45 +780,50 @@ function CanvasInner({ boardId }: { boardId: string }) {
         />
       )}
 
-      {pendingDelete && (
-        <ConfirmDialog
-          title={
-            pendingDelete.nodes.length === 1
-              ? 'Delete object?'
-              : `Delete ${countLabel(pendingDelete.nodes.length, 'object')}?`
-          }
-          message={
-            pendingDelete.edges.length > 0
-              ? `This will permanently delete ${countLabel(
-                  pendingDelete.nodes.length,
-                  'object',
-                )} and ${countLabel(pendingDelete.edges.length, 'link')}, including their media. This can't be undone.`
-              : `This will permanently delete ${countLabel(
-                  pendingDelete.nodes.length,
-                  'object',
-                )} and their media. This can't be undone.`
-          }
-          confirmLabel="Delete"
-          danger
-          onConfirm={() => {
-            pendingDelete.resolve(true)
-            setPendingDelete(null)
-          }}
-          onCancel={() => {
-            pendingDelete.resolve(false)
-            setPendingDelete(null)
-          }}
-        />
-      )}
+      {pendingDelete &&
+        (() => {
+          const nCount = pendingDelete.nodes.length
+          const eCount = pendingDelete.edges.length
+          const title =
+            nCount > 0
+              ? nCount === 1
+                ? 'Delete object?'
+                : `Delete ${countLabel(nCount, 'object')}?`
+              : eCount === 1
+                ? 'Delete connection?'
+                : `Delete ${countLabel(eCount, 'connection')}?`
+          const message =
+            nCount > 0
+              ? eCount > 0
+                ? `This will permanently delete ${countLabel(nCount, 'object')} and ${countLabel(eCount, 'link')}, including their media. This can't be undone.`
+                : `This will permanently delete ${countLabel(nCount, 'object')} and their media. This can't be undone.`
+              : `This will permanently delete ${countLabel(eCount, 'connection')}. This can't be undone.`
+          return (
+            <ConfirmDialog
+              title={title}
+              message={message}
+              confirmLabel="Delete"
+              danger
+              onConfirm={() => {
+                pendingDelete.resolve(true)
+                setPendingDelete(null)
+              }}
+              onCancel={() => {
+                pendingDelete.resolve(false)
+                setPendingDelete(null)
+              }}
+            />
+          )
+        })()}
     </div>
     </BoardIdContext.Provider>
   )
 }
 
-export default function Canvas({ boardId }: { boardId: string }) {
+export default function Canvas(props: CanvasProps) {
   return (
     <ReactFlowProvider>
-      <CanvasInner boardId={boardId} />
+      <CanvasInner {...props} />
     </ReactFlowProvider>
   )
 }

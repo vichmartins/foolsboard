@@ -15,13 +15,74 @@
   z-index: 5;
 }
 
-.brand {
+/* Clickable logo + dropdown menu */
+.brand-menu {
+  position: relative;
+}
+.brand--button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  font-family: inherit;
   font-weight: 700;
   font-size: 18px;
   letter-spacing: -0.5px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
 }
-.brand span {
+.brand__accent {
   color: var(--accent);
+}
+.brand--button:hover {
+  background: var(--bg-elev-2);
+}
+.brand--button .brand__chevron {
+  font-size: 10px;
+  color: var(--text-dim);
+  transition: transform 0.15s;
+}
+.brand--button .brand__chevron--open {
+  transform: rotate(180deg);
+}
+
+.brand-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  padding: 5px;
+  z-index: 50;
+  animation: ctx-in 0.12s ease;
+}
+.brand-dropdown__item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 9px 10px;
+  border-radius: 7px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.brand-dropdown__item:hover {
+  background: var(--bg-elev-2);
+}
+.brand-dropdown__footer {
+  margin-top: 4px;
+  padding: 8px 10px 4px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .board-select {
@@ -83,13 +144,21 @@
 }
 
 .icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: transparent;
   border: none;
   color: var(--text-dim);
   cursor: pointer;
   font-size: 14px;
-  padding: 2px 6px;
+  padding: 5px 7px;
   border-radius: 6px;
+}
+.icon-btn svg {
+  width: 15px;
+  height: 15px;
+  display: block;
 }
 .icon-btn:hover {
   color: var(--text);
@@ -563,6 +632,96 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 4px;
+}
+
+/* Merge dialog board picker */
+.merge-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.merge-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: pointer;
+}
+.merge-item:hover {
+  border-color: var(--accent);
+}
+.merge-item input {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+
+.dialog--wide {
+  width: min(540px, calc(100vw - 48px));
+}
+
+/* Keyboard shortcuts reference */
+.shortcuts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 28px;
+}
+.shortcuts__heading {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-dim);
+}
+.shortcuts__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.shortcut {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.shortcut__desc {
+  font-size: 13.5px;
+  color: var(--text);
+}
+.shortcut__keys {
+  display: inline-flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.shortcut kbd {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1;
+  padding: 4px 6px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  color: var(--text);
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .shortcuts {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Respect users who prefer minimal motion. */
