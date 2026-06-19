@@ -26,6 +26,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..audit import log_event
 from ..compression import compress
 from ..config import settings
 from ..database import SessionLocal, get_db
@@ -132,6 +133,7 @@ def _process_compression(asset_id: UUID) -> None:
 def upload_asset(
     background_tasks: BackgroundTasks,
     node: Node = Depends(get_owned_node),
+    user: User = Depends(get_current_user),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ) -> AssetOut:
@@ -172,6 +174,8 @@ def upload_asset(
             db.add(asset)
             db.commit()
             db.refresh(asset)
+            log_event(db, user=user, action="media.upload", entity_type="media",
+                      entity_id=asset.id, summary=f"uploaded “{filename}”")
             return _to_out(asset)
 
         store_path, store_name, store_ct, store_kind = src_path, filename, content_type, kind
@@ -218,6 +222,8 @@ def upload_asset(
         asset_id = asset.id
         out = _to_out(asset)
 
+    log_event(db, user=user, action="media.upload", entity_type="media", entity_id=asset_id,
+              summary=f"uploaded “{store_name}”")
     if processing:
         background_tasks.add_task(_process_compression, asset_id)
     return out
@@ -263,17 +269,23 @@ def reference_assets(
     db.commit()
     for asset in created:
         db.refresh(asset)
+    if created:
+        log_event(db, user=user, action="media.reference", entity_type="media",
+                  summary=f"referenced {len(created)} media item(s)")
     return [_to_out(asset) for asset in created]
 
 
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_asset(
-    asset_id: UUID, node: Node = Depends(get_owned_node), db: Session = Depends(get_db)
+    asset_id: UUID,
+    node: Node = Depends(get_owned_node),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> None:
     asset = db.get(Asset, asset_id)
     if asset is None or asset.node_id != node.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Asset not found")
-    key, thumb = asset.storage_key, asset.thumbnail_key
+    key, thumb, name = asset.storage_key, asset.thumbnail_key, asset.filename
     db.delete(asset)
     db.commit()
     # Files may be shared with other nodes via dedup -- only remove the last ref.
@@ -281,3 +293,5 @@ def delete_asset(
         storage.delete(key)
     if thumb and db.scalars(select(Asset.id).where(Asset.thumbnail_key == thumb)).first() is None:
         storage.delete(thumb)
+    log_event(db, user=user, action="media.delete", entity_type="media", entity_id=asset_id,
+              summary=f"removed “{name}”")

@@ -7,9 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..audit import log_event
 from ..database import get_db
-from ..deps import get_owned_board
-from ..models import Board, Node
+from ..deps import get_current_user, get_owned_board
+from ..models import Board, Node, User
 from ..schemas import NodeCreate, NodeOut, NodeUpdate
 
 router = APIRouter(prefix="/api/boards/{board_id}/nodes", tags=["nodes"])
@@ -33,12 +34,15 @@ def list_nodes(
 def create_node(
     payload: NodeCreate,
     board: Board = Depends(get_owned_board),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Node:
     node = Node(board_id=board.id, **payload.model_dump())
     db.add(node)
     db.commit()
     db.refresh(node)
+    log_event(db, user=user, action="object.create", entity_type="object", entity_id=node.id,
+              summary=f"added an object to “{board.name}”")
     return node
 
 
@@ -66,8 +70,13 @@ def update_node(
 
 @router.delete("/{node_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_node(
-    node_id: UUID, board: Board = Depends(get_owned_board), db: Session = Depends(get_db)
+    node_id: UUID,
+    board: Board = Depends(get_owned_board),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> None:
     node = _get_node(board.id, node_id, db)
     db.delete(node)
     db.commit()
+    log_event(db, user=user, action="object.delete", entity_type="object", entity_id=node_id,
+              summary=f"deleted an object from “{board.name}”")

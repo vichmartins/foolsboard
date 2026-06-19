@@ -31,6 +31,9 @@ def get_current_user(
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Account no longer exists")
+    if not user.is_active:
+        # 401 so the client clears the token and returns to the login screen.
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Account suspended")
     return user
 
 

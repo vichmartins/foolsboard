@@ -6,19 +6,66 @@ head` before first use.
 """
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, update
+from starlette.concurrency import run_in_threadpool
 
 from .config import settings
 from .database import SessionLocal
-from .models import Asset
-from .routers import assets, auth, boards, edges, invites, links, nodes
+from .models import Asset, RequestLog
+from .routers import admin, assets, auth, boards, edges, invites, links, nodes
+from .security import decode_token
 
 app = FastAPI(title="foolsboard API", version="0.4.0")
+
+
+def _write_request_log(
+    method: str, path: str, status_code: int, duration_ms: int, user_id, ip: str | None
+) -> None:
+    db = SessionLocal()
+    try:
+        db.add(
+            RequestLog(
+                method=method,
+                path=path[:500],
+                status_code=status_code,
+                duration_ms=duration_ms,
+                user_id=user_id,
+                ip=ip,
+            )
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
+
+@app.middleware("http")
+async def _log_requests(request: Request, call_next):
+    """Record every API request (skipping the log-viewing endpoints themselves)."""
+    start = time.monotonic()
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/api") and not path.startswith("/api/admin/logs"):
+        header = request.headers.get("Authorization", "")
+        user_id = decode_token(header[7:]) if header.startswith("Bearer ") else None
+        ip = request.client.host if request.client else None
+        await run_in_threadpool(
+            _write_request_log,
+            request.method,
+            path,
+            response.status_code,
+            int((time.monotonic() - start) * 1000),
+            user_id,
+            ip,
+        )
+    return response
 
 
 @app.on_event("startup")
@@ -80,6 +127,7 @@ if settings.storage_backend == "local":
 
 app.include_router(auth.router)
 app.include_router(invites.router)
+app.include_router(admin.router)
 app.include_router(boards.router)
 app.include_router(nodes.router)
 app.include_router(edges.router)

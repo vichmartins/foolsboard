@@ -162,8 +162,45 @@ class UserOut(ORMModel):
     email: str
     username: str
     is_admin: bool
+    is_active: bool = True
     created_at: datetime
     avatar_url: str | None = None
+
+
+class AdminUserOut(ORMModel):
+    id: UUID
+    email: str
+    username: str
+    is_admin: bool
+    is_active: bool
+    created_at: datetime
+
+
+class AdminUserUpdate(BaseModel):
+    is_admin: bool | None = None
+    is_active: bool | None = None
+
+
+class ActivityLogOut(ORMModel):
+    id: UUID
+    user_id: UUID | None
+    username: str | None
+    action: str
+    entity_type: str | None
+    entity_id: UUID | None
+    summary: str
+    created_at: datetime
+
+
+class RequestLogOut(ORMModel):
+    id: UUID
+    user_id: UUID | None
+    method: str
+    path: str
+    status_code: int
+    duration_ms: int
+    ip: str | None
+    created_at: datetime
 
 
 class Token(BaseModel):

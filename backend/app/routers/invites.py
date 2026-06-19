@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_admin
 from ..models import InviteCode, User
@@ -32,12 +33,14 @@ def create_invite(
     db.add(invite)
     db.commit()
     db.refresh(invite)
+    log_event(db, user=admin, action="invite.create", entity_type="invite", entity_id=invite.id,
+              summary="generated an invite code")
     return invite
 
 
 @router.delete("/{invite_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_invite(
-    invite_id: UUID, _: User = Depends(get_current_admin), db: Session = Depends(get_db)
+    invite_id: UUID, admin: User = Depends(get_current_admin), db: Session = Depends(get_db)
 ) -> None:
     invite = db.get(InviteCode, invite_id)
     if invite is None:
@@ -46,3 +49,5 @@ def delete_invite(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "That invite has already been used")
     db.delete(invite)
     db.commit()
+    log_event(db, user=admin, action="invite.revoke", entity_type="invite",
+              summary="revoked an invite code")

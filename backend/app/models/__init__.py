@@ -7,7 +7,17 @@ from .asset import Asset
 from .board import Board
 from .edge import Edge
 from .invite import InviteCode
+from .logs import ActivityLog, RequestLog
 from .node import Node
 from .user import User
 
-__all__ = ["Asset", "Board", "Edge", "InviteCode", "Node", "User"]
+__all__ = [
+    "ActivityLog",
+    "Asset",
+    "Board",
+    "Edge",
+    "InviteCode",
+    "Node",
+    "RequestLog",
+    "User",
+]

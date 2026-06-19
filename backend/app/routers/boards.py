@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
 from ..models import Board, Edge, Node, User
@@ -41,6 +42,10 @@ def create_board(
     db.add(board)
     db.commit()
     db.refresh(board)
+    log_event(
+        db, user=user, action="board.create", entity_type="board",
+        entity_id=board.id, summary=f"created board “{board.name}”",
+    )
     return board
 
 
@@ -73,6 +78,10 @@ def update_board(
         setattr(board, field, value)
     db.commit()
     db.refresh(board)
+    log_event(
+        db, user=user, action="board.update", entity_type="board",
+        entity_id=board.id, summary=f"updated board “{board.name}”",
+    )
     return board
 
 
@@ -81,5 +90,11 @@ def delete_board(
     board_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> None:
     board = _get_board(board_id, db, user)
+    name = board.name
+    bid = board.id
     db.delete(board)
     db.commit()
+    log_event(
+        db, user=user, action="board.delete", entity_type="board",
+        entity_id=bid, summary=f"deleted board “{name}”",
+    )

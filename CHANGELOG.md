@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.15.0
+
+- Admin + logging backend (UI to follow). Accounts gained an active/suspended
+  status (suspended users can't sign in and are dropped mid-session). New
+  admin-only endpoints list users, change a user's admin role / active status
+  (with self and last-admin guards), and delete users; account creation stays
+  invite-only. Full logging: an HTTP middleware records every API request, and a
+  curated activity log captures sign-in/out, register, board/object/link/media
+  create-delete, invite changes, and admin actions. Log-query endpoints with
+  filtering. New migration adds users.is_active and the activity_logs /
+  request_logs tables.
+
 ## v0.14.6
 
 - New objects are now created untyped instead of defaulting to Notes. An untyped

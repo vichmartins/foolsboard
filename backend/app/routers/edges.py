@@ -7,9 +7,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..audit import log_event
 from ..database import get_db
-from ..deps import get_owned_board
-from ..models import Board, Edge, Node
+from ..deps import get_current_user, get_owned_board
+from ..models import Board, Edge, Node, User
 from ..schemas import EdgeCreate, EdgeOut, EdgeUpdate
 
 router = APIRouter(prefix="/api/boards/{board_id}/edges", tags=["edges"])
@@ -42,6 +43,7 @@ def list_edges(
 def create_edge(
     payload: EdgeCreate,
     board: Board = Depends(get_owned_board),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Edge:
     _validate_endpoint(board.id, payload.source_id, db)
@@ -50,6 +52,8 @@ def create_edge(
     db.add(edge)
     db.commit()
     db.refresh(edge)
+    log_event(db, user=user, action="link.create", entity_type="link", entity_id=edge.id,
+              summary=f"linked two objects on “{board.name}”")
     return edge
 
 
@@ -70,8 +74,13 @@ def update_edge(
 
 @router.delete("/{edge_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_edge(
-    edge_id: UUID, board: Board = Depends(get_owned_board), db: Session = Depends(get_db)
+    edge_id: UUID,
+    board: Board = Depends(get_owned_board),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> None:
     edge = _get_edge(board.id, edge_id, db)
     db.delete(edge)
     db.commit()
+    log_event(db, user=user, action="link.delete", entity_type="link", entity_id=edge_id,
+              summary=f"removed a link on “{board.name}”")

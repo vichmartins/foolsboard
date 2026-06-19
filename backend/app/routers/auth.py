@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
+from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
 from ..models import Board, InviteCode, User
@@ -75,6 +76,7 @@ def register(payload: RegisterIn, db: Session = Depends(get_db)) -> Token:
 
     db.commit()
     db.refresh(user)
+    log_event(db, user=user, action="auth.register", summary=f"registered {user.username}")
     return Token(access_token=create_access_token(user.id), user=_user_out(user))
 
 
@@ -88,7 +90,15 @@ def login(payload: LoginIn, db: Session = Depends(get_db)) -> Token:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "Incorrect username/email or password"
         )
+    if not user.is_active:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Your account has been suspended")
+    log_event(db, user=user, action="auth.login", summary="signed in")
     return Token(access_token=create_access_token(user.id), user=_user_out(user))
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> None:
+    log_event(db, user=user, action="auth.logout", summary="signed out")
 
 
 @router.get("/me", response_model=UserOut)
