@@ -160,7 +160,9 @@ export default function ContextPanel({
         <span>Type</span>
         <select value={type} onChange={(e) => setType(e.target.value)}>
           {NODE_TYPES.map((t) => (
-            <option key={t} value={t}>{t}</option>
+            <option key={t} value={t}>
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </option>
           ))}
         </select>
       </label>

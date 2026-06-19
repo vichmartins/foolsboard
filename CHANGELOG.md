@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8.1
+
+- The Type dropdown now shows capitalized labels (Scene, Character, …) while
+  keeping the stored values lowercase.
+
 ## v0.8.0
 
 - **Background media optimization** — uploads now return as soon as the file is
