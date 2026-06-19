@@ -107,10 +107,6 @@ export default function App() {
           Merge…
         </button>
 
-        <span className="hint">
-          Right-click canvas to add · drag handles to link · right-click a link to edit · Del to remove
-        </span>
-
         <ThemeToggle />
       </header>
 

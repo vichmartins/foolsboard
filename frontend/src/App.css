@@ -109,11 +109,6 @@
   font-size: 14px;
 }
 
-.hint {
-  margin-left: auto;
-  color: var(--text-dim);
-  font-size: 12.5px;
-}
 
 /* --- Buttons ------------------------------------------------------------- */
 .btn {
@@ -197,6 +192,8 @@
   display: inline-flex;
   align-items: center;
   padding: 6px 8px;
+  /* Push the toggle to the right edge of the top bar. */
+  margin-left: auto;
 }
 .theme-toggle svg {
   width: 17px;
@@ -737,6 +734,8 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 18px 28px;
+  max-height: 65vh;
+  overflow-y: auto;
 }
 .shortcuts__heading {
   margin: 0 0 8px;

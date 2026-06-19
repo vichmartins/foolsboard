@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.7
+
+- Removed the top-bar hint sentence and moved its guidance into the Keyboard
+  shortcuts dialog, which now also documents the mouse gestures (objects,
+  connections, minimap).
+
 ## v0.6.6
 
 - **Fix:** the right-click context menu got stuck after its first use (a

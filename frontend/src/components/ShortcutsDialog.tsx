@@ -24,12 +24,23 @@ const GROUPS: { title: string; items: { keys: string[]; desc: string }[] }[] = [
     ],
   },
   {
-    title: 'Canvas',
+    title: 'Objects',
     items: [
-      { keys: ['Del'], desc: 'Delete selection' },
-      { keys: ['Shift', 'drag'], desc: 'Select multiple objects' },
+      { keys: ['Right-click'], desc: 'New object (empty canvas)' },
+      { keys: ['Click'], desc: 'Select object' },
+      { keys: ['Double-click'], desc: 'Open edit panel' },
+      { keys: ['Shift', 'Drag'], desc: 'Select multiple' },
       { keys: ['Right-click'], desc: 'Object / selection menu' },
-      { keys: ['Right-click', 'pane'], desc: 'New object' },
+      { keys: ['Del'], desc: 'Delete selection' },
+    ],
+  },
+  {
+    title: 'Connections',
+    items: [
+      { keys: ['Drag'], desc: 'Link objects (from a node edge)' },
+      { keys: ['Drag'], desc: 'Move or reassign a link end' },
+      { keys: ['Drag'], desc: 'Delete a link (drop on empty)' },
+      { keys: ['Right-click'], desc: 'Edit or delete a link' },
     ],
   },
   {
