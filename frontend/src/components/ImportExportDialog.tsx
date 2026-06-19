@@ -17,10 +17,15 @@ function slug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'board'
 }
 
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`
+// Indeterminate progress bar, shown while exporting or importing.
+function ProgressBar() {
+  return (
+    <div className="impex-progress">
+      <div className="impex-progress__bar">
+        <div className="impex-progress__fill" />
+      </div>
+    </div>
+  )
 }
 
 export default function ImportExportDialog({ boards, onClose, onImported }: Props) {
@@ -30,8 +35,6 @@ export default function ImportExportDialog({ boards, onClose, onImported }: Prop
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
-  // Bytes streamed so far during an export (null when not exporting).
-  const [exportBytes, setExportBytes] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const allSelected = boards.length > 0 && selected.size === boards.length
@@ -49,10 +52,9 @@ export default function ImportExportDialog({ boards, onClose, onImported }: Prop
     if (selected.size === 0 || busy) return
     setBusy(true)
     setError(null)
-    setExportBytes(0)
     try {
       const ids = [...selected]
-      const blob = await api.exportBoards(ids, (loaded) => setExportBytes(loaded))
+      const blob = await api.exportBoards(ids)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -68,7 +70,6 @@ export default function ImportExportDialog({ boards, onClose, onImported }: Prop
       setError('Export failed. Please try again.')
     } finally {
       setBusy(false)
-      setExportBytes(null)
     }
   }
 
@@ -139,18 +140,7 @@ export default function ImportExportDialog({ boards, onClose, onImported }: Prop
                   </li>
                 ))}
               </ul>
-              {exportBytes !== null && (
-                <div className="impex-progress">
-                  <div className="impex-progress__bar">
-                    <div className="impex-progress__fill" />
-                  </div>
-                  <div className="impex-progress__label">
-                    {exportBytes > 0
-                      ? `Packaging… ${formatBytes(exportBytes)}`
-                      : 'Preparing bundle…'}
-                  </div>
-                </div>
-              )}
+              {busy && <ProgressBar />}
               <div className="dialog__actions">
                 <button className="btn" onClick={onClose} disabled={busy}>
                   Cancel
@@ -191,6 +181,7 @@ export default function ImportExportDialog({ boards, onClose, onImported }: Prop
                   {busy ? 'Importing…' : 'Drop a .zip bundle here, or click to browse'}
                 </div>
               </div>
+              {busy && <ProgressBar />}
               {result && <p className="account-msg">{result}</p>}
               <input
                 ref={fileRef}

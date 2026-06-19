@@ -22,3 +22,39 @@ export function TrashIcon() {
     </svg>
   )
 }
+
+export function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  )
+}
+
+export function MergeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="6" cy="6" r="3" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="18" cy="12" r="3" />
+      <path d="M9 6h2a4 4 0 0 1 4 4v0" />
+      <path d="M9 18h2a4 4 0 0 0 4-4v0" />
+    </svg>
+  )
+}
+
+// Up + down arrows = import / export (transfer in & out).
+export function TransferIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 20V8" />
+      <path d="M4 12l4-4 4 4" />
+      <path d="M16 4v12" />
+      <path d="M20 12l-4 4-4-4" />
+    </svg>
+  )
+}

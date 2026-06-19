@@ -13,7 +13,7 @@ import PromptDialog from './components/PromptDialog'
 import MergeDialog from './components/MergeDialog'
 import TypeToConfirmDialog from './components/TypeToConfirmDialog'
 import ThemeToggle from './components/ThemeToggle'
-import { PencilIcon, TrashIcon } from './components/icons'
+import { MergeIcon, PencilIcon, PlusIcon, TransferIcon, TrashIcon } from './components/icons'
 import type { Board } from './types'
 import './App.css'
 
@@ -109,22 +109,33 @@ function Workspace() {
           </button>
         </div>
 
-        <button className="btn" onClick={() => setDialog('new')}>+ New board</button>
-        <button
-          className="btn"
-          onClick={() => setDialog('merge')}
-          disabled={boards.length < 2}
-          title="Merge other boards into this one"
-        >
-          Merge…
-        </button>
-        <button
-          className="btn"
-          onClick={() => setImpexOpen(true)}
-          title="Import or export boards"
-        >
-          Import / Export
-        </button>
+        <div className="board-actions">
+          <button
+            className="icon-btn"
+            onClick={() => setDialog('new')}
+            title="New board"
+            aria-label="New board"
+          >
+            <PlusIcon />
+          </button>
+          <button
+            className="icon-btn"
+            onClick={() => setDialog('merge')}
+            disabled={boards.length < 2}
+            title="Merge other boards into this one"
+            aria-label="Merge boards"
+          >
+            <MergeIcon />
+          </button>
+          <button
+            className="icon-btn"
+            onClick={() => setImpexOpen(true)}
+            title="Import or export boards"
+            aria-label="Import or export boards"
+          >
+            <TransferIcon />
+          </button>
+        </div>
 
         <ThemeToggle />
         <ProfileMenu

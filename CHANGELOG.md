@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.15.4
+
+- The top-bar New board / Merge / Import-Export actions are now themed line
+  icons grouped with the rename/delete icons (tooltips + aria-labels retained).
+- Import shows the same progress bar as export, and the export progress bar
+  dropped its byte counter for a cleaner indeterminate bar.
+- The import drag-and-drop target now uses the same accent pulse/glow animation
+  as dragging media onto the side panel.
+
 ## v0.15.3
 
 - Import / Export storyboards from a new top-bar button. Export bundles the
