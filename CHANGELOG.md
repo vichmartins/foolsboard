@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.9.0
+
+- The shift-drag selection rectangle is now mirrored live on the minimap (drawn
+  in flow coordinates against the minimap's viewBox, so it stays aligned through
+  pan/zoom and clears on release).
+
 ## v0.8.9
 
 - Merged-in content now arrives selected/highlighted (click empty canvas to

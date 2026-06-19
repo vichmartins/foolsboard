@@ -27,6 +27,7 @@ import {
   rfNodesBox,
   serializeSelection,
   unionBox,
+  type Box,
   type Portable,
 } from '../boardOps'
 import { clipboardHasContent, readClipboard, writeClipboard } from '../clipboard'
@@ -37,6 +38,7 @@ import ConfirmDialog from './ConfirmDialog'
 import ContextMenu from './ContextMenu'
 import ContextPanel from './ContextPanel'
 import FloatingEdge from './FloatingEdge'
+import MinimapSelection from './MinimapSelection'
 import PromptDialog from './PromptDialog'
 import StoryNodeCard from './StoryNodeCard'
 
@@ -94,6 +96,9 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
   const [dragKind, setDragKind] = useState<'none' | 'ready' | 'blocked'>('none')
   const [droppedFiles, setDroppedFiles] = useState<File[] | null>(null)
   const hasPanelRef = useRef(false)
+  // Live shift-drag selection rectangle (flow coords), mirrored on the minimap.
+  const [selectionRect, setSelectionRect] = useState<Box | null>(null)
+  const selStart = useRef<{ x: number; y: number } | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const [edgeMenu, setEdgeMenu] = useState<{ x: number; y: number; edge: Edge } | null>(null)
   const [nodeMenu, setNodeMenu] = useState<{ x: number; y: number } | null>(null)
@@ -441,6 +446,38 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
     [setCenter, getZoom],
   )
 
+  // Shift-drag selection rectangle -> track in flow coords to mirror on the minimap.
+  const onSelectionStart = useCallback(
+    (e: React.MouseEvent) => {
+      const p = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      selStart.current = p
+      setSelectionRect({ minX: p.x, minY: p.y, maxX: p.x, maxY: p.y })
+    },
+    [screenToFlowPosition],
+  )
+  const onSelectionEnd = useCallback(() => {
+    selStart.current = null
+    setSelectionRect(null)
+  }, [])
+
+  const isSelecting = selectionRect !== null
+  useEffect(() => {
+    if (!isSelecting) return
+    const onMove = (e: MouseEvent) => {
+      const s = selStart.current
+      if (!s) return
+      const c = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      setSelectionRect({
+        minX: Math.min(s.x, c.x),
+        minY: Math.min(s.y, c.y),
+        maxX: Math.max(s.x, c.x),
+        maxY: Math.max(s.y, c.y),
+      })
+    }
+    window.addEventListener('mousemove', onMove)
+    return () => window.removeEventListener('mousemove', onMove)
+  }, [isSelecting, screenToFlowPosition])
+
   // Drawing a connection: remember where it started...
   const onConnectStart = useCallback(
     (
@@ -765,6 +802,8 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
         onEdgesChange={onEdgesChange}
         onConnectStart={onConnectStart}
         onConnectEnd={onConnectEnd}
+        onSelectionStart={onSelectionStart}
+        onSelectionEnd={onSelectionEnd}
         onNodeDragStart={onNodeDragStart}
         onNodeDragStop={onNodeDragStop}
         onNodeDoubleClick={(_, n) => openPanel(n.id)}
@@ -796,6 +835,8 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
           nodeStrokeWidth={4}
         />
       </ReactFlow>
+
+      {selectionRect && <MinimapSelection rect={selectionRect} />}
 
       {!nodes.length && (
         <div className="canvas-hint">Right-click anywhere to create your first object</div>

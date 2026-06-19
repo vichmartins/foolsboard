@@ -382,6 +382,19 @@
   fill: var(--minimap-mask);
 }
 
+/* Shift-drag selection rectangle mirrored over the minimap */
+.minimap-selection {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+}
+.minimap-selection rect {
+  fill: rgba(99, 102, 241, 0.2);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
 /* Shift-drag selection box + the bounding box around selected nodes —
    themed to the accent, a touch brighter than the default blue. */
 .react-flow__selection,
