@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.13.2
+
+- Memory: React Flow now only renders nodes within the viewport
+  (onlyRenderVisibleElements), so off-screen cards and their decoded images are
+  unmounted — keeping memory roughly proportional to what's on screen. Node-card
+  preview images are also released when the dropdown collapses (kept mounted only
+  while open, plus a short window for the close animation).
+
 ## v0.13.1
 
 - The node-card content preview now shows real media thumbnails and link

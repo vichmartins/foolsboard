@@ -901,6 +901,9 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
         onEdgesDelete={onEdgesDelete}
         fitView
         proOptions={{ hideAttribution: true }}
+        // Only mount nodes within the viewport: off-screen cards (and their
+        // decoded images) are unmounted, which keeps memory flat on big boards.
+        onlyRenderVisibleElements
       >
         <Background gap={20} />
         <Controls />

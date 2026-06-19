@@ -7,7 +7,7 @@
 // Hovering reveals a chevron that expands an in-card preview of the node's
 // content: its type fields, media thumbnails, and reference link previews, with
 // a smooth height animation. Media is fetched lazily the first time it expands.
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { listAssets } from '../api'
@@ -59,8 +59,10 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
   const d = data as StoryNodeData
   const accent = KIND_COLORS[d.kind] ?? KIND_COLORS.note
   const [expanded, setExpanded] = useState(false)
+  const [closing, setClosing] = useState(false)
   const [assets, setAssets] = useState<Asset[] | null>(null)
   const [galleryIndex, setGalleryIndex] = useState<number | null>(null)
+  const closeTimer = useRef<number | null>(null)
 
   const story = d.story
   const content = story?.content ?? {}
@@ -80,6 +82,30 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
 
   const media = assets ?? []
   const isEmpty = rows.length === 0 && media.length === 0 && references.length === 0
+
+  // Keep the preview's images mounted only while open (plus a short window so
+  // the collapse animation can play). Collapsing releases the decoded images.
+  const showContent = expanded || closing
+  function toggle() {
+    if (closeTimer.current) {
+      window.clearTimeout(closeTimer.current)
+      closeTimer.current = null
+    }
+    if (expanded) {
+      setExpanded(false)
+      setClosing(true)
+      closeTimer.current = window.setTimeout(() => setClosing(false), 300)
+    } else {
+      setClosing(false)
+      setExpanded(true)
+    }
+  }
+  useEffect(
+    () => () => {
+      if (closeTimer.current) window.clearTimeout(closeTimer.current)
+    },
+    [],
+  )
 
   return (
     <div
@@ -104,7 +130,7 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
         aria-label={expanded ? 'Hide preview' : 'Preview content'}
         onClick={(e) => {
           e.stopPropagation()
-          setExpanded((v) => !v)
+          toggle()
         }}
         onDoubleClick={(e) => e.stopPropagation()}
       >
@@ -119,6 +145,8 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
 
       <div className={'story-node__more' + (expanded ? ' story-node__more--open' : '')}>
         <div className="story-node__more-inner nodrag">
+          {showContent && (
+            <>
           {rows.map((r) => (
             <div className="story-node__row" key={r.label}>
               <span className="story-node__row-label">{r.label}</span>
@@ -209,6 +237,8 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
           )}
 
           {isEmpty && <p className="story-node__more-empty">No content yet</p>}
+            </>
+          )}
         </div>
       </div>
 
