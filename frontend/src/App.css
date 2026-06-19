@@ -771,29 +771,40 @@
   box-shadow: -10px 0 28px rgba(0, 0, 0, 0.32);
   display: flex;
   flex-direction: column;
-  animation: drawer-in 0.2s ease;
+  /* Slide out from behind the panel and retreat behind it on close. */
+  animation: drawer-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .media-drawer--closing {
   animation: drawer-out 0.2s ease forwards;
 }
+/* Full-panel dismiss (clicked away): fade out so it doesn't race the panel. */
+.media-drawer--dismiss {
+  animation: drawer-dismiss 0.18s ease forwards;
+}
 @keyframes drawer-in {
   from {
-    transform: translateX(24px);
-    opacity: 0;
+    transform: translateX(100%);
   }
   to {
     transform: translateX(0);
-    opacity: 1;
   }
 }
 @keyframes drawer-out {
   from {
     transform: translateX(0);
-    opacity: 1;
   }
   to {
-    transform: translateX(24px);
+    transform: translateX(100%);
+  }
+}
+@keyframes drawer-dismiss {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
     opacity: 0;
+    transform: translateX(24px);
   }
 }
 .media-drawer__head {
@@ -1007,6 +1018,15 @@
   object-fit: contain;
   border-radius: 6px;
   display: block;
+}
+/* With the gallery drawer open, float the preview into the open canvas area to
+   the left of the drawer instead of on top of it. */
+.media-preview--drawer {
+  right: calc(356px + min(460px, 100vw - 372px));
+  width: 360px;
+}
+.media-preview--drawer img {
+  max-height: 340px;
 }
 
 /* File drag-and-drop overlays */

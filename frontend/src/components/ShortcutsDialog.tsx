@@ -40,6 +40,16 @@ const GROUPS: { title: string; items: Shortcut[] }[] = [
       { keys: ['Shift', 'Drag'], desc: 'Select multiple' },
       { keys: ['Right-click'], desc: 'Object / selection menu' },
       { keys: ['Del', 'Backspace'], alt: true, desc: 'Delete selection' },
+      { keys: ['Esc'], desc: 'Close edit panel, or clear selection' },
+    ],
+  },
+  {
+    title: 'Gallery',
+    items: [
+      { keys: ['Click'], desc: 'Open a file in the viewer' },
+      { keys: ['Click'], desc: 'Expand / collapse drawer (◀ arrow)' },
+      { keys: ['←', '→'], alt: true, desc: 'Previous / next file (viewer)' },
+      { keys: ['Esc'], desc: 'Close viewer or preview, then collapse the drawer' },
     ],
   },
   {

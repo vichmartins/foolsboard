@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.9.3
+
+- Esc now also closes the media hover preview, as the first step of the panel's
+  Esc cascade (preview → gallery drawer → side panel → clear selection).
+- The gallery drawer retracts with a panel-style horizontal slide, tucking
+  behind the side panel on Esc/collapse; when the whole panel is dismissed by
+  clicking away, the drawer fades out instead of racing the panel, which looks
+  much smoother.
+- Documented Esc in the keyboard shortcuts dialog and added a Gallery section
+  (open viewer, expand/collapse drawer, navigate, Esc).
+
 ## v0.9.2
 
 - Recolored Scene objects from indigo to sky-blue so they're distinguishable

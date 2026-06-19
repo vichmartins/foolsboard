@@ -185,7 +185,7 @@ export default function ContextPanel({
   function showPreview(e: React.MouseEvent, url: string | null) {
     if (!url) return
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    const top = Math.min(Math.max(8, r.top - 40), window.innerHeight - 320)
+    const top = Math.min(Math.max(8, r.top - 40), window.innerHeight - 372)
     setPreview({ url, top })
   }
 
@@ -199,6 +199,7 @@ export default function ContextPanel({
     if (mediaExpanded) {
       setMediaExpanded(false)
       setMediaClosing(true)
+      setPreview(null)
       mediaTimer.current = window.setTimeout(() => setMediaClosing(false), 220)
     } else {
       setMediaClosing(false)
@@ -213,15 +214,22 @@ export default function ContextPanel({
     [],
   )
 
-  // Esc retracts the expanded gallery first (capture phase + stopPropagation), so
-  // a single Esc only collapses the drawer rather than also closing the panel.
+  // Esc cascade within the panel (capture phase + stopPropagation, so each press
+  // handles one level): first close the hover preview, then retract the gallery
+  // drawer — only then does the event reach the canvas (close panel / deselect).
   useEffect(() => {
-    if (!mediaExpanded) return
+    if (!preview && !mediaExpanded) return
     const onEsc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      // Let an open lightbox/dialog/dropdown over the drawer consume Esc first.
+      // Let an open lightbox/dialog/dropdown consume Esc first.
       if (document.querySelector('.overlay, .ctx-menu, .gallery, [aria-expanded="true"]'))
         return
+      if (preview) {
+        e.preventDefault()
+        e.stopPropagation()
+        setPreview(null)
+        return
+      }
       e.preventDefault()
       e.stopPropagation()
       setMediaExpanded(false)
@@ -231,7 +239,7 @@ export default function ContextPanel({
     }
     window.addEventListener('keydown', onEsc, true)
     return () => window.removeEventListener('keydown', onEsc, true)
-  }, [mediaExpanded])
+  }, [preview, mediaExpanded])
 
   const drawerMounted = mediaExpanded || mediaClosing
 
@@ -340,6 +348,27 @@ export default function ContextPanel({
 
   return (
     <>
+    {drawerMounted && (
+      <div
+        className={
+          'media-drawer' +
+          (closing ? ' media-drawer--dismiss' : mediaClosing ? ' media-drawer--closing' : '')
+        }
+      >
+        <div className="media-drawer__head">
+          <h3 title={title || 'Media'}>{title || 'Media'}</h3>
+          <button
+            className="icon-btn"
+            title="Collapse gallery"
+            aria-label="Collapse gallery"
+            onClick={toggleMedia}
+          >
+            <span className="media-expand media-expand--open">◀</span>
+          </button>
+        </div>
+        <div className="media-drawer__body">{mediaBody}</div>
+      </div>
+    )}
     <aside className={'panel' + (closing ? ' panel--closing' : '')}>
       <div className="panel__head">
         {isExisting ? (
@@ -432,7 +461,10 @@ export default function ContextPanel({
       </div>
 
       {preview && (
-        <div className="media-preview" style={{ top: preview.top }}>
+        <div
+          className={'media-preview' + (drawerMounted ? ' media-preview--drawer' : '')}
+          style={{ top: preview.top }}
+        >
           <img src={preview.url} alt="" />
         </div>
       )}
@@ -461,23 +493,6 @@ export default function ContextPanel({
         <div className="panel__saved" role="status">Saved ✓</div>
       )}
     </aside>
-
-    {drawerMounted && (
-      <div className={'media-drawer' + (mediaClosing || closing ? ' media-drawer--closing' : '')}>
-        <div className="media-drawer__head">
-          <h3 title={title || 'Media'}>{title || 'Media'}</h3>
-          <button
-            className="icon-btn"
-            title="Collapse gallery"
-            aria-label="Collapse gallery"
-            onClick={toggleMedia}
-          >
-            <span className="media-expand media-expand--open">◀</span>
-          </button>
-        </div>
-        <div className="media-drawer__body">{mediaBody}</div>
-      </div>
-    )}
     </>
   )
 }
