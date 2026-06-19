@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.14.2
+
+- The login error message now fades and slides in instead of appearing
+  instantly, and re-animates on each failed attempt. Respects reduced-motion.
+
 ## v0.14.1
 
 - The login screen now animates between Sign In and Register: the card height

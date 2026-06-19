@@ -2254,6 +2254,17 @@
   border: 1px solid var(--danger);
   color: var(--danger);
   font-size: 13px;
+  animation: auth-error-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes auth-error-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .auth-submit {
   margin-top: 4px;
@@ -2485,7 +2496,8 @@
   .drop-overlay,
   .drop-overlay__card,
   .media-upload__fill--processing,
-  .media-tile__processing {
+  .media-tile__processing,
+  .auth-error {
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
   }
