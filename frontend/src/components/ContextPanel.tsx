@@ -19,6 +19,7 @@ import {
 import AnimationsField from './AnimationsField'
 import ConfirmDialog from './ConfirmDialog'
 import Gallery from './Gallery'
+import ReferencesField from './ReferencesField'
 import Select from './Select'
 
 interface Props {
@@ -432,6 +433,15 @@ export default function ContextPanel({
           </label>
         ),
       )}
+
+      {/* References: link previews — its own section (like Media), on every kind. */}
+      <div className="panel__refs">
+        <h3 className="panel__refs-head">References</h3>
+        <ReferencesField
+          value={content.references}
+          onChange={(refs) => setField('references', refs)}
+        />
+      </div>
 
       <div className="panel__actions">
         <button className="btn btn--primary" onClick={save} disabled={busy}>

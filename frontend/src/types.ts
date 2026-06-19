@@ -103,6 +103,16 @@ export interface AnimationRow {
   name: string
 }
 
+// A reference link with its fetched preview metadata (Open Graph / meta tags).
+// Stored per object under content.references. Available on every object kind.
+export interface LinkRef {
+  url: string
+  title?: string | null
+  description?: string | null
+  image?: string | null
+  site_name?: string | null
+}
+
 export const TYPE_FIELDS: Record<string, FieldDef[]> = {
   scene: [
     { key: 'location', label: 'Location', placeholder: 'Where does it happen?' },

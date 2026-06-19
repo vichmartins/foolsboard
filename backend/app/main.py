@@ -16,7 +16,7 @@ from sqlalchemy import update
 from .config import settings
 from .database import SessionLocal
 from .models import Asset
-from .routers import assets, boards, edges, nodes
+from .routers import assets, boards, edges, links, nodes
 
 app = FastAPI(title="foolsboard API", version="0.4.0")
 
@@ -54,6 +54,7 @@ app.include_router(boards.router)
 app.include_router(nodes.router)
 app.include_router(edges.router)
 app.include_router(assets.router)
+app.include_router(links.router)
 
 
 @app.get("/api/health", tags=["meta"])

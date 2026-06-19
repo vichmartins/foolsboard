@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.10.0
+
+- Added a "References" section to every object kind: paste a link and it renders
+  a WhatsApp/Telegram-style preview card (thumbnail, title, description, site),
+  with a + to add and a - to remove. Direct image links preview as the image.
+  Stored in the node's content JSON (no migration).
+- New backend endpoint GET /api/links/preview fetches a URL server-side (to
+  dodge CORS) and parses Open Graph / meta tags, using only the standard library
+  (urllib + html.parser). Rejects non-http(s) and private/loopback hosts.
+
 ## v0.9.5
 
 - Fixed a horizontal scrollbar that briefly flashed and jolted the layout while

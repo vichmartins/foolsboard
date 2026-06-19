@@ -4,11 +4,18 @@ import type {
   Asset,
   Board,
   BoardGraph,
+  LinkRef,
   StoryEdge,
   StoryNode,
 } from './types'
 
 const http = axios.create({ baseURL: '/api' })
+
+// --- Links -----------------------------------------------------------------
+// Fetch Open Graph / meta preview for a URL (server-side, to dodge CORS).
+export async function fetchLinkPreview(url: string): Promise<LinkRef> {
+  return (await http.get('/links/preview', { params: { url } })).data
+}
 
 // --- Boards ----------------------------------------------------------------
 export async function listBoards(): Promise<Board[]> {
