@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.5.6
+
+- Themed the shift-drag selection box (and the bounding box around selected
+  nodes) to use the app's accent color, slightly brighter than the default blue.
+
 ## v0.5.5
 
 - **Click the minimap to navigate** — clicking anywhere on the minimap recenters
