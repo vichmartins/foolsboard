@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.9.5
+
+- Fixed a horizontal scrollbar that briefly flashed and jolted the layout while
+  the side panel / gallery drawer slid on and off screen, by clipping the canvas
+  wrapper (overflow: hidden). The slide animations are now smooth.
+
 ## v0.9.4
 
 - Character objects gained an "Animations" field: a repeatable list of rows,

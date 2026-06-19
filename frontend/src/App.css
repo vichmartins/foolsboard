@@ -324,6 +324,9 @@
   position: relative;
   width: 100%;
   height: 100%;
+  /* Clip the panel/drawer while they slide off-screen so their transform
+     doesn't briefly add a horizontal scrollbar that jolts the layout. */
+  overflow: hidden;
 }
 .loading {
   display: grid;
