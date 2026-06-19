@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8.2
+
+- Capitalized the side panel header to "Edit Object".
+
 ## v0.8.1
 
 - The Type dropdown now shows capitalized labels (Scene, Character, …) while

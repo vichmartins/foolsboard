@@ -152,7 +152,7 @@ export default function ContextPanel({
   return (
     <aside className={'panel' + (closing ? ' panel--closing' : '')}>
       <div className="panel__head">
-        <h2>Edit object</h2>
+        <h2>Edit Object</h2>
         <button className="icon-btn" onClick={onClose} title="Close">✕</button>
       </div>
 
