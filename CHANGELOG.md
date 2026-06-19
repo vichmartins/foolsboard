@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.14.4
+
+- Signing in/out now plays a smooth gradient "curtain" transition between the
+  login screen and the canvas (covers, swaps underneath, reveals). The gradient
+  is built from the theme's surface tokens, so it adapts to dark/light mode. A
+  fresh page load with a valid token swaps without the curtain.
+
 ## v0.14.3
 
 - Smoothed out the login error: it now lives inside the height-animated card

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as api from './api'
 import { useAuth } from './auth'
 import AccountDialog from './components/AccountDialog'
@@ -188,10 +188,57 @@ function Workspace() {
   )
 }
 
-// Gate the whole app on authentication: the workspace (and its data hooks) only
-// mounts once a user is signed in.
+type Screen = 'login' | 'app'
+const CURTAIN_COVER_MS = 200
+const CURTAIN_REVEAL_MS = 260
+
+// Gate the whole app on authentication, with a gradient "curtain" that covers
+// the screen, swaps login <-> workspace underneath, then reveals -- so signing
+// in or out is a smooth transition rather than an instant cut. The first load
+// (token check) swaps without a curtain.
 export default function App() {
   const { user, loading } = useAuth()
-  if (loading) return <div className="auth-screen" />
-  return user ? <Workspace /> : <LoginScreen />
+  const target: Screen = user ? 'app' : 'login'
+  const [displayed, setDisplayed] = useState<Screen | null>(null)
+  const [curtain, setCurtain] = useState<'none' | 'in' | 'out'>('none')
+  const displayedRef = useRef<Screen | null>(null)
+
+  useEffect(() => {
+    displayedRef.current = displayed
+  }, [displayed])
+
+  useEffect(() => {
+    if (loading) return
+    if (displayedRef.current === null) {
+      setDisplayed(target) // first resolve after the token check: no curtain
+      return
+    }
+    if (target === displayedRef.current) return
+    setCurtain('in')
+    const cover = window.setTimeout(() => {
+      setDisplayed(target)
+      setCurtain('out')
+    }, CURTAIN_COVER_MS)
+    const done = window.setTimeout(
+      () => setCurtain('none'),
+      CURTAIN_COVER_MS + CURTAIN_REVEAL_MS,
+    )
+    return () => {
+      window.clearTimeout(cover)
+      window.clearTimeout(done)
+    }
+  }, [target, loading])
+
+  if (loading || displayed === null) return <div className="auth-screen" />
+
+  return (
+    <>
+      {displayed === 'app' ? <Workspace /> : <LoginScreen />}
+      {curtain !== 'none' && (
+        <div
+          className={'auth-curtain' + (curtain === 'out' ? ' auth-curtain--out' : '')}
+        />
+      )}
+    </>
+  )
 }

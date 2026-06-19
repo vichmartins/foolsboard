@@ -2148,6 +2148,40 @@
 }
 
 /* Respect users who prefer minimal motion. */
+/* Gradient curtain that covers the login <-> workspace swap. */
+.auth-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  pointer-events: none;
+  background: radial-gradient(
+    1200px 1000px at 50% 35%,
+    var(--bg-elev-2),
+    var(--bg) 80%
+  );
+  opacity: 0;
+  animation: curtain-in 0.2s ease forwards;
+}
+.auth-curtain--out {
+  animation: curtain-out 0.26s ease forwards;
+}
+@keyframes curtain-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes curtain-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 /* --- Auth screen (login / register) --------------------------------------- */
 .auth-screen {
   position: fixed;
@@ -2495,7 +2529,8 @@
   .drop-overlay__card,
   .media-upload__fill--processing,
   .media-tile__processing,
-  .auth-error {
+  .auth-error,
+  .auth-curtain {
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
   }
