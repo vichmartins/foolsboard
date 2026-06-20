@@ -258,12 +258,13 @@ export async function removeShare(id: string): Promise<void> {
 // so `onProgress` ticks with the running byte count for a live indicator.
 export async function exportBoards(
   boardIds: string[],
+  folderIds: string[] = [],
   onProgress?: (loadedBytes: number) => void,
 ): Promise<Blob> {
   return (
     await http.post(
       '/boards/export',
-      { board_ids: boardIds },
+      { board_ids: boardIds, folder_ids: folderIds },
       {
         responseType: 'blob',
         onDownloadProgress: (e) => onProgress?.(e.loaded),

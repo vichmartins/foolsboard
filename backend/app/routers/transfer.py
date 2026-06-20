@@ -22,19 +22,20 @@ from sqlalchemy.orm import Session
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import Asset, Board, Edge, Node, User
+from ..models import Asset, Board, Edge, Folder, Node, User
 from ..schemas import BoardOut
 from ..storage import storage
 
 router = APIRouter(prefix="/api/boards", tags=["transfer"])
 
-EXPORT_VERSION = 2
+EXPORT_VERSION = 3  # v3 adds folders; v2 bundles (boards only) still import fine
 MANIFEST_NAME = "manifest.json"
 MAX_IMPORT_BYTES = 1024 * 1024 * 1024  # 1 GiB ceiling on an uploaded bundle
 
 
 class ExportRequest(BaseModel):
-    board_ids: list[UUID]
+    board_ids: list[UUID] = []
+    folder_ids: list[UUID] = []  # exporting a folder includes every board inside it
 
 
 def _slug(name: str) -> str:
@@ -72,8 +73,37 @@ def export_boards(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> StreamingResponse:
-    if not payload.board_ids:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No boards selected")
+    if not payload.board_ids and not payload.folder_ids:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nothing selected to export")
+
+    # Resolve the selected folders into their boards (preserving which board
+    # belongs to which folder), then append any individually-selected boards.
+    # Deduped and owner-checked.
+    manifest_folders: list[dict] = []
+    board_folder: dict[UUID, str] = {}  # board id -> owning folder's name
+    ordered_ids: list[UUID] = []
+    chosen: set[UUID] = set()
+
+    for fid in payload.folder_ids:
+        folder = db.get(Folder, fid)
+        if folder is None or folder.owner_id != user.id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, f"Folder {fid} not found")
+        manifest_folders.append({"name": folder.name})
+        in_folder = db.scalars(
+            select(Board)
+            .where(Board.owner_id == user.id, Board.folder_id == folder.id)
+            .order_by(Board.position.asc(), Board.created_at.desc())
+        )
+        for board in in_folder:
+            if board.id not in chosen:
+                chosen.add(board.id)
+                ordered_ids.append(board.id)
+                board_folder[board.id] = folder.name
+
+    for bid in payload.board_ids:
+        if bid not in chosen:
+            chosen.add(bid)
+            ordered_ids.append(bid)
 
     # Gather everything from the DB up front so the streaming generator below
     # never touches the session (it only reads files + compresses).
@@ -81,7 +111,7 @@ def export_boards(
     media: list[tuple[str, str]] = []  # (arcname, storage_key), deduped
     seen: set[str] = set()
 
-    for bid in payload.board_ids:
+    for bid in ordered_ids:
         board = db.get(Board, bid)
         if board is None or board.owner_id != user.id:
             raise HTTPException(status.HTTP_404_NOT_FOUND, f"Board {bid} not found")
@@ -118,6 +148,7 @@ def export_boards(
             {
                 "name": board.name,
                 "description": board.description,
+                "folder": board_folder.get(board.id),
                 "nodes": [
                     {
                         "id": str(n.id),
@@ -145,23 +176,33 @@ def export_boards(
             }
         )
 
+    if not manifest_boards:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nothing to export")
+
     manifest_json = json.dumps(
-        {"foolsboard": "export", "version": EXPORT_VERSION, "boards": manifest_boards},
+        {
+            "foolsboard": "export",
+            "version": EXPORT_VERSION,
+            "folders": manifest_folders,
+            "boards": manifest_boards,
+        },
         default=str,
         indent=2,
     )
 
+    folder_note = f" in {len(manifest_folders)} folder(s)" if manifest_folders else ""
     log_event(
         db, user=user, action="board.export",
-        summary=f"exported {len(manifest_boards)} board(s)",
+        summary=f"exported {len(manifest_boards)} board(s){folder_note}",
     )
 
     count = len(manifest_boards)
-    fname = (
-        f"{_slug(manifest_boards[0]['name'])}.foolsboard.zip"
-        if count == 1
-        else f"foolsboard-{count}-boards.zip"
-    )
+    if len(manifest_folders) == 1 and not payload.board_ids:
+        fname = f"{_slug(manifest_folders[0]['name'])}.foolsboard.zip"
+    elif count == 1:
+        fname = f"{_slug(manifest_boards[0]['name'])}.foolsboard.zip"
+    else:
+        fname = f"foolsboard-{count}-boards.zip"
 
     def generate():
         buf = _StreamBuffer()
@@ -236,6 +277,23 @@ def import_boards(
     key_map: dict[str, str] = {}
     created: list[Board] = []
 
+    # Recreate folders referenced by the bundle (v3+) and file boards into them.
+    # Always new folders, mirroring how boards always import as new. v2 bundles
+    # have no folders, so this is a no-op for them.
+    folder_names: list[str] = [
+        str(f["name"]) for f in (manifest.get("folders") or [])
+        if isinstance(f, dict) and f.get("name")
+    ]
+    folder_names += [
+        str(b["folder"]) for b in boards_in if isinstance(b, dict) and b.get("folder")
+    ]
+    folder_map: dict[str, UUID] = {}
+    for name in dict.fromkeys(folder_names):  # dedupe, preserve first-seen order
+        fld = Folder(owner_id=user.id, name=name[:120])
+        db.add(fld)
+        db.flush()  # assign folder.id
+        folder_map[name] = fld.id
+
     for b in boards_in:
         if not isinstance(b, dict):
             continue
@@ -243,6 +301,7 @@ def import_boards(
             owner_id=user.id,
             name=(str(b.get("name") or "Imported board"))[:300],
             description=b.get("description"),
+            folder_id=folder_map.get(str(b["folder"])) if b.get("folder") else None,
         )
         db.add(board)
         db.flush()  # assign board.id

@@ -3627,11 +3627,26 @@
   background: var(--bg-hover);
 }
 .impex-item__name {
+  flex: 1;
+  min-width: 0;
   font-size: 13.5px;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.impex-item__count {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+.impex-group {
+  margin: 2px 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
 }
 .impex-all input,
 .impex-item input {

@@ -3,10 +3,11 @@
 // file picker or by dropping it anywhere on the dialog (full-screen drop target).
 import { useEffect, useRef, useState } from 'react'
 import * as api from '../api'
-import type { Board } from '../types'
+import type { Board, Folder } from '../types'
 
 interface Props {
   boards: Board[]
+  folders: Folder[]
   onClose: () => void
   onImported: (created: Board[]) => void
 }
@@ -38,9 +39,10 @@ function ProgressBar() {
   )
 }
 
-export default function ImportExportDialog({ boards, onClose, onImported }: Props) {
+export default function ImportExportDialog({ boards, folders, onClose, onImported }: Props) {
   const [tab, setTab] = useState<Tab>('export')
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
@@ -49,30 +51,41 @@ export default function ImportExportDialog({ boards, onClose, onImported }: Prop
   const fileRef = useRef<HTMLInputElement>(null)
 
   const allSelected = boards.length > 0 && selected.size === boards.length
-  const toggle = (id: string) =>
-    setSelected((s) => {
+  const totalSelected = selected.size + selectedFolders.size
+  const toggleIn = (setter: typeof setSelected) => (id: string) =>
+    setter((s) => {
       const n = new Set(s)
       if (n.has(id)) n.delete(id)
       else n.add(id)
       return n
     })
+  const toggle = toggleIn(setSelected)
+  const toggleFolder = toggleIn(setSelectedFolders)
   const toggleAll = () =>
     setSelected(allSelected ? new Set() : new Set(boards.map((b) => b.id)))
 
+  function exportFilename(ids: string[], fids: string[]): string {
+    if (fids.length === 1 && ids.length === 0) {
+      return `${slug(folders.find((f) => f.id === fids[0])?.name ?? 'folder')}.foolsboard.zip`
+    }
+    if (ids.length === 1 && fids.length === 0) {
+      return `${slug(boards.find((b) => b.id === ids[0])?.name ?? 'board')}.foolsboard.zip`
+    }
+    return 'foolsboard-export.zip'
+  }
+
   async function doExport() {
-    if (selected.size === 0 || busy) return
+    if (totalSelected === 0 || busy) return
     setBusy(true)
     setError(null)
     try {
       const ids = [...selected]
-      const blob = await api.exportBoards(ids)
+      const fids = [...selectedFolders]
+      const blob = await api.exportBoards(ids, fids)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download =
-        ids.length === 1
-          ? `${slug(boards.find((b) => b.id === ids[0])?.name ?? 'board')}.foolsboard.zip`
-          : `foolsboard-${ids.length}-boards.zip`
+      a.download = exportFilename(ids, fids)
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -179,12 +192,39 @@ export default function ImportExportDialog({ boards, onClose, onImported }: Prop
           {tab === 'export' ? (
             <>
               <p className="dialog__text">
-                Choose boards to export to a .zip bundle — graph, content, links, and media.
+                Choose folders or boards to export to a .zip bundle — graph, content, links,
+                and media. Exporting a folder includes every board inside it.
               </p>
+              {folders.length > 0 && (
+                <>
+                  <div className="impex-group">Folders</div>
+                  <ul className="impex-list">
+                    {folders.map((f) => {
+                      const count = boards.filter((b) => b.folder_id === f.id).length
+                      return (
+                        <li key={f.id}>
+                          <label className="impex-item">
+                            <input
+                              type="checkbox"
+                              checked={selectedFolders.has(f.id)}
+                              onChange={() => toggleFolder(f.id)}
+                            />
+                            <span className="impex-item__name">🗀 {f.name}</span>
+                            <span className="impex-item__count">
+                              {count} board{count === 1 ? '' : 's'}
+                            </span>
+                          </label>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  <div className="impex-group">Boards</div>
+                </>
+              )}
               {boards.length > 0 && (
                 <label className="impex-all">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll} />
-                  <span>Select all</span>
+                  <span>Select all boards</span>
                 </label>
               )}
               <ul className="impex-list">
@@ -208,17 +248,18 @@ export default function ImportExportDialog({ boards, onClose, onImported }: Prop
                 </button>
                 <button
                   className="btn btn--primary"
-                  disabled={selected.size === 0 || busy}
+                  disabled={totalSelected === 0 || busy}
                   onClick={() => void doExport()}
                 >
-                  {busy ? 'Exporting…' : `Export ${selected.size || ''}`.trim()}
+                  {busy ? 'Exporting…' : `Export ${totalSelected || ''}`.trim()}
                 </button>
               </div>
             </>
           ) : (
             <>
               <p className="dialog__text">
-                Import boards from a .zip bundle — added as new boards, with their media.
+                Import a .zip bundle — boards (and any folders they were in) are added as new,
+                with their media.
               </p>
               <div
                 className={'impex-drop' + (fileDragging ? ' impex-drop--over' : '')}

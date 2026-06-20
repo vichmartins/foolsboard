@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.32.0
+
+- Import/Export now handles folders, not just boards. The Export tab lists your
+  folders alongside boards; selecting a folder exports every board inside it, and
+  the bundle remembers the folder structure. Importing such a bundle recreates
+  the folders and files the boards back into them. Existing board-only bundles
+  still import unchanged (the manifest is versioned, and the folder data is
+  optional).
+
 ## v0.31.0
 
 - The Debian package now defaults to **PostgreSQL** instead of SQLite. On a fresh
