@@ -2238,6 +2238,14 @@
   color: var(--text-dim);
   margin-bottom: -8px;
 }
+.dialog__hint {
+  color: var(--text-dim);
+  font-weight: 400;
+  opacity: 0.75;
+}
+.new-board__folder-label {
+  margin-top: 2px;
+}
 .dialog__message {
   margin: 0;
   font-size: 14px;

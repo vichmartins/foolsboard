@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.24.0
+
+- The New Board dialog can now place the board in a folder: pick an existing
+  folder or create a new one inline. The folder is optional (labels say so), and
+  it defaults to the currently-selected folder.
+
 ## v0.23.1
 
 - Title-cased all top-bar button tooltips, and moved the New (+) and Merge

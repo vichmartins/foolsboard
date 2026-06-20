@@ -13,6 +13,7 @@ import ProfileMenu from './components/ProfileMenu'
 import PromptDialog from './components/PromptDialog'
 import MergeDialog from './components/MergeDialog'
 import MoveDialog, { type MoveTarget } from './components/MoveDialog'
+import NewBoardDialog, { type NewBoardTarget } from './components/NewBoardDialog'
 import MoveToFolderDialog from './components/MoveToFolderDialog'
 import TypeToConfirmDialog from './components/TypeToConfirmDialog'
 import ThemeToggle from './components/ThemeToggle'
@@ -74,11 +75,19 @@ function Workspace() {
   const visibleBoards =
     activeFolderId === null ? boards : boards.filter((b) => b.folder_id === activeFolderId)
 
-  async function createBoard(name: string) {
-    // New boards inherit the currently-selected folder.
-    const board = await api.createBoard(name, undefined, activeFolderId)
+  async function handleNewBoard(name: string, target: NewBoardTarget) {
+    let folderId: string | null
+    if ('newFolder' in target) {
+      const folder = await api.createFolder(target.newFolder)
+      setFolders((fs) => [...fs, folder])
+      folderId = folder.id
+    } else {
+      folderId = target.folderId
+    }
+    const board = await api.createBoard(name, undefined, folderId)
     setBoards((b) => [board, ...b])
     setActiveId(board.id)
+    setActiveFolderId(folderId) // surface the new board in the (now-filtered) list
     setDialog(null)
   }
 
@@ -268,12 +277,10 @@ function Workspace() {
       </main>
 
       {dialog === 'new' && (
-        <PromptDialog
-          title="Create a New Storyboard"
-          label="What should we call it?"
-          placeholder="e.g. Episode 1: The Fork"
-          confirmLabel="Create board"
-          onSubmit={createBoard}
+        <NewBoardDialog
+          folders={folders}
+          defaultFolderId={activeFolderId}
+          onCreate={handleNewBoard}
           onCancel={() => setDialog(null)}
         />
       )}
