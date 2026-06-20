@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.31.0
+
+- The Debian package now defaults to **PostgreSQL** instead of SQLite. On a fresh
+  install it auto-provisions a local Postgres role + database (generated
+  password), installs the psycopg driver into the venv, and writes the
+  DATABASE_URL into the config. `DATABASE_URL` is still overridable to point at an
+  external server or back at SQLite. Added a `scripts/sqlite_to_postgres.py`
+  helper to copy an existing SQLite database into Postgres.
+
 ## v0.30.1
 
 - Fixed the folders migration to run on SQLite: it added a foreign key with a

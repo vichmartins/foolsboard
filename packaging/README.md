@@ -2,8 +2,9 @@
 
 foolsboard ships as a self-contained Debian package. The installed app runs as a
 single `uvicorn` worker that serves the **SPA, API, WebSocket, and media** on one
-port (default **9534**) — no web server required. It uses **SQLite** by default;
-`DATABASE_URL` is overridable for Postgres without code changes.
+port (default **9534**) — no web server required. It uses a **local PostgreSQL**
+database, auto-provisioned on install; `DATABASE_URL` is overridable to point at
+an external server (or SQLite) without code changes.
 
 ## Build the .deb
 
@@ -26,10 +27,14 @@ sudo apt install ./build/foolsboard_<version>_all.deb      # resolves deps (pyth
 
 On install the package:
 1. creates a `foolsboard` system user,
-2. creates `/var/lib/foolsboard` (SQLite db + media) and `/etc/foolsboard/foolsboard.env` (with a random `JWT_SECRET`),
-3. builds a virtualenv at `/opt/foolsboard/venv` and installs the Python deps,
-4. runs `alembic upgrade head`,
-5. enables and starts `foolsboard.service`.
+2. auto-provisions a local Postgres role + database `foolsboard` (generated password),
+3. writes `/etc/foolsboard/foolsboard.env` (DATABASE_URL + a random `JWT_SECRET`) and `/var/lib/foolsboard` (media),
+4. builds a virtualenv at `/opt/foolsboard/venv` and installs the Python deps (incl. psycopg),
+5. runs `alembic upgrade head`,
+6. enables and starts `foolsboard.service`.
+
+To migrate data from an old SQLite database into Postgres, see
+`/opt/foolsboard/backend/scripts/sqlite_to_postgres.py`.
 
 Then browse to `http://<host>:9534`. Open TCP **9534** on the firewall if needed.
 

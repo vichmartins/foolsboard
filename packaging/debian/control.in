@@ -3,13 +3,14 @@ Version: @VERSION@
 Section: web
 Priority: optional
 Architecture: @ARCH@
-Depends: python3 (>= 3.11), python3-venv, ffmpeg, adduser
+Depends: python3 (>= 3.11), python3-venv, ffmpeg, adduser, postgresql
 Maintainer: Victor <vich.martins@gmail.com>
 Homepage: https://foolsboard.home
 Description: foolsboard -- branching-storyline storyboard app
  A FastAPI + React storyboard with real-time multi-user collaboration. Runs a
  self-contained uvicorn service (single worker) that serves the SPA, API,
- WebSocket, and media on port 9534 -- no web server required. Backed by SQLite
- by default; DATABASE_URL is overridable for Postgres without code changes.
+ WebSocket, and media on port 9534 -- no web server required. Backed by a local
+ PostgreSQL database, auto-provisioned on install; DATABASE_URL is overridable
+ to point at an external server or another engine without code changes.
  Can optionally be placed behind a reverse proxy (see the nginx example in
  /usr/share/doc/foolsboard/).

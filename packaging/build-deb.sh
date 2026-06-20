@@ -33,7 +33,7 @@ mkdir -p "$STAGE/DEBIAN" \
          "$STAGE/usr/share/doc/foolsboard"
 
 # Backend source (no dev artifacts).
-cp -r backend/app backend/alembic backend/alembic.ini \
+cp -r backend/app backend/alembic backend/alembic.ini backend/scripts \
       backend/requirements.txt backend/requirements-postgres.txt \
       "$STAGE/opt/foolsboard/backend/"
 find "$STAGE/opt/foolsboard/backend" -type d -name __pycache__ -prune -exec rm -rf {} +
