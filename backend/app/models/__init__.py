@@ -10,6 +10,7 @@ from .folder import Folder
 from .invite import InviteCode
 from .logs import ActivityLog, ErrorLog, RequestLog
 from .node import Node
+from .share import Share
 from .user import User
 
 __all__ = [
@@ -17,9 +18,11 @@ __all__ = [
     "Asset",
     "Board",
     "Edge",
+    "ErrorLog",
     "Folder",
     "InviteCode",
     "Node",
     "RequestLog",
+    "Share",
     "User",
 ]

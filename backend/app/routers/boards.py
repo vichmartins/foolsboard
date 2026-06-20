@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 
 from ..audit import log_event
 from ..database import get_db
-from ..deps import get_current_user
-from ..models import Asset, Board, Edge, Folder, Node, User
+from ..deps import can_access_board, get_current_user
+from ..models import Asset, Board, Edge, Folder, Node, Share, User
 from ..schemas import (
     AssetOut,
     BoardAbsorb,
@@ -27,23 +27,75 @@ router = APIRouter(prefix="/api/boards", tags=["boards"])
 
 
 def _get_board(board_id: UUID, db: Session, user: User) -> Board:
+    """Owner-only access (rename/delete/move/share/export)."""
     board = db.get(Board, board_id)
     if board is None or board.owner_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Board not found")
     return board
 
 
+def _get_accessible_board(board_id: UUID, db: Session, user: User) -> Board:
+    """Owner or accepted collaborator (view/edit)."""
+    board = db.get(Board, board_id)
+    if board is None or not can_access_board(board, user, db):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Board not found")
+    return board
+
+
+def _board_out(board: Board, user: User, db: Session, owner_names: dict) -> BoardOut:
+    item = BoardOut.model_validate(board)
+    if board.owner_id != user.id:
+        item.shared = True
+        if board.owner_id not in owner_names:
+            owner = db.get(User, board.owner_id)
+            owner_names[board.owner_id] = owner.username if owner else None
+        item.owner_name = owner_names[board.owner_id]
+    return item
+
+
 @router.get("", response_model=list[BoardOut])
 def list_boards(
     db: Session = Depends(get_db), user: User = Depends(get_current_user)
-) -> list[Board]:
-    return list(
+) -> list[BoardOut]:
+    owned = list(
         db.scalars(
             select(Board)
             .where(Board.owner_id == user.id)
             .order_by(Board.position.asc(), Board.created_at.desc())
         )
     )
+    # Boards shared with the caller: directly, or via a shared folder.
+    board_ids = set(
+        db.scalars(
+            select(Share.board_id).where(
+                Share.shared_with_id == user.id,
+                Share.status == "accepted",
+                Share.board_id.is_not(None),
+            )
+        )
+    )
+    folder_ids = set(
+        db.scalars(
+            select(Share.folder_id).where(
+                Share.shared_with_id == user.id,
+                Share.status == "accepted",
+                Share.folder_id.is_not(None),
+            )
+        )
+    )
+    shared: list[Board] = []
+    conds = []
+    if board_ids:
+        conds.append(Board.id.in_(board_ids))
+    if folder_ids:
+        conds.append(Board.folder_id.in_(folder_ids))
+    if conds:
+        shared = list(
+            db.scalars(select(Board).where(Board.owner_id != user.id, or_(*conds)))
+        )
+    shared.sort(key=lambda b: b.name.lower())
+    owner_names: dict = {}
+    return [_board_out(b, user, db, owner_names) for b in [*owned, *shared]]
 
 
 @router.post("", response_model=BoardOut, status_code=status.HTTP_201_CREATED)
@@ -90,15 +142,16 @@ def reorder_boards(
 @router.get("/{board_id}", response_model=BoardOut)
 def get_board(
     board_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
-) -> Board:
-    return _get_board(board_id, db, user)
+) -> BoardOut:
+    board = _get_accessible_board(board_id, db, user)
+    return _board_out(board, user, db, {})
 
 
 @router.get("/{board_id}/graph", response_model=BoardGraph)
 def get_board_graph(
     board_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> BoardGraph:
-    board = _get_board(board_id, db, user)
+    board = _get_accessible_board(board_id, db, user)
     nodes = list(db.scalars(select(Node).where(Node.board_id == board_id)))
     edges = list(db.scalars(select(Edge).where(Edge.board_id == board_id)))
     return BoardGraph(board=board, nodes=nodes, edges=edges)
@@ -109,7 +162,7 @@ def list_board_assets(
     board_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> list[AssetOut]:
     """Every media asset attached to any node on the board (for the gallery)."""
-    _get_board(board_id, db, user)
+    _get_accessible_board(board_id, db, user)
     node_ids = list(db.scalars(select(Node.id).where(Node.board_id == board_id)))
     if not node_ids:
         return []
@@ -124,6 +177,52 @@ def list_board_assets(
             item.thumbnail_url = storage.url_for(a.thumbnail_key)
         out.append(item)
     return out
+
+
+@router.post("/{board_id}/copy", response_model=BoardOut, status_code=status.HTTP_201_CREATED)
+def copy_board(
+    board_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> BoardOut:
+    """Make a private, unshared copy of a board the caller can access (the whole
+    graph + media is duplicated into a new board owned by them)."""
+    src = _get_accessible_board(board_id, db, user)
+    min_pos = db.scalar(select(func.min(Board.position)).where(Board.owner_id == user.id))
+    position = (min_pos - 1) if min_pos is not None else 0
+    new = Board(
+        owner_id=user.id,
+        name=f"{src.name} (copy)",
+        description=src.description,
+        position=position,
+        folder_id=None,
+    )
+    db.add(new)
+    db.flush()
+    id_map: dict = {}
+    for n in db.scalars(select(Node).where(Node.board_id == src.id)):
+        nn = Node(
+            board_id=new.id, type=n.type, title=n.title, content=n.content,
+            x=n.x, y=n.y, width=n.width, height=n.height, color=n.color,
+        )
+        db.add(nn)
+        db.flush()
+        id_map[n.id] = nn.id
+        # Reference the same stored files (dedup-safe) on the copied node.
+        for a in db.scalars(select(Asset).where(Asset.node_id == n.id)):
+            db.add(Asset(
+                node_id=nn.id, kind=a.kind, filename=a.filename, content_type=a.content_type,
+                size=a.size, storage_key=a.storage_key, thumbnail_key=a.thumbnail_key,
+                processing=False, content_hash=a.content_hash,
+            ))
+    for e in db.scalars(select(Edge).where(Edge.board_id == src.id)):
+        s = id_map.get(e.source_id)
+        t = id_map.get(e.target_id)
+        if s and t:
+            db.add(Edge(board_id=new.id, source_id=s, target_id=t, label=e.label, data=e.data))
+    db.commit()
+    db.refresh(new)
+    log_event(db, user=user, action="board.copy", entity_type="board", entity_id=new.id,
+              summary=f"made a private copy of “{src.name}”")
+    return _board_out(new, user, db, {})
 
 
 @router.post("/{board_id}/absorb", status_code=status.HTTP_204_NO_CONTENT)

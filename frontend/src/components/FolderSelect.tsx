@@ -19,6 +19,7 @@ interface Props {
   onReorder: (orderedIds: string[]) => void
   onSort: (dir: 'asc' | 'desc') => void
   onDropBoard: (boardId: string, folderId: string | null) => void
+  onShare: (folder: Folder) => void
 }
 
 export default function FolderSelect({
@@ -31,6 +32,7 @@ export default function FolderSelect({
   onDelete,
   onReorder,
   onSort,
+  onShare,
   onDropBoard,
 }: Props) {
   const [open, setOpen] = useState(false)
@@ -153,6 +155,7 @@ export default function FolderSelect({
         title="Folders"
       >
         <span className="folder-select__icon">🗀</span>
+        {active?.shared && <span className="pick-dot" title={`Shared by ${active.owner_name ?? 'someone'}`} />}
         <span className="board-select__current">{active?.name ?? 'All Boards'}</span>
         <span className={'board-select__chevron' + (open ? ' board-select__chevron--open' : '')}>
           ▾
@@ -208,27 +211,40 @@ export default function FolderSelect({
                     'folder-row' +
                     (f.id === activeFolderId ? ' folder-row--active' : '') +
                     (i === dragIndex ? ' folder-row--dragging' : '') +
-                    (overId === f.id ? ' folder-row--drop' : '')
+                    (overId === f.id ? ' folder-row--drop' : '') +
+                    (f.shared ? ' folder-row--shared' : '')
                   }
                   onDragOver={(e) => {
+                    if (f.shared) return
                     onRowDragOver(e, f.id)
                     onFolderDragOver(e, i)
                   }}
                   onDragLeave={() => setOverId((o) => (o === f.id ? null : o))}
-                  onDrop={(e) => onRowDrop(e, f.id)}
+                  onDrop={(e) => {
+                    if (!f.shared) onRowDrop(e, f.id)
+                  }}
                 >
-                  <span
-                    className="folder-row__grip"
-                    draggable
-                    onDragStart={(e) => onFolderDragStart(e, i)}
-                    onDragEnd={onFolderDragEnd}
-                    title="Drag to reorder"
-                    aria-hidden="true"
-                  >
-                    ⠿
-                  </span>
+                  {f.shared ? (
+                    <span
+                      className="folder-row__dot"
+                      title={`Shared by ${f.owner_name ?? 'someone'}`}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <span
+                      className="folder-row__grip"
+                      draggable
+                      onDragStart={(e) => onFolderDragStart(e, i)}
+                      onDragEnd={onFolderDragEnd}
+                      title="Drag to reorder"
+                      aria-hidden="true"
+                    >
+                      ⠿
+                    </span>
+                  )}
                   <button
                     className="folder-row__name folder-row__select"
+                    title={f.shared ? `Shared by ${f.owner_name ?? 'someone'}` : undefined}
                     onClick={() => {
                       onSelect(f.id)
                       setOpen(false)
@@ -237,25 +253,37 @@ export default function FolderSelect({
                     {f.name}
                   </button>
                   <span className="folder-row__count">{count(f.id)}</span>
-                  <button
-                    className="folder-row__act"
-                    title="Rename"
-                    aria-label="Rename folder"
-                    onClick={() => {
-                      setEditingId(f.id)
-                      setEditName(f.name)
-                    }}
-                  >
-                    ✎
-                  </button>
-                  <button
-                    className="folder-row__act folder-row__act--danger"
-                    title="Delete folder (boards are kept)"
-                    aria-label="Delete folder"
-                    onClick={() => onDelete(f.id)}
-                  >
-                    ✕
-                  </button>
+                  {!f.shared && (
+                    <>
+                      <button
+                        className="folder-row__act"
+                        title="Share folder"
+                        aria-label="Share folder"
+                        onClick={() => onShare(f)}
+                      >
+                        ⤴
+                      </button>
+                      <button
+                        className="folder-row__act"
+                        title="Rename"
+                        aria-label="Rename folder"
+                        onClick={() => {
+                          setEditingId(f.id)
+                          setEditName(f.name)
+                        }}
+                      >
+                        ✎
+                      </button>
+                      <button
+                        className="folder-row__act folder-row__act--danger"
+                        title="Delete folder (boards are kept)"
+                        aria-label="Delete folder"
+                        onClick={() => onDelete(f.id)}
+                      >
+                        ✕
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </li>

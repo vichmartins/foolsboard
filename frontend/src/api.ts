@@ -11,6 +11,7 @@ import type {
   Invite,
   LinkRef,
   RequestLog,
+  Share,
   StoryEdge,
   StoryNode,
   User,
@@ -221,6 +222,35 @@ export async function listBoardAssets(boardId: string): Promise<Asset[]> {
 // positions, content, and attached media. Used to extract a selection.
 export async function absorbNodes(boardId: string, nodeIds: string[]): Promise<void> {
   await http.post(`/boards/${boardId}/absorb`, { node_ids: nodeIds })
+}
+
+// Make a private, unshared copy of a board the caller can access.
+export async function copyBoard(boardId: string): Promise<Board> {
+  return (await http.post(`/boards/${boardId}/copy`)).data
+}
+
+// --- Sharing ---------------------------------------------------------------
+export async function createShare(payload: {
+  recipient: string
+  board_id?: string
+  folder_id?: string
+}): Promise<Share> {
+  return (await http.post('/shares', payload)).data
+}
+export async function listIncomingShares(status?: string): Promise<Share[]> {
+  return (await http.get('/shares/incoming', { params: status ? { status } : {} })).data
+}
+export async function listOutgoingShares(): Promise<Share[]> {
+  return (await http.get('/shares/outgoing')).data
+}
+export async function acceptShare(id: string): Promise<Share> {
+  return (await http.post(`/shares/${id}/accept`)).data
+}
+export async function rejectShare(id: string): Promise<void> {
+  await http.post(`/shares/${id}/reject`)
+}
+export async function removeShare(id: string): Promise<void> {
+  await http.delete(`/shares/${id}`)
 }
 
 // Export selected boards as a .zip bundle (manifest + media). Returns the raw

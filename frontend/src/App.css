@@ -2328,6 +2328,154 @@
   border-color: var(--accent);
 }
 
+/* --- Sharing -------------------------------------------------------------- */
+/* Shared resources use a teal "denomination" dot, distinct from the accent. */
+.pick-dot,
+.board-select__dot,
+.folder-row__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #14b8a6;
+}
+.board-select__dot,
+.folder-row__dot {
+  width: 7px;
+  height: 7px;
+}
+
+/* Share dialog */
+.share-add {
+  display: flex;
+  gap: 8px;
+}
+.share-add__input {
+  flex: 1;
+}
+.share-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.share-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 10px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.share-row__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.share-row__status {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.share-row__status--pending {
+  color: #f59e0b;
+}
+.share-row__status--accepted {
+  color: #14b8a6;
+}
+.share-row__status--rejected {
+  color: var(--text-dim);
+}
+
+/* Sliding share notification banner */
+.share-banner {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  z-index: 400;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  cursor: pointer;
+  animation: share-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.share-banner--leaving {
+  animation: share-out 0.26s ease forwards;
+}
+@keyframes share-in {
+  from {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes share-out {
+  to {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+}
+.share-banner__body {
+  padding: 14px 16px 12px;
+}
+.share-banner__text {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--text);
+}
+.share-banner__res {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-dim);
+}
+.share-banner__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+.share-banner__btn {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+.share-banner__bar {
+  height: 4px;
+  background: var(--bg-elev-2);
+}
+.share-banner__fill {
+  height: 100%;
+  width: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  animation: share-countdown linear forwards;
+}
+@keyframes share-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .share-banner {
+    animation-duration: 0.01ms;
+  }
+}
+
 .dialog--wide {
   width: min(540px, calc(100vw - 48px));
 }

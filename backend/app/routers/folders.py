@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import Folder, User
+from ..models import Folder, Share, User
 from ..schemas import FolderCreate, FolderOut, FolderReorder, FolderUpdate
 
 router = APIRouter(prefix="/api/folders", tags=["folders"])
@@ -27,14 +27,41 @@ def _get_folder(folder_id: UUID, db: Session, user: User) -> Folder:
 @router.get("", response_model=list[FolderOut])
 def list_folders(
     db: Session = Depends(get_db), user: User = Depends(get_current_user)
-) -> list[Folder]:
-    return list(
+) -> list[FolderOut]:
+    owned = list(
         db.scalars(
             select(Folder)
             .where(Folder.owner_id == user.id)
             .order_by(Folder.position.asc(), Folder.created_at.asc())
         )
     )
+    folder_ids = set(
+        db.scalars(
+            select(Share.folder_id).where(
+                Share.shared_with_id == user.id,
+                Share.status == "accepted",
+                Share.folder_id.is_not(None),
+            )
+        )
+    )
+    shared = (
+        list(db.scalars(select(Folder).where(Folder.id.in_(folder_ids), Folder.owner_id != user.id)))
+        if folder_ids
+        else []
+    )
+    shared.sort(key=lambda f: f.name.lower())
+    owner_names: dict = {}
+    out: list[FolderOut] = []
+    for f in [*owned, *shared]:
+        item = FolderOut.model_validate(f)
+        if f.owner_id != user.id:
+            item.shared = True
+            if f.owner_id not in owner_names:
+                o = db.get(User, f.owner_id)
+                owner_names[f.owner_id] = o.username if o else None
+            item.owner_name = owner_names[f.owner_id]
+        out.append(item)
+    return out
 
 
 @router.post("", response_model=FolderOut, status_code=status.HTTP_201_CREATED)

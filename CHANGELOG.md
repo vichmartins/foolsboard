@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.25.0
+
+- Sharing & collaboration foundation. You can share a board (top-bar person-plus
+  icon) or a folder (⤴ in the folder row) with another user by username or
+  email; they get a slide-in notification with a countdown to accept or reject
+  (clicking it accepts; letting it time out dismisses it). Accepted boards and
+  folders appear in your pickers, marked with a teal "shared" dot, and a folder
+  share grants access to every board inside it. Collaborators can open and edit
+  the shared board's graph and media, while owner-only actions (rename, delete,
+  move, re-share, export) stay locked to the owner. Shared boards also gain a
+  "Make a Private Copy" action that duplicates the whole board into a new
+  private board you own. (REST foundation; live presence/cursors come next.)
+
 ## v0.24.1
 
 - Typography consistency pass: comfortable global line-height plus grayscale

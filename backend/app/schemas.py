@@ -31,6 +31,11 @@ class FolderReorder(BaseModel):
 class FolderOut(ORMModel):
     id: UUID
     name: str
+    owner_id: UUID | None = None
+    # True when this folder was shared with the caller (not owned by them).
+    shared: bool = False
+    # Username of the owner, when shared.
+    owner_name: str | None = None
     created_at: datetime
 
 
@@ -63,8 +68,36 @@ class BoardOut(ORMModel):
     name: str
     description: str | None
     folder_id: UUID | None = None
+    # True when this board was shared with the caller (not owned by them).
+    shared: bool = False
+    owner_name: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+# --- Sharing ----------------------------------------------------------------
+class ShareCreate(BaseModel):
+    recipient: str  # username or email of the person to share with
+    board_id: UUID | None = None
+    folder_id: UUID | None = None
+
+
+class ShareUserOut(BaseModel):
+    id: UUID
+    username: str
+
+
+class ShareOut(BaseModel):
+    id: UUID
+    resource_type: str  # 'board' | 'folder'
+    board_id: UUID | None = None
+    folder_id: UUID | None = None
+    resource_name: str | None = None
+    status: str
+    permission: str
+    owner: ShareUserOut | None = None  # who shared it (for incoming)
+    shared_with: ShareUserOut | None = None  # recipient (for outgoing)
+    created_at: datetime
 
 
 # --- Node -------------------------------------------------------------------

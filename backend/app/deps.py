@@ -10,10 +10,11 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from .database import get_db
-from .models import Board, Node, User
+from .models import Board, Node, Share, User
 from .security import decode_token
 
 _bearer = HTTPBearer(auto_error=False)
@@ -43,13 +44,34 @@ def get_current_admin(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+def can_access_board(board: Board, user: User, db: Session) -> bool:
+    """True if the user owns the board or has an accepted share for it (directly
+    or via a share on the board's folder)."""
+    if board.owner_id == user.id:
+        return True
+    return (
+        db.scalar(
+            select(Share.id).where(
+                Share.shared_with_id == user.id,
+                Share.status == "accepted",
+                or_(
+                    Share.board_id == board.id,
+                    and_(Share.folder_id.is_not(None), Share.folder_id == board.folder_id),
+                ),
+            )
+        )
+        is not None
+    )
+
+
 def get_owned_board(
     board_id: UUID,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> Board:
+    """The board if the caller can access it (owner or accepted collaborator)."""
     board = db.get(Board, board_id)
-    if board is None or board.owner_id != user.id:
+    if board is None or not can_access_board(board, user, db):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Board not found")
     return board
 
@@ -62,6 +84,6 @@ def get_owned_node(
     node = db.get(Node, node_id)
     if node is not None:
         board = db.get(Board, node.board_id)
-        if board is not None and board.owner_id == user.id:
+        if board is not None and can_access_board(board, user, db):
             return node
     raise HTTPException(status.HTTP_404_NOT_FOUND, "Node not found")

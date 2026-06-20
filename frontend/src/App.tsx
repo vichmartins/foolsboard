@@ -15,19 +15,25 @@ import MergeDialog from './components/MergeDialog'
 import MoveDialog, { type MoveTarget } from './components/MoveDialog'
 import NewBoardDialog, { type NewBoardTarget } from './components/NewBoardDialog'
 import MoveToFolderDialog from './components/MoveToFolderDialog'
+import ShareBanner from './components/ShareBanner'
+import ShareDialog from './components/ShareDialog'
 import TypeToConfirmDialog from './components/TypeToConfirmDialog'
 import ThemeToggle from './components/ThemeToggle'
 import {
+  CopyIcon,
   FolderIcon,
   GalleryIcon,
   MergeIcon,
   PencilIcon,
   PlusIcon,
+  ShareIcon,
   TransferIcon,
   TrashIcon,
 } from './components/icons'
 import type { Board, Folder } from './types'
 import './App.css'
+
+type ShareTarget = { type: 'board' | 'folder'; id: string; name: string }
 
 function Workspace() {
   const [boards, setBoards] = useState<Board[]>([])
@@ -36,6 +42,8 @@ function Workspace() {
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null)
   // Board awaiting a folder via the Move-to-Folder dialog.
   const [moveFolderBoard, setMoveFolderBoard] = useState<Board | null>(null)
+  // Resource being shared (opens the Share dialog).
+  const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'new' | 'rename' | 'delete' | 'merge' | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -94,6 +102,19 @@ function Workspace() {
   function moveBoardToFolder(boardId: string, folderId: string | null) {
     setBoards((bs) => bs.map((b) => (b.id === boardId ? { ...b, folder_id: folderId } : b)))
     void api.moveBoardToFolder(boardId, folderId).catch(() => {})
+  }
+
+  // Re-fetch boards + folders (e.g. after accepting a share, so shared items appear).
+  function refreshLists() {
+    api.listBoards().then(setBoards).catch(() => {})
+    api.listFolders().then(setFolders).catch(() => {})
+  }
+
+  async function makePrivateCopy(board: Board) {
+    const copy = await api.copyBoard(board.id)
+    setBoards((b) => [copy, ...b])
+    setActiveId(copy.id)
+    setActiveFolderId(null)
   }
 
   async function createFolder(name: string) {
@@ -162,12 +183,16 @@ function Workspace() {
           onReorder={reorderFolders}
           onSort={sortFolders}
           onDropBoard={moveBoardToFolder}
+          onShare={(folder) =>
+            setShareTarget({ type: 'folder', id: folder.id, name: folder.name })
+          }
         />
 
         <BoardSelect
           boards={visibleBoards}
           activeId={activeId}
           activeName={activeBoard?.name}
+          activeShared={activeBoard?.shared}
           onSelect={setActiveId}
           onReorder={(ids) => {
             setBoards((bs) =>
@@ -207,6 +232,28 @@ function Workspace() {
           >
             <FolderIcon />
           </button>
+          <button
+            className="icon-btn"
+            title={activeBoard?.shared ? 'Only the owner can share' : 'Share Board'}
+            aria-label="Share Board"
+            onClick={() =>
+              activeBoard &&
+              setShareTarget({ type: 'board', id: activeBoard.id, name: activeBoard.name })
+            }
+            disabled={!activeBoard || activeBoard.shared}
+          >
+            <ShareIcon />
+          </button>
+          {activeBoard?.shared && (
+            <button
+              className="icon-btn"
+              title="Make a Private Copy"
+              aria-label="Make a Private Copy"
+              onClick={() => activeBoard && void makePrivateCopy(activeBoard)}
+            >
+              <CopyIcon />
+            </button>
+          )}
           <button
             className="icon-btn"
             onClick={() => setDialog('new')}
@@ -366,6 +413,17 @@ function Workspace() {
           }}
         />
       )}
+
+      {shareTarget && (
+        <ShareDialog
+          resourceType={shareTarget.type}
+          resourceId={shareTarget.id}
+          resourceName={shareTarget.name}
+          onClose={() => setShareTarget(null)}
+        />
+      )}
+
+      <ShareBanner onChanged={refreshLists} />
 
       {accountOpen && <AccountDialog onClose={() => setAccountOpen(false)} />}
       {adminOpen && <AdminPanel onClose={() => setAdminOpen(false)} />}

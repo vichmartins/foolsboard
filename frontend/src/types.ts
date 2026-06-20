@@ -5,6 +5,8 @@ export interface Board {
   name: string
   description: string | null
   folder_id: string | null
+  shared: boolean // shared with me (not owned by me)
+  owner_name: string | null
   created_at: string
   updated_at: string
 }
@@ -12,6 +14,26 @@ export interface Board {
 export interface Folder {
   id: string
   name: string
+  shared: boolean
+  owner_name: string | null
+  created_at: string
+}
+
+export interface ShareUser {
+  id: string
+  username: string
+}
+
+export interface Share {
+  id: string
+  resource_type: 'board' | 'folder'
+  board_id: string | null
+  folder_id: string | null
+  resource_name: string | null
+  status: 'pending' | 'accepted' | 'rejected'
+  permission: string
+  owner: ShareUser | null
+  shared_with: ShareUser | null
   created_at: string
 }
 
