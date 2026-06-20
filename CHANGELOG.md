@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.21.1
+
+- Title-cased the connection context-menu items (Edit Label…, Insert Node,
+  Delete Connection).
+
 ## v0.21.0
 
 - "Move to New Board" is now just "Move": right-clicking a selection opens a

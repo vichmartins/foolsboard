@@ -1058,14 +1058,14 @@ function CanvasInner({
           y={edgeMenu.y}
           onClose={() => setEdgeMenu(null)}
           items={[
-            { label: 'Edit label…', mnemonic: 'E', onClick: () => setEditEdge(edgeMenu.edge) },
+            { label: 'Edit Label…', mnemonic: 'E', onClick: () => setEditEdge(edgeMenu.edge) },
             {
-              label: 'Insert node',
+              label: 'Insert Node',
               mnemonic: 'I',
               onClick: () => insertNodeOnEdge(edgeMenu.edge),
             },
             {
-              label: 'Delete connection',
+              label: 'Delete Connection',
               mnemonic: 'D',
               danger: true,
               onClick: () => deleteEdgeById(edgeMenu.edge),
