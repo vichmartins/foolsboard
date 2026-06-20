@@ -2793,6 +2793,22 @@
   cursor: default;
   opacity: 1;
 }
+/* Self-row actions are intentionally inert (a click explains why). */
+.admin-action--self {
+  cursor: not-allowed;
+}
+/* "By design" explainer banner in the Users tab (informational, not an error). */
+.admin-notice {
+  margin-bottom: 12px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  background: rgba(245, 158, 11, 0.13);
+  border: 1px solid rgba(245, 158, 11, 0.7);
+  color: #f59e0b;
+  font-size: 13px;
+  line-height: 1.45;
+  animation: auth-error-in 0.2s ease;
+}
 
 /* Invites tab */
 .admin-invites__head {

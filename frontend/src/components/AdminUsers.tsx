@@ -21,10 +21,18 @@ export default function AdminUsers() {
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null)
+  // Explains why a self-row action is blocked (these guards are by design).
+  const [notice, setNotice] = useState<string | null>(null)
 
   useEffect(() => {
     api.listUsers().then(setUsers).catch((e) => setError(apiError(e, 'Could not load users')))
   }, [])
+
+  useEffect(() => {
+    if (!notice) return
+    const t = window.setTimeout(() => setNotice(null), 7000)
+    return () => window.clearTimeout(t)
+  }, [notice])
 
   async function patch(u: AdminUser, change: { is_admin?: boolean; is_active?: boolean }) {
     setBusyId(u.id)
@@ -56,6 +64,7 @@ export default function AdminUsers() {
   return (
     <div className="admin-users">
       {error && <div className="auth-error">{error}</div>}
+      {notice && <div className="admin-notice">{notice}</div>}
       <ul className="admin-list">
         {users.map((u) => {
           const self = u.id === me?.id
@@ -76,27 +85,42 @@ export default function AdminUsers() {
               </div>
               <div className="admin-user__actions">
                 <button
-                  className="btn admin-action admin-action--admin"
-                  disabled={self || busy}
+                  className={'btn admin-action admin-action--admin' + (self ? ' admin-action--self' : '')}
+                  disabled={busy}
                   title={u.is_admin ? 'Remove admin' : 'Make admin'}
-                  onClick={() => patch(u, { is_admin: !u.is_admin })}
+                  onClick={() =>
+                    self
+                      ? setNotice(
+                          'You can’t change your own admin role — by design. It stops you locking yourself out, and the workspace must always keep at least one admin.',
+                        )
+                      : patch(u, { is_admin: !u.is_admin })
+                  }
                 >
                   {u.is_admin ? 'Remove admin' : 'Make admin'}
                 </button>
                 <button
                   className={
                     'btn admin-action ' +
-                    (u.is_active ? 'admin-action--suspend' : 'admin-action--activate')
+                    (u.is_active ? 'admin-action--suspend' : 'admin-action--activate') +
+                    (self ? ' admin-action--self' : '')
                   }
-                  disabled={self || busy}
-                  onClick={() => patch(u, { is_active: !u.is_active })}
+                  disabled={busy}
+                  onClick={() =>
+                    self
+                      ? setNotice('You can’t suspend your own account — by design, it would lock you out instantly.')
+                      : patch(u, { is_active: !u.is_active })
+                  }
                 >
                   {u.is_active ? 'Suspend' : 'Activate'}
                 </button>
                 <button
-                  className="btn admin-action admin-action--delete"
-                  disabled={self || busy}
-                  onClick={() => setConfirmDelete(u)}
+                  className={'btn admin-action admin-action--delete' + (self ? ' admin-action--self' : '')}
+                  disabled={busy}
+                  onClick={() =>
+                    self
+                      ? setNotice('You can’t delete your own account from the admin panel — by design.')
+                      : setConfirmDelete(u)
+                  }
                 >
                   Delete
                 </button>

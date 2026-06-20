@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.18.2
+
+- Admin Users tab: clicking a blocked action on your own row (remove admin /
+  suspend / delete) now shows a "by design" banner explaining the self-guard,
+  instead of doing nothing. Self-row buttons show a not-allowed cursor.
+
 ## v0.18.1
 
 - Title-cased dialog and menu labels: the New/Rename/Delete Storyboard and Merge
