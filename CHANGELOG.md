@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.19.0
+
+- Merging boards now consumes the sources: after picking boards, a confirmation
+  step warns that they'll be copied into the current board and then permanently
+  deleted. On proceed, the content is transferred first and the source boards
+  are deleted only if that succeeds (no half-merge data loss).
+
 ## v0.18.3
 
 - Any invite code can now be deleted — active, expired, or already used (the

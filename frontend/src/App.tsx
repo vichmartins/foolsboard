@@ -177,7 +177,16 @@ function Workspace() {
             key={activeId}
             boardId={activeId}
             mergeSourceIds={mergeSourceIds}
-            onMergeHandled={() => setMergeSourceIds(null)}
+            onMergeHandled={(merged) => {
+              const ids = mergeSourceIds
+              setMergeSourceIds(null)
+              // A successful merge consumes the source boards -- delete them.
+              if (merged && ids?.length) {
+                void Promise.all(ids.map((id) => api.deleteBoard(id).catch(() => {}))).then(() => {
+                  setBoards((bs) => bs.filter((b) => !ids.includes(b.id)))
+                })
+              }
+            }}
             galleryOpen={galleryOpen}
             onCloseGallery={() => setGalleryOpen(false)}
           />
@@ -223,6 +232,7 @@ function Workspace() {
       {dialog === 'merge' && (
         <MergeDialog
           boards={boards.filter((b) => b.id !== activeId)}
+          targetName={activeBoard?.name ?? 'this board'}
           onConfirm={(ids) => {
             setMergeSourceIds(ids)
             setDialog(null)

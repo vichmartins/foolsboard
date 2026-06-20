@@ -60,7 +60,7 @@ interface UndoEntry {
 interface CanvasProps {
   boardId: string
   mergeSourceIds?: string[] | null
-  onMergeHandled?: () => void
+  onMergeHandled?: (merged: boolean) => void
   galleryOpen?: boolean
   onCloseGallery?: () => void
 }
@@ -690,13 +690,15 @@ function CanvasInner({
     if (!mergeSourceIds || !mergeSourceIds.length) return
     let cancelled = false
     ;(async () => {
+      let merged = false
       try {
         const graphs = await Promise.all(mergeSourceIds.map((sid) => api.getGraph(sid)))
         if (cancelled) return
         const portables = graphs.map((g) => graphToPortable(g.board.id, g.nodes, g.edges))
         await doMerge(portables)
+        merged = true
       } finally {
-        if (!cancelled) onMergeHandled?.()
+        if (!cancelled) onMergeHandled?.(merged)
       }
     })()
     return () => {
