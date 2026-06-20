@@ -173,8 +173,8 @@ function Workspace() {
         <div className="board-actions">
           <button
             className="icon-btn"
-            title="Rename board"
-            aria-label="Rename board"
+            title="Rename Board"
+            aria-label="Rename Board"
             onClick={() => setDialog('rename')}
             disabled={!activeBoard}
           >
@@ -182,8 +182,8 @@ function Workspace() {
           </button>
           <button
             className="icon-btn icon-btn--danger"
-            title="Delete board"
-            aria-label="Delete board"
+            title="Delete Board"
+            aria-label="Delete Board"
             onClick={() => setDialog('delete')}
             disabled={!activeBoard}
           >
@@ -191,28 +191,18 @@ function Workspace() {
           </button>
           <button
             className="icon-btn"
-            title="Move board to a folder"
-            aria-label="Move board to folder"
+            title="Move Board to a Folder"
+            aria-label="Move Board to a Folder"
             onClick={() => activeBoard && setMoveFolderBoard(activeBoard)}
             disabled={!activeBoard}
           >
             <FolderIcon />
           </button>
-          <span className="topbar-sep" aria-hidden="true" />
-          <button
-            className="icon-btn"
-            onClick={() => setGalleryOpen(true)}
-            title="Gallery — browse all items on this board"
-            aria-label="Open gallery"
-            disabled={!activeBoard}
-          >
-            <GalleryIcon />
-          </button>
           <button
             className="icon-btn"
             onClick={() => setDialog('new')}
-            title="New board"
-            aria-label="New board"
+            title="New Board"
+            aria-label="New Board"
           >
             <PlusIcon />
           </button>
@@ -220,16 +210,26 @@ function Workspace() {
             className="icon-btn"
             onClick={() => setDialog('merge')}
             disabled={boards.length < 2}
-            title="Merge other boards into this one"
-            aria-label="Merge boards"
+            title="Merge Other Boards Into This One"
+            aria-label="Merge Boards"
           >
             <MergeIcon />
+          </button>
+          <span className="topbar-sep" aria-hidden="true" />
+          <button
+            className="icon-btn"
+            onClick={() => setGalleryOpen(true)}
+            title="Gallery — Browse All Items on This Board"
+            aria-label="Open Gallery"
+            disabled={!activeBoard}
+          >
+            <GalleryIcon />
           </button>
           <button
             className="icon-btn"
             onClick={() => setImpexOpen(true)}
-            title="Import or export boards"
-            aria-label="Import or export boards"
+            title="Import or Export Boards"
+            aria-label="Import or Export Boards"
           >
             <TransferIcon />
           </button>

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.23.1
+
+- Title-cased all top-bar button tooltips, and moved the New (+) and Merge
+  buttons to the left of the divider (Gallery and Import/Export stay on the
+  right).
+
 ## v0.23.0
 
 - Organize storyboards into folders. A new Folder picker sits next to the board
