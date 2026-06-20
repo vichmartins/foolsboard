@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.18.1
+
+- Title-cased dialog and menu labels: the New/Rename/Delete Storyboard and Merge
+  Boards dialogs, the profile menu (Account Settings / Admin Panel / Sign Out)
+  and the Account Settings dialog title, and the logo menu's Keyboard Shortcuts.
+
 ## v0.18.0
 
 - Invite codes now expire. When generating, pick a lifetime (5/10/30 min, 1 hr,

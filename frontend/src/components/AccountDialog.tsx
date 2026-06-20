@@ -72,7 +72,7 @@ export default function AccountDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className="overlay" onMouseDown={onClose}>
       <div className="dialog" onMouseDown={(e) => e.stopPropagation()}>
-        <h2 className="dialog__title">Account settings</h2>
+        <h2 className="dialog__title">Account Settings</h2>
 
         <div className="account-avatar">
           {user.avatar_url ? (

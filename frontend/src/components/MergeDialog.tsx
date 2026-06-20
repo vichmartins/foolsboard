@@ -23,7 +23,7 @@ export default function MergeDialog({ boards, onConfirm, onCancel }: Props) {
   return (
     <div className="overlay" onClick={onCancel}>
       <div className="dialog" onClick={(e) => e.stopPropagation()}>
-        <h2 className="dialog__title">Merge boards</h2>
+        <h2 className="dialog__title">Merge Boards</h2>
         <p className="dialog__message">
           Choose boards to copy into the current one. Their content is placed
           beside what's already here — nothing is overwritten.

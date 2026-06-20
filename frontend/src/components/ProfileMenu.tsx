@@ -63,7 +63,7 @@ export default function ProfileMenu({ onOpenAccount, onOpenAdmin }: Props) {
             onOpenAccount()
           }}
         >
-          Account settings
+          Account Settings
         </button>
         {user.is_admin && (
           <button
@@ -74,7 +74,7 @@ export default function ProfileMenu({ onOpenAccount, onOpenAdmin }: Props) {
               onOpenAdmin()
             }}
           >
-            Admin panel
+            Admin Panel
           </button>
         )}
         <button
@@ -85,7 +85,7 @@ export default function ProfileMenu({ onOpenAccount, onOpenAdmin }: Props) {
             logout()
           }}
         >
-          Sign out
+          Sign Out
         </button>
       </div>
     </div>

@@ -54,7 +54,7 @@ export default function BrandMenu() {
             setOpen(false)
           }}
         >
-          Keyboard shortcuts
+          Keyboard Shortcuts
         </button>
         <div className="brand-dropdown__footer">v{APP_VERSION}</div>
       </div>

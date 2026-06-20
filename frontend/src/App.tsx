@@ -188,7 +188,7 @@ function Workspace() {
 
       {dialog === 'new' && (
         <PromptDialog
-          title="Create a new storyboard"
+          title="Create a New Storyboard"
           label="What should we call it?"
           placeholder="e.g. Episode 1: The Fork"
           confirmLabel="Create board"
@@ -199,7 +199,7 @@ function Workspace() {
 
       {dialog === 'rename' && activeBoard && (
         <PromptDialog
-          title="Rename storyboard"
+          title="Rename Storyboard"
           label="New name"
           initialValue={activeBoard.name}
           confirmLabel="Rename"
@@ -210,7 +210,7 @@ function Workspace() {
 
       {dialog === 'delete' && activeBoard && (
         <TypeToConfirmDialog
-          title="Delete storyboard?"
+          title="Delete Storyboard?"
           message={`"${activeBoard.name}" and all of its objects, links, and media will be permanently deleted. This can't be undone.`}
           requiredText={activeBoard.name}
           confirmLabel="Delete board"
