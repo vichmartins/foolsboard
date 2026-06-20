@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.29.2
+
+- Polished the Share Board dialog. The Share button now matches the input it sits
+  beside (same height and radius, stable width so it doesn't jump to "Sharing…"),
+  recipient rows are roomier with the status shown as a color-tinted pill, the
+  remove control is a tidy fixed square, and Done is a full-width close button
+  instead of a small one stranded in the corner.
+
 ## v0.29.1
 
 - Reordered the top-bar board-action icons to a more natural grouping: Rename,

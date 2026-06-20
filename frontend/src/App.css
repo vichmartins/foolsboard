@@ -2482,28 +2482,43 @@
 /* Share dialog */
 .share-add {
   display: flex;
+  align-items: stretch; /* the Share button matches the input's height */
   gap: 8px;
 }
 .share-add__input {
   flex: 1;
+  min-width: 0;
+}
+/* Make the Share button sit flush with the (taller) dialog input: same radius,
+   a stable width so it doesn't jump between "Share" and "Sharing…". */
+.share-add .btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 96px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .share-list {
   list-style: none;
-  margin: 4px 0 0;
+  margin: 8px 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 .share-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px 6px 10px;
+  gap: 10px;
+  padding: 7px 8px 7px 13px;
   background: var(--bg-elev-2);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: 10px;
+  font-size: 13.5px;
 }
 .share-row__name {
   flex: 1;
@@ -2513,19 +2528,46 @@
   white-space: nowrap;
 }
 .share-row__status {
+  flex: none;
+  padding: 2px 9px;
+  border-radius: 999px;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
 }
 .share-row__status--pending {
   color: #f59e0b;
+  background: rgba(245, 158, 11, 0.14);
 }
 .share-row__status--accepted {
   color: #14b8a6;
+  background: rgba(20, 184, 166, 0.14);
 }
 .share-row__status--rejected {
   color: var(--text-dim);
+  background: var(--bg-elev);
+}
+/* Tidy, fixed-size remove control so it doesn't crowd the status pill. */
+.share-row .icon-btn {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  font-size: 13px;
+  border-radius: 7px;
+}
+/* Dismiss is a full-width close, so it reads as "I'm finished" rather than a
+   lone button hanging in the corner. */
+.share-done {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 600;
 }
 
 /* Sliding share notification banner */

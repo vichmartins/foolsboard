@@ -109,11 +109,9 @@ export default function ShareDialog({ resourceType, resourceId, resourceName, on
           </ul>
         )}
 
-        <div className="dialog__actions">
-          <button className="btn" onClick={onClose}>
-            Done
-          </button>
-        </div>
+        <button className="btn share-done" onClick={onClose}>
+          Done
+        </button>
       </div>
     </div>
   )
