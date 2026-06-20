@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.18.3
+
+- Any invite code can now be deleted — active, expired, or already used (the
+  "already used" guard is removed); every row has a delete button.
+- Used codes now show who redeemed them: the row displays the account's username
+  and email (resolved server-side), falling back gracefully if that account was
+  since deleted.
+
 ## v0.18.2
 
 - Admin Users tab: clicking a blocked action on your own row (remove admin /

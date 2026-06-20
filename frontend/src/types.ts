@@ -66,6 +66,7 @@ export interface Invite {
   expires_at: string | null
   used_by_id: string | null
   used_at: string | null
+  used_by: { id: string; username: string; email: string } | null
 }
 
 export interface StoryNode {

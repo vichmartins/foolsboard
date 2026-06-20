@@ -14,7 +14,7 @@ from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_admin
 from ..models import InviteCode, User
-from ..schemas import InviteCreate, InviteOut
+from ..schemas import InviteCreate, InviteOut, InviteUser
 
 router = APIRouter(prefix="/api/invites", tags=["invites"])
 
@@ -25,8 +25,22 @@ ALLOWED_MINUTES = {5, 10, 30, 60, 1440, 10080, 43200}
 @router.get("", response_model=list[InviteOut])
 def list_invites(
     _: User = Depends(get_current_admin), db: Session = Depends(get_db)
-) -> list[InviteCode]:
-    return list(db.scalars(select(InviteCode).order_by(InviteCode.created_at.desc())))
+) -> list[InviteOut]:
+    invites = list(db.scalars(select(InviteCode).order_by(InviteCode.created_at.desc())))
+    user_ids = {i.used_by_id for i in invites if i.used_by_id is not None}
+    users = (
+        {u.id: u for u in db.scalars(select(User).where(User.id.in_(user_ids)))}
+        if user_ids
+        else {}
+    )
+    out: list[InviteOut] = []
+    for i in invites:
+        item = InviteOut.model_validate(i)
+        u = users.get(i.used_by_id) if i.used_by_id else None
+        if u is not None:
+            item.used_by = InviteUser(id=u.id, username=u.username, email=u.email)
+        out.append(item)
+    return out
 
 
 @router.post("", response_model=InviteOut, status_code=status.HTTP_201_CREATED)
@@ -57,9 +71,8 @@ def delete_invite(
     invite = db.get(InviteCode, invite_id)
     if invite is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Invite not found")
-    if invite.used_by_id is not None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That invite has already been used")
+    # Any code can be deleted -- active, expired, or already used.
     db.delete(invite)
     db.commit()
-    log_event(db, user=admin, action="invite.revoke", entity_type="invite",
-              summary="revoked an invite code")
+    log_event(db, user=admin, action="invite.delete", entity_type="invite",
+              summary="deleted an invite code")

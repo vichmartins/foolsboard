@@ -228,6 +228,12 @@ class InviteCreate(BaseModel):
     expires_in_minutes: int = 60
 
 
+class InviteUser(BaseModel):
+    id: UUID
+    username: str
+    email: str
+
+
 class InviteOut(ORMModel):
     id: UUID
     code: str
@@ -235,3 +241,6 @@ class InviteOut(ORMModel):
     expires_at: datetime | None = None
     used_by_id: UUID | None = None
     used_at: datetime | None = None
+    # The account that redeemed the code (resolved by the router); null if unused
+    # or if that account was later deleted.
+    used_by: InviteUser | None = None

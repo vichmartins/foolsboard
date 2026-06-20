@@ -114,7 +114,15 @@ export default function AdminInvites() {
 
               <span className="invite__status">
                 {used ? (
-                  <>Used{inv.used_at ? ` · ${fmtWhen(inv.used_at)}` : ''}</>
+                  inv.used_by ? (
+                    <>
+                      Used by <strong>{inv.used_by.username}</strong>
+                      <span className="invite__email"> · {inv.used_by.email}</span>
+                      {inv.used_at ? ` · ${fmtWhen(inv.used_at)}` : ''}
+                    </>
+                  ) : (
+                    <>Used{inv.used_at ? ` · ${fmtWhen(inv.used_at)}` : ''}</>
+                  )
                 ) : expired ? (
                   <>
                     Created {fmtWhen(inv.created_at)} · Expired{' '}
@@ -135,17 +143,15 @@ export default function AdminInvites() {
                     {copied === inv.code ? 'Copied' : 'Copy'}
                   </button>
                 )}
-                {!used && (
-                  <button
-                    type="button"
-                    className="icon-btn icon-btn--danger"
-                    title="Revoke"
-                    aria-label="Revoke"
-                    onClick={() => revoke(inv.id)}
-                  >
-                    ✕
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="icon-btn icon-btn--danger"
+                  title="Delete code"
+                  aria-label="Delete code"
+                  onClick={() => revoke(inv.id)}
+                >
+                  ✕
+                </button>
               </span>
             </li>
           )
