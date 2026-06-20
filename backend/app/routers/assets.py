@@ -10,6 +10,7 @@ import io
 import mimetypes
 import shutil
 import tempfile
+import threading
 from pathlib import Path
 from uuid import UUID
 
@@ -37,6 +38,10 @@ from ..storage import storage
 from ..thumbnails import generate_thumbnail
 
 router = APIRouter(prefix="/api/nodes/{node_id}/assets", tags=["assets"])
+
+# Cap concurrent background re-encodes so a burst of video/audio uploads doesn't
+# thrash CPU/GPU (each ffmpeg/NVENC pass is heavy). Others wait their turn.
+_ENCODE_SEM = threading.Semaphore(2)
 
 
 class AssetReferenceIn(BaseModel):
@@ -110,7 +115,12 @@ def _process_compression(asset_id: UUID) -> None:
             return
         src = _local_path(asset.storage_key)
         try:
-            result = compress(src, asset.content_type, asset.filename) if src.exists() else None
+            if src.exists():
+                # Hold a slot only for the heavy encode itself.
+                with _ENCODE_SEM:
+                    result = compress(src, asset.content_type, asset.filename)
+            else:
+                result = None
         except Exception:
             result = None
         if result is not None:

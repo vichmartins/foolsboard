@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.22.0
+
+- Faster media uploads: dropped files now upload with bounded concurrency (3 at
+  a time) instead of one-by-one; the busy state is derived from in-flight
+  uploads so it stays correct during parallel uploads.
+- Background media re-encodes are capped at 2 concurrent (a semaphore) so a
+  burst of video/audio uploads doesn't thrash CPU/GPU.
+
 ## v0.21.1
 
 - Title-cased the connection context-menu items (Edit Label…, Insert Node,

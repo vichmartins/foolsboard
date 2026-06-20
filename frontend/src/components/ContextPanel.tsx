@@ -42,6 +42,20 @@ interface Props {
   onDroppedConsumed?: () => void
 }
 
+// Run an async task over items with at most `limit` running concurrently.
+async function runPooled<T>(
+  items: T[],
+  limit: number,
+  run: (item: T) => Promise<void>,
+  stop: () => boolean,
+): Promise<void> {
+  let i = 0
+  const worker = async () => {
+    while (i < items.length && !stop()) await run(items[i++])
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+}
+
 export default function ContextPanel({
   boardId,
   node,
@@ -59,7 +73,6 @@ export default function ContextPanel({
   // so switching type never loses data the other type captured.
   const [content, setContent] = useState<Record<string, unknown>>(node.content ?? {})
   const [assets, setAssets] = useState<Asset[]>([])
-  const [busy, setBusy] = useState(false)
   const [justSaved, setJustSaved] = useState(false)
   const savingRef = useRef(false)
   const savedTimer = useRef<number | null>(null)
@@ -68,6 +81,8 @@ export default function ContextPanel({
   const [preview, setPreview] = useState<{ url: string; top: number } | null>(null)
   // In-flight uploads: progress 0-100 (100 = bytes sent, server still processing).
   const [uploads, setUploads] = useState<{ id: string; name: string; progress: number }[]>([])
+  // Busy while any upload is in flight (derived, so parallel uploads stay correct).
+  const busy = uploads.length > 0
   const [mediaExpanded, setMediaExpanded] = useState(false)
   const [mediaClosing, setMediaClosing] = useState(false)
   const [showNearby, setShowNearby] = useState(false)
@@ -153,14 +168,12 @@ export default function ContextPanel({
   async function uploadFile(file: File) {
     const uploadId = crypto.randomUUID()
     setUploads((u) => [...u, { id: uploadId, name: file.name, progress: 0 }])
-    setBusy(true)
     try {
       const asset = await uploadAsset(node.id, file, (pct) =>
         setUploads((u) => u.map((x) => (x.id === uploadId ? { ...x, progress: pct } : x))),
       )
       setAssets((prev) => [...prev, asset])
     } finally {
-      setBusy(false)
       setUploads((u) => u.filter((x) => x.id !== uploadId))
     }
   }
@@ -177,10 +190,8 @@ export default function ContextPanel({
     if (!droppedFiles || droppedFiles.length === 0) return
     let cancelled = false
     ;(async () => {
-      for (const f of droppedFiles) {
-        if (cancelled) break
-        await uploadFile(f)
-      }
+      // Upload several at once for faster batches; the server handles concurrency.
+      await runPooled(droppedFiles, 3, uploadFile, () => cancelled)
       onDroppedConsumed?.()
     })()
     return () => {
