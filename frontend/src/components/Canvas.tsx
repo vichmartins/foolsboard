@@ -580,7 +580,7 @@ function CanvasInner({
 
   // Click anywhere on the minimap to recenter the canvas there (keeping zoom).
   const onMinimapClick = useCallback(
-    (_: MouseEvent, position: { x: number; y: number }) => {
+    (_: React.MouseEvent, position: { x: number; y: number }) => {
       setCenter(position.x, position.y, { zoom: getZoom(), duration: 200 })
     },
     [setCenter, getZoom],

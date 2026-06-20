@@ -1,0 +1,11 @@
+#!/bin/sh
+# foolsboard prerm: stop the service before the package is removed/upgraded.
+set -e
+
+case "$1" in
+  remove|deconfigure)
+    systemctl stop foolsboard.service >/dev/null 2>&1 || true
+    ;;
+esac
+
+exit 0

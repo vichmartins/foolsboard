@@ -1,0 +1,71 @@
+#!/bin/sh
+# foolsboard postinst: create the service user, virtualenv, config + secrets,
+# run database migrations, then enable and start the systemd service.
+set -e
+
+APP_DIR=/opt/foolsboard
+DATA_DIR=/var/lib/foolsboard
+CONF_DIR=/etc/foolsboard
+ENV_FILE="$CONF_DIR/foolsboard.env"
+VENV="$APP_DIR/venv"
+SVC_USER=foolsboard
+
+case "$1" in
+  configure)
+    # 1. Service user (system account, no login shell).
+    if ! getent passwd "$SVC_USER" >/dev/null; then
+      adduser --system --group --home "$APP_DIR" --no-create-home --quiet "$SVC_USER"
+    fi
+
+    # 2. Data + config directories.
+    mkdir -p "$DATA_DIR/storage" "$CONF_DIR"
+    chown -R "$SVC_USER":"$SVC_USER" "$DATA_DIR"
+
+    # 3. Config + secrets -- generated once, preserved across upgrades.
+    if [ ! -f "$ENV_FILE" ]; then
+      JWT="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
+      cat > "$ENV_FILE" <<EOF
+# foolsboard configuration -- generated on install.
+
+# Where the app listens. By default it serves the SPA + API + WebSocket + media
+# itself, so it works with no other software. To run it behind a reverse proxy,
+# set FOOLSBOARD_HOST=127.0.0.1 and point the proxy at http://127.0.0.1:9534
+# (see /usr/share/doc/foolsboard/ for an nginx example).
+FOOLSBOARD_HOST=0.0.0.0
+FOOLSBOARD_PORT=9534
+
+# Built frontend, served by the app itself.
+STATIC_DIR=/opt/foolsboard/frontend/dist
+
+# Data.
+DATABASE_URL=sqlite:////var/lib/foolsboard/foolsboard.db
+STORAGE_LOCAL_DIR=/var/lib/foolsboard/storage
+JWT_SECRET=$JWT
+
+# --- Optional: Postgres instead of SQLite ---
+#   $VENV/bin/pip install -r $APP_DIR/backend/requirements-postgres.txt
+#   DATABASE_URL=postgresql+psycopg://foolsboard:PASSWORD@localhost:5432/foolsboard
+EOF
+      chown root:"$SVC_USER" "$ENV_FILE"
+      chmod 640 "$ENV_FILE"
+    fi
+
+    # 4. Python virtualenv + dependencies.
+    if [ ! -x "$VENV/bin/python" ]; then
+      python3 -m venv "$VENV"
+    fi
+    "$VENV/bin/pip" install --quiet --upgrade pip
+    "$VENV/bin/pip" install --quiet -r "$APP_DIR/backend/requirements.txt"
+    chown -R "$SVC_USER":"$SVC_USER" "$APP_DIR"
+
+    # 5. Database migrations (as the service user, so a SQLite file is owned by it).
+    runuser -u "$SVC_USER" -- sh -c "set -a; . '$ENV_FILE'; cd '$APP_DIR/backend'; exec '$VENV/bin/alembic' upgrade head"
+
+    # 6. systemd service.
+    systemctl daemon-reload
+    systemctl enable foolsboard.service >/dev/null 2>&1 || true
+    systemctl restart foolsboard.service
+    ;;
+esac
+
+exit 0

@@ -1,0 +1,18 @@
+#!/bin/sh
+# foolsboard postrm: disable the service on remove; drop the venv on purge.
+# Data (/var/lib/foolsboard) and config (/etc/foolsboard) are intentionally
+# preserved so boards/media survive a reinstall -- remove them by hand to wipe.
+set -e
+
+case "$1" in
+  remove)
+    systemctl disable foolsboard.service >/dev/null 2>&1 || true
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    ;;
+  purge)
+    rm -rf /opt/foolsboard/venv
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    ;;
+esac
+
+exit 0

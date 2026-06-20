@@ -10,8 +10,9 @@ import time
 import traceback
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, update
 from starlette.concurrency import run_in_threadpool
@@ -172,3 +173,23 @@ app.include_router(links.router)
 @app.get("/api/health", tags=["meta"])
 def health() -> dict:
     return {"status": "ok", "database": settings.database_url.split("://", 1)[0]}
+
+
+# --- Serve the built frontend (production single-port deployment) -----------
+# When STATIC_DIR points at the built SPA, uvicorn serves the app, its hashed
+# assets, and the API/WebSocket from one origin/port -- no separate web server.
+# Registered last so every /api and /media route is matched first.
+if settings.static_dir and Path(settings.static_dir).is_dir():
+    _dist = Path(settings.static_dir)
+    if (_dist / "assets").is_dir():
+        app.mount("/assets", StaticFiles(directory=_dist / "assets"), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa(full_path: str):
+        # Unknown API paths should still 404 as JSON, not fall back to the SPA.
+        if full_path.startswith(("api/", "media/")):
+            raise HTTPException(status_code=404)
+        candidate = _dist / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(_dist / "index.html")  # client-side routing fallback

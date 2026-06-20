@@ -1,0 +1,2 @@
+# Packaging scripts/configs must keep LF endings or they break on Debian.
+* text eol=lf

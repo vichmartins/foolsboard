@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.30.0
+
+- Production packaging. foolsboard can now build as a self-contained Debian
+  package (`packaging/build-deb.sh`): one uvicorn service that serves the SPA,
+  API, WebSocket, and media on port 9534 — no web server required — backed by
+  SQLite by default (DATABASE_URL overridable for Postgres). Installs a systemd
+  unit, a service user, config + generated secrets under `/etc/foolsboard`, and
+  data under `/var/lib/foolsboard`. The app optionally sits behind a reverse
+  proxy (nginx example included). To support this, the backend serves the built
+  frontend when `STATIC_DIR` is set.
+- Fixed a latent type error (`onMinimapClick`) that broke the production build
+  but was invisible in dev.
+
 ## v0.29.2
 
 - Polished the Share Board dialog. The Share button now matches the input it sits

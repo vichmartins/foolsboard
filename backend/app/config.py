@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     storage_local_dir: str = "./storage"
     storage_public_url: str = "/media"
 
+    # Built frontend directory (the Vite `dist/`). When set, uvicorn serves the
+    # SPA + its assets alongside the API on one port -- the production single-port
+    # deployment. Left unset in dev, where Vite serves the frontend separately.
+    static_dir: str | None = None
+
     # Frontend origins allowed to call the API (Vite dev server by default).
     cors_origins: list[str] = ["http://localhost:5173"]
 

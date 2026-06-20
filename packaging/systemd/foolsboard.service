@@ -1,0 +1,26 @@
+[Unit]
+Description=foolsboard (storyboard app: API + WebSocket + SPA + media)
+After=network.target
+
+[Service]
+Type=simple
+User=foolsboard
+Group=foolsboard
+# Defaults; overridden by anything in the EnvironmentFile below.
+Environment=FOOLSBOARD_HOST=0.0.0.0 FOOLSBOARD_PORT=9534
+EnvironmentFile=/etc/foolsboard/foolsboard.env
+WorkingDirectory=/opt/foolsboard/backend
+ExecStart=/opt/foolsboard/venv/bin/uvicorn app.main:app \
+    --host ${FOOLSBOARD_HOST} --port ${FOOLSBOARD_PORT} --workers 1
+Restart=on-failure
+RestartSec=3
+
+# Hardening.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/foolsboard
+
+[Install]
+WantedBy=multi-user.target

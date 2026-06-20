@@ -18,6 +18,9 @@ node_modules/
 frontend/dist/
 frontend/.vite/
 
+# Packaging build output
+build/
+
 # Editors / OS
 .vscode/
 .idea/
