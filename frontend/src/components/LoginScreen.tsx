@@ -21,11 +21,9 @@ export default function LoginScreen() {
   // Animate the swappable fields' container height as the mode changes.
   const bodyRef = useRef<HTMLDivElement>(null)
   const [bodyHeight, setBodyHeight] = useState<number | undefined>(undefined)
-  // Re-measure on mode AND error change so the card height eases to fit the
-  // error message instead of snapping.
   useLayoutEffect(() => {
     if (bodyRef.current) setBodyHeight(bodyRef.current.scrollHeight)
-  }, [mode, error])
+  }, [mode])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -53,7 +51,7 @@ export default function LoginScreen() {
       <div className="auth-themetoggle">
         <ThemeToggle />
       </div>
-      <form className="auth-card" onSubmit={submit}>
+      <form className="auth-card" onSubmit={submit} noValidate>
         <div className="auth-brand">
           fools<span>board</span>
         </div>
@@ -116,9 +114,14 @@ export default function LoginScreen() {
                 />
               </label>
             )}
-
-            {error && <div className="auth-error">{error}</div>}
           </div>
+        </div>
+
+        {/* Outside .auth-body so its overflow:hidden (used for the mode-swap
+            height animation) can't clip the message; the collapse wrapper eases
+            its own height so the layout opens smoothly instead of snapping. */}
+        <div className={'auth-error-collapse' + (error ? ' is-open' : '')}>
+          <div className="auth-error">{error}</div>
         </div>
 
         <button className="btn btn--primary auth-submit" type="submit" disabled={busy}>

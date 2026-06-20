@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.16.1
+
+- Admin user-action buttons are now subtle colour-coded chips that fill with
+  their bright set colour on hover (works on the locked self-row too).
+- Registration: replaced the browser's native email validation popup with the
+  app's themed error (form noValidate), stopped the error from being clipped by
+  the card's animated body, and gave it a smooth height-easing reveal. Stripped
+  Pydantic's "Value error, " prefix from messages.
+- Animated tab switching in the Admin panel (Users/Invites/Logs) and the Logs
+  sub-tabs (Activity/Requests/Errors): the contents fade/slide in and the active
+  indicators ease.
+- Capitalised the "Admin Panel" and "Keyboard Shortcuts" dialog titles.
+
 ## v0.16.0
 
 - Reorder the board list by dragging: each row in the board dropdown has a drag

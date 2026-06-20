@@ -37,8 +37,10 @@ http.interceptors.request.use((config) => {
 // Pull a human-readable message out of a FastAPI error response.
 export function apiError(e: unknown, fallback: string): string {
   const detail = (e as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
-  if (typeof detail === 'string') return detail
-  if (Array.isArray(detail) && typeof detail[0]?.msg === 'string') return detail[0].msg as string
+  // Pydantic prefixes custom validator messages with "Value error, " — strip it.
+  const clean = (m: string) => m.replace(/^Value error,\s*/i, '')
+  if (typeof detail === 'string') return clean(detail)
+  if (Array.isArray(detail) && typeof detail[0]?.msg === 'string') return clean(detail[0].msg as string)
   return fallback
 }
 

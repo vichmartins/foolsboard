@@ -83,7 +83,7 @@ export default function ShortcutsDialog({ onClose }: Props) {
   return (
     <div className="overlay" onClick={onClose}>
       <div className="dialog dialog--wide" onClick={(e) => e.stopPropagation()}>
-        <h2 className="dialog__title">Keyboard shortcuts</h2>
+        <h2 className="dialog__title">Keyboard Shortcuts</h2>
 
         <div className="shortcuts">
           {GROUPS.map((g) => (

@@ -93,7 +93,8 @@ export default function AdminLogs() {
         />
       </div>
 
-      <div className="admin-logs__table">
+      {/* key={tab} replays the enter animation when the sub-tab changes. */}
+      <div className="admin-logs__table admin-tab-panel" key={tab}>
         {tab === 'events' &&
           shownEvents.map((e) => (
             <div className="log-row" key={e.id}>

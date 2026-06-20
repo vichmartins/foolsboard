@@ -2337,6 +2337,31 @@
     opacity: 1;
   }
 }
+/* Smooth height-easing reveal for the login/register error. grid-template-rows
+   0fr->1fr animates height without a fixed value; the negative margin cancels
+   the card's flex gap while collapsed so empty state keeps normal spacing. */
+.auth-error-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  margin-top: -14px;
+  transition:
+    grid-template-rows 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+    margin-top 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.auth-error-collapse.is-open {
+  grid-template-rows: 1fr;
+  margin-top: 0;
+}
+.auth-error-collapse > .auth-error {
+  min-height: 0;
+  overflow: hidden;
+  animation: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.auth-error-collapse.is-open > .auth-error {
+  opacity: 1;
+}
 .auth-submit {
   margin-top: 4px;
   padding: 11px;
@@ -2592,6 +2617,7 @@
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
+  transition: color 0.15s ease, border-bottom-color 0.15s ease;
 }
 .admin-tab:hover {
   color: var(--text);
@@ -2605,6 +2631,20 @@
   min-height: 0;
   overflow-y: auto;
   padding: 16px 20px 20px;
+}
+/* Fade + slide the tab contents in on each switch (re-keyed by tab). */
+.admin-tab-panel {
+  animation: admin-tab-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes admin-tab-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Users tab */
@@ -2688,35 +2728,51 @@
   display: flex;
   gap: 6px;
 }
+/* Subtle colour-coded chips by default; each fills with its bright set colour
+   on hover. The hover isn't gated on :not(:disabled) and .btn:disabled doesn't
+   set pointer-events:none, so even the locked self-row lights up on hover. */
 .admin-action {
   padding: 6px 11px;
   font-size: 12px;
   font-weight: 600;
-  color: #fff;
   border: 1px solid transparent;
+  transition: background 0.12s ease, color 0.12s ease;
 }
-.admin-action--admin,
-.admin-action--admin:hover:not(:disabled) {
-  background: var(--accent);
+.admin-action--admin {
+  color: #8b91ff;
+  background: rgba(109, 116, 255, 0.14);
 }
-.admin-action--suspend,
-.admin-action--suspend:hover:not(:disabled) {
-  background: #f59e0b;
+.admin-action--admin:hover {
+  color: #fff;
+  background: #6d74ff;
 }
-.admin-action--activate,
-.admin-action--activate:hover:not(:disabled) {
-  background: #10b981;
+.admin-action--suspend {
+  color: #f9a826;
+  background: rgba(249, 168, 38, 0.14);
 }
-.admin-action--delete,
-.admin-action--delete:hover:not(:disabled) {
-  background: var(--danger);
+.admin-action--suspend:hover {
+  color: #fff;
+  background: #f9a826;
 }
-.admin-action:hover:not(:disabled) {
-  filter: brightness(1.12);
+.admin-action--activate {
+  color: #14c98e;
+  background: rgba(20, 201, 142, 0.14);
+}
+.admin-action--activate:hover {
+  color: #fff;
+  background: #14c98e;
+}
+.admin-action--delete {
+  color: #f8554f;
+  background: rgba(248, 85, 79, 0.14);
+}
+.admin-action--delete:hover {
+  color: #fff;
+  background: #f8554f;
 }
 .admin-action:disabled {
-  opacity: 0.4;
-  filter: none;
+  cursor: default;
+  opacity: 1;
 }
 
 /* Invites tab */
@@ -2753,6 +2809,7 @@
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 .admin-subtab--active {
   color: #fff;
@@ -3089,7 +3146,8 @@
   .media-upload__fill--processing,
   .media-tile__processing,
   .auth-error,
-  .auth-curtain {
+  .auth-curtain,
+  .admin-tab-panel {
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
   }
@@ -3103,7 +3161,9 @@
   .story-node__more-inner,
   .story-node__toggle,
   .profile__menu,
-  .auth-body {
+  .auth-body,
+  .auth-error-collapse,
+  .auth-error-collapse > .auth-error {
     transition-duration: 0.01ms;
   }
   .auth-body-inner {

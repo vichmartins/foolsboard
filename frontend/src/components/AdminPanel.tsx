@@ -18,7 +18,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
     <div className="overlay" onMouseDown={onClose}>
       <div className="dialog admin-panel" onMouseDown={(e) => e.stopPropagation()}>
         <div className="admin-panel__head">
-          <h2 className="dialog__title">Admin panel</h2>
+          <h2 className="dialog__title">Admin Panel</h2>
           <button className="icon-btn" onClick={onClose} title="Close" aria-label="Close">
             ✕
           </button>
@@ -37,9 +37,12 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="admin-panel__body">
-          {tab === 'users' && <AdminUsers />}
-          {tab === 'invites' && <AdminInvites />}
-          {tab === 'logs' && <AdminLogs />}
+          {/* key={tab} replays the enter animation each time the tab changes. */}
+          <div className="admin-tab-panel" key={tab}>
+            {tab === 'users' && <AdminUsers />}
+            {tab === 'invites' && <AdminInvites />}
+            {tab === 'logs' && <AdminLogs />}
+          </div>
         </div>
       </div>
     </div>
