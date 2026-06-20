@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.17.0
+
+- New Gallery (top-bar grid icon): a searchable browser of everything on the
+  current board, in four tabs — Objects, Media (images/videos/audio/files),
+  Links, and Connections — with live counts. Search matches any attribute an
+  item carries (titles, types, every content field, filenames, link URLs, edge
+  labels). Backed by a new GET /api/boards/{id}/assets endpoint.
+- Picking a result navigates the canvas: objects/links/edge-endpoints focus
+  (edges frame both nodes). Media opens in the in-place lightbox (image zoom,
+  video/audio playback, file download); the owning node name is a separate link
+  that jumps to the node.
+- Link results render as full-width preview cards (image, title, description,
+  site) that open in a new tab; fixed long URLs overflowing their card.
+- Logs/gallery sub-tab buttons use a subtle accent-tint hover (replacing the
+  off-theme gradient).
+
 ## v0.16.1
 
 - Admin user-action buttons are now subtle colour-coded chips that fill with

@@ -183,6 +183,11 @@ export async function reorderBoards(boardIds: string[]): Promise<void> {
   await http.patch('/boards/reorder', { board_ids: boardIds })
 }
 
+// Every media asset attached to any node on the board (for the gallery).
+export async function listBoardAssets(boardId: string): Promise<Asset[]> {
+  return (await http.get(`/boards/${boardId}/assets`)).data
+}
+
 // Export selected boards as a .zip bundle (manifest + media). Returns the raw
 // archive bytes for the browser to download. The archive streams as it's built,
 // so `onProgress` ticks with the running byte count for a live indicator.

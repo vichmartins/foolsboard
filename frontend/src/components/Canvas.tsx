@@ -48,6 +48,7 @@ import ContextMenu from './ContextMenu'
 import ContextPanel from './ContextPanel'
 import FloatingEdge from './FloatingEdge'
 import MinimapSelection from './MinimapSelection'
+import NodeGallery from './NodeGallery'
 import PromptDialog from './PromptDialog'
 import StoryNodeCard from './StoryNodeCard'
 
@@ -60,6 +61,8 @@ interface CanvasProps {
   boardId: string
   mergeSourceIds?: string[] | null
   onMergeHandled?: () => void
+  galleryOpen?: boolean
+  onCloseGallery?: () => void
 }
 
 const PASTE_OFFSET = 48 // px nudge when pasting/duplicating within the same board
@@ -114,8 +117,15 @@ function toRFNode(n: StoryNode): Node {
   }
 }
 
-function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
-  const { screenToFlowPosition, getNodes, getEdges, getZoom, setCenter } = useReactFlow()
+function CanvasInner({
+  boardId,
+  mergeSourceIds,
+  onMergeHandled,
+  galleryOpen,
+  onCloseGallery,
+}: CanvasProps) {
+  const { screenToFlowPosition, getNodes, getEdges, getZoom, setCenter, fitView } =
+    useReactFlow()
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -766,6 +776,37 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
     [],
   )
 
+  // Center the canvas on a node, select it, and open its panel. Used by the
+  // gallery to jump straight to a chosen item.
+  const focusNode = useCallback(
+    (id: string) => {
+      const n = getNodes().find((x) => x.id === id)
+      if (!n) return
+      const { w, h } = nodeSize(n)
+      setCenter(n.position.x + w / 2, n.position.y + h / 2, {
+        zoom: Math.max(getZoom(), 1),
+        duration: 400,
+      })
+      selectNodes([id])
+      openPanel(id)
+    },
+    [getNodes, setCenter, getZoom, selectNodes, openPanel],
+  )
+
+  // Frame both endpoints of a connection and select them (from the gallery).
+  const focusEdge = useCallback(
+    (source: string, target: string) => {
+      fitView({
+        nodes: [{ id: source }, { id: target }],
+        duration: 400,
+        padding: 0.4,
+        maxZoom: 1.2,
+      })
+      selectNodes([source, target])
+    },
+    [fitView, selectNodes],
+  )
+
   // Esc cascade: the gallery drawer (handled in ContextPanel, which stops the
   // event) takes priority; otherwise close the open panel; otherwise clear any
   // node selection.
@@ -873,6 +914,25 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
     })
   }, [nodes, edges, selectedId])
 
+  // Every item + connection on the board, for the gallery.
+  const galleryItems = useMemo(
+    () =>
+      nodes
+        .map((n) => n.data?.story as StoryNode | undefined)
+        .filter((s): s is StoryNode => !!s),
+    [nodes],
+  )
+  const galleryEdges = useMemo(
+    () =>
+      edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        label: typeof e.label === 'string' ? e.label : '',
+      })),
+    [edges],
+  )
+
   return (
     <BoardIdContext.Provider value={boardId}>
     <div className="canvas-wrap">
@@ -941,6 +1001,23 @@ function CanvasInner({ boardId, mergeSourceIds, onMergeHandled }: CanvasProps) {
           onChange={applyNodeUpdate}
           onDelete={removeSelected}
           onClose={closePanel}
+        />
+      )}
+
+      {galleryOpen && (
+        <NodeGallery
+          boardId={boardId}
+          nodes={galleryItems}
+          edges={galleryEdges}
+          onPickNode={(id) => {
+            focusNode(id)
+            onCloseGallery?.()
+          }}
+          onPickEdge={(s, t) => {
+            focusEdge(s, t)
+            onCloseGallery?.()
+          }}
+          onClose={() => onCloseGallery?.()}
         />
       )}
 

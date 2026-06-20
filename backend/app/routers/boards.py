@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import Board, Edge, Node, User
-from ..schemas import BoardCreate, BoardGraph, BoardOut, BoardReorder, BoardUpdate
+from ..models import Asset, Board, Edge, Node, User
+from ..schemas import AssetOut, BoardCreate, BoardGraph, BoardOut, BoardReorder, BoardUpdate
+from ..storage import storage
 
 router = APIRouter(prefix="/api/boards", tags=["boards"])
 
@@ -88,6 +89,28 @@ def get_board_graph(
     nodes = list(db.scalars(select(Node).where(Node.board_id == board_id)))
     edges = list(db.scalars(select(Edge).where(Edge.board_id == board_id)))
     return BoardGraph(board=board, nodes=nodes, edges=edges)
+
+
+@router.get("/{board_id}/assets", response_model=list[AssetOut])
+def list_board_assets(
+    board_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> list[AssetOut]:
+    """Every media asset attached to any node on the board (for the gallery)."""
+    _get_board(board_id, db, user)
+    node_ids = list(db.scalars(select(Node.id).where(Node.board_id == board_id)))
+    if not node_ids:
+        return []
+    assets = db.scalars(
+        select(Asset).where(Asset.node_id.in_(node_ids)).order_by(Asset.created_at.desc())
+    )
+    out: list[AssetOut] = []
+    for a in assets:
+        item = AssetOut.model_validate(a)
+        item.url = storage.url_for(a.storage_key)
+        if a.thumbnail_key:
+            item.thumbnail_url = storage.url_for(a.thumbnail_key)
+        out.append(item)
+    return out
 
 
 @router.patch("/{board_id}", response_model=BoardOut)

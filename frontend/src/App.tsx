@@ -13,7 +13,14 @@ import PromptDialog from './components/PromptDialog'
 import MergeDialog from './components/MergeDialog'
 import TypeToConfirmDialog from './components/TypeToConfirmDialog'
 import ThemeToggle from './components/ThemeToggle'
-import { MergeIcon, PencilIcon, PlusIcon, TransferIcon, TrashIcon } from './components/icons'
+import {
+  GalleryIcon,
+  MergeIcon,
+  PencilIcon,
+  PlusIcon,
+  TransferIcon,
+  TrashIcon,
+} from './components/icons'
 import type { Board } from './types'
 import './App.css'
 
@@ -24,6 +31,7 @@ function Workspace() {
   const [accountOpen, setAccountOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
   const [impexOpen, setImpexOpen] = useState(false)
+  const [galleryOpen, setGalleryOpen] = useState(false)
   // Source boards to merge into the active board; handed to Canvas to import.
   const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
 
@@ -122,6 +130,15 @@ function Workspace() {
           <span className="topbar-sep" aria-hidden="true" />
           <button
             className="icon-btn"
+            onClick={() => setGalleryOpen(true)}
+            title="Gallery — browse all items on this board"
+            aria-label="Open gallery"
+            disabled={!activeBoard}
+          >
+            <GalleryIcon />
+          </button>
+          <button
+            className="icon-btn"
             onClick={() => setDialog('new')}
             title="New board"
             aria-label="New board"
@@ -161,6 +178,8 @@ function Workspace() {
             boardId={activeId}
             mergeSourceIds={mergeSourceIds}
             onMergeHandled={() => setMergeSourceIds(null)}
+            galleryOpen={galleryOpen}
+            onCloseGallery={() => setGalleryOpen(false)}
           />
         ) : (
           <div className="loading">Loading…</div>
