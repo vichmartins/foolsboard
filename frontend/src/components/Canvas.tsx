@@ -152,6 +152,24 @@ function CanvasInner({
     realtime.sendSelection(ids)
   }, [])
 
+  // True while I'm dragging, so incoming remote moves don't yank my own nodes.
+  const isDragging = useRef(false)
+  const lastMoveSent = useRef(0)
+  const broadcastMove = useCallback(
+    (throttle: boolean) => {
+      const now = performance.now()
+      if (throttle && now - lastMoveSent.current < 45) return
+      lastMoveSent.current = now
+      const moving = getNodes().filter((n) => n.selected || n.dragging)
+      if (moving.length) {
+        realtime.sendNodeMove(moving.map((n) => ({ id: n.id, x: n.position.x, y: n.position.y })))
+      }
+    },
+    [getNodes],
+  )
+  // Tell collaborators a structural change landed; they refetch the graph.
+  const markDirty = useCallback(() => realtime.sendDirty(), [])
+
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -190,6 +208,51 @@ function CanvasInner({
     })
     return () => {
       active = false
+    }
+  }, [boardId])
+
+  // Apply collaborators' live changes: remote node moves patch positions in
+  // place; a "board_dirty" signal debounce-refetches the graph (covering edits,
+  // creates, deletes, edges) while preserving my own selection.
+  useEffect(() => {
+    let dirtyTimer: number | null = null
+    const off = realtime.subscribeOps((msg) => {
+      if (msg.board_id !== boardId) return
+      if (msg.type === 'node_move') {
+        const moved = new Map<string, { x: number; y: number }>(
+          msg.positions.map((p: { id: string; x: number; y: number }) => [p.id, p]),
+        )
+        setNodes((nds) =>
+          nds.map((n) => {
+            const p = moved.get(n.id)
+            // Don't override a node I'm actively dragging.
+            return p && !(isDragging.current && n.selected)
+              ? { ...n, position: { x: p.x, y: p.y } }
+              : n
+          }),
+        )
+      } else if (msg.type === 'board_dirty') {
+        if (dirtyTimer) window.clearTimeout(dirtyTimer)
+        dirtyTimer = window.setTimeout(() => {
+          api
+            .getGraph(boardId)
+            .then((g) => {
+              setNodes((prev) => {
+                const sel = new Set(prev.filter((n) => n.selected).map((n) => n.id))
+                return g.nodes.map((n) => {
+                  const rf = toRFNode(n)
+                  return sel.has(n.id) ? { ...rf, selected: true } : rf
+                })
+              })
+              setEdges(g.edges.map(toRFEdge))
+            })
+            .catch(() => {})
+        }, 250)
+      }
+    })
+    return () => {
+      off()
+      if (dirtyTimer) window.clearTimeout(dirtyTimer)
     }
   }, [boardId])
 
@@ -295,12 +358,13 @@ function CanvasInner({
         return [...base, ...rfNew.map((n) => (select ? { ...n, selected: true } : n))]
       })
       setEdges((eds) => [...eds, ...rfNewEdges])
+      markDirty()
       return {
         nodeIds: createdNodes.map((n) => n.id),
         edgeIds: createdEdges.map((e) => e.id),
       }
     },
-    [boardId],
+    [boardId, markDirty],
   )
 
   const removeByIds = useCallback(
@@ -316,8 +380,9 @@ function CanvasInner({
         ...edgeIds.map((id) => api.deleteEdge(boardId, id).catch(() => {})),
         ...nodeIds.map((id) => api.deleteNode(boardId, id).catch(() => {})),
       ])
+      markDirty()
     },
-    [boardId],
+    [boardId, markDirty],
   )
 
   // Select exactly the given nodes (deselecting the rest).
@@ -335,20 +400,29 @@ function CanvasInner({
         nds.map((n) => (positions.has(n.id) ? { ...n, position: { ...positions.get(n.id)! } } : n)),
       )
       positions.forEach((pos, id) => api.updateNode(boardId, id, pos).catch(() => {}))
+      realtime.sendNodeMove(
+        [...positions].map(([id, pos]) => ({ id, x: pos.x, y: pos.y })),
+      )
     },
     [boardId],
   )
 
   const onNodeDragStart = useCallback(
     (_: unknown, node: Node) => {
+      isDragging.current = true
       const moving = getNodes().filter((n) => n.selected || n.id === node.id)
       dragStartPos.current = new Map(moving.map((n) => [n.id, { x: n.position.x, y: n.position.y }]))
     },
     [getNodes],
   )
 
+  // Stream positions to collaborators while dragging (throttled).
+  const onNodeDrag = useCallback(() => broadcastMove(true), [broadcastMove])
+
   const onNodeDragStop = useCallback(
     (_: unknown, node: Node) => {
+      isDragging.current = false
+      broadcastMove(false) // send the settled positions
       const before = dragStartPos.current
       dragStartPos.current = null
       const ids = before ? [...before.keys()] : [node.id]
@@ -586,8 +660,9 @@ function CanvasInner({
         snap.t,
       )
       setEdges((eds) => addEdge(toRFEdge(created), eds))
+      markDirty()
     },
-    [boardId, screenToFlowPosition, getNodes],
+    [boardId, screenToFlowPosition, getNodes, markDirty],
   )
 
   // Right-click on empty canvas -> create a new object there (Agar.io style).
@@ -603,8 +678,9 @@ function CanvasInner({
       })
       setNodes((nds) => [...nds, toRFNode(created)])
       setSelectedId(created.id)
+      markDirty()
     },
-    [boardId, screenToFlowPosition],
+    [boardId, screenToFlowPosition, markDirty],
   )
 
   // Gate every deletion (objects and/or connections) behind a confirm dialog.
@@ -623,19 +699,27 @@ function CanvasInner({
       // Deleting a node cascades its edges on the backend, so ignore 404s.
       deleted.forEach((n) => api.deleteNode(boardId, n.id).catch(() => {}))
       if (deleted.some((n) => n.id === selectedId)) setSelectedId(null)
+      markDirty()
     },
-    [boardId, selectedId],
+    [boardId, selectedId, markDirty],
   )
   const onEdgesDelete = useCallback(
-    (deleted: Edge[]) =>
-      deleted.forEach((e) => api.deleteEdge(boardId, e.id).catch(() => {})),
-    [boardId],
+    (deleted: Edge[]) => {
+      deleted.forEach((e) => api.deleteEdge(boardId, e.id).catch(() => {}))
+      markDirty()
+    },
+    [boardId, markDirty],
   )
 
-  // Reflect a panel edit back into the canvas card (including the preview line).
-  const applyNodeUpdate = useCallback((updated: StoryNode) => {
-    setNodes((nds) => nds.map((n) => (n.id === updated.id ? toRFNode(updated) : n)))
-  }, [])
+  // Reflect a panel edit back into the canvas card (including the preview line),
+  // and tell collaborators so they pick up the edited fields.
+  const applyNodeUpdate = useCallback(
+    (updated: StoryNode) => {
+      setNodes((nds) => nds.map((n) => (n.id === updated.id ? toRFNode(updated) : n)))
+      markDirty()
+    },
+    [markDirty],
+  )
 
   // --- Edge editing --------------------------------------------------------
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
@@ -675,16 +759,18 @@ function CanvasInner({
     (edge: Edge) => {
       setEdges((eds) => eds.filter((e) => e.id !== edge.id))
       api.deleteEdge(boardId, edge.id).catch(() => {})
+      markDirty()
     },
-    [boardId],
+    [boardId, markDirty],
   )
 
   const saveEdgeLabel = useCallback(
     async (edge: Edge, label: string) => {
       const updated = await api.updateEdge(boardId, edge.id, { label: label || null })
       setEdges((eds) => eds.map((e) => (e.id === edge.id ? toRFEdge(updated) : e)))
+      markDirty()
     },
-    [boardId],
+    [boardId, markDirty],
   )
 
   // Insert a new object in the middle of a connection: A->B becomes A->new->B.
@@ -714,8 +800,9 @@ function CanvasInner({
         eds.filter((e) => e.id !== edge.id).concat(toRFEdge(e1), toRFEdge(e2)),
       )
       setSelectedId(created.id)
+      markDirty()
     },
-    [boardId, nodes],
+    [boardId, nodes, markDirty],
   )
 
   // Merge requested from the top bar: fetch each source board and import it.
@@ -904,11 +991,15 @@ function CanvasInner({
     }
   }, [])
 
-  const removeSelected = useCallback((nodeId: string) => {
-    setNodes((nds) => nds.filter((n) => n.id !== nodeId))
-    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId))
-    setSelectedId(null)
-  }, [])
+  const removeSelected = useCallback(
+    (nodeId: string) => {
+      setNodes((nds) => nds.filter((n) => n.id !== nodeId))
+      setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId))
+      setSelectedId(null)
+      markDirty()
+    },
+    [markDirty],
+  )
 
   const selectedStory =
     (nodes.find((n) => n.id === selectedId)?.data?.story as StoryNode | undefined) ?? null
@@ -986,6 +1077,7 @@ function CanvasInner({
         onSelectionStart={onSelectionStart}
         onSelectionEnd={onSelectionEnd}
         onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onNodeDoubleClick={(_, n) => openPanel(n.id)}
         onPaneClick={() => {

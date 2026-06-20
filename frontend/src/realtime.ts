@@ -40,6 +40,9 @@ class Realtime {
 
   private presenceListeners = new Set<() => void>()
   private collabListeners = new Set<() => void>()
+  // Board ops (node_move, board_dirty) are apply-and-forget, so they go to
+  // direct handlers (the canvas) rather than into rendered state.
+  private opListeners = new Set<(msg: any) => void>()
 
   start() {
     this.wantOpen = true
@@ -120,6 +123,8 @@ class Realtime {
         delete map[msg.user_id]
       }
       this.emitCollab()
+    } else if (msg.type === 'node_move' || msg.type === 'board_dirty') {
+      this.opListeners.forEach((l) => l(msg))
     }
   }
 
@@ -151,6 +156,16 @@ class Realtime {
     this.send({ type: 'select', node_ids: nodeIds })
   }
 
+  // Live node movement (sent during/after a drag) — advisory, view-only.
+  sendNodeMove(positions: { id: string; x: number; y: number }[]) {
+    this.send({ type: 'node_move', positions })
+  }
+
+  // "Something structural changed on this board" — receivers refetch the graph.
+  sendDirty() {
+    this.send({ type: 'board_dirty' })
+  }
+
   membersFor(boardId: string | null): PresenceMember[] {
     if (!boardId) return []
     return this.presence[boardId] ?? []
@@ -176,6 +191,12 @@ class Realtime {
     this.collabListeners.add(fn)
     return () => {
       this.collabListeners.delete(fn)
+    }
+  }
+  subscribeOps(fn: (msg: any) => void) {
+    this.opListeners.add(fn)
+    return () => {
+      this.opListeners.delete(fn)
     }
   }
   private emitPresence() {

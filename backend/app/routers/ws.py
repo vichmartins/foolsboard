@@ -108,3 +108,22 @@ async def _handle(conn, user: User, raw: str) -> None:
                 "color": color_for(conn.user_id),
                 "node_ids": ids,
             })
+    elif kind == "node_move":
+        positions = msg.get("positions")
+        if isinstance(positions, list):
+            clean = [
+                {"id": str(p["id"]), "x": p["x"], "y": p["y"]}
+                for p in positions[:500]
+                if isinstance(p, dict)
+                and p.get("id")
+                and isinstance(p.get("x"), (int, float))
+                and isinstance(p.get("y"), (int, float))
+            ]
+            if clean:
+                await hub.relay(conn, {
+                    "type": "node_move",
+                    "board_id": str(conn.board_id),
+                    "positions": clean,
+                })
+    elif kind == "board_dirty":
+        await hub.relay(conn, {"type": "board_dirty", "board_id": str(conn.board_id)})

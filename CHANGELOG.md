@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.28.0
+
+- Live editing on shared boards. Changes a collaborator makes now appear on your
+  canvas without a refresh: dragging an object streams its position in real time
+  (so you watch it glide), and any structural change — editing an object's
+  fields, creating or deleting objects, drawing or removing connections, pasting,
+  duplicating, or merging — is signalled over the collaboration socket and pulls
+  a fresh graph on the other side. Remote updates preserve your own selection and
+  never fight a drag you're in the middle of. Position streaming is throttled and
+  graph refetches are debounced to keep traffic light.
+
 ## v0.27.0
 
 - Live cursors and selection highlights. On a board you share, you now see other
