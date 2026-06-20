@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.20.1
+
+- Title-cased the "Move to New Board" context-menu item.
+
 ## v0.20.0
 
 - Extract a selection to a new board: select objects, right-click → "Move to new

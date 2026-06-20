@@ -1084,7 +1084,7 @@ function CanvasInner({
             { label: 'Copy', mnemonic: 'C', onClick: () => doCopy() },
             { label: 'Cut', mnemonic: 't', onClick: () => void doCut() },
             { label: 'Duplicate', mnemonic: 'D', onClick: () => void doDuplicate() },
-            { label: 'Move to new board', mnemonic: 'M', onClick: () => void doExtract() },
+            { label: 'Move to New Board', mnemonic: 'M', onClick: () => void doExtract() },
             ...(clipboardHasContent()
               ? [{ label: 'Paste', mnemonic: 'P', onClick: () => void doPaste() }]
               : []),
