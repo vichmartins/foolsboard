@@ -10,11 +10,6 @@ export default defineConfig({
     // (Vite's default binds IPv6 ::1 only, which 127.0.0.1 can't reach).
     // Use `host: true` instead if you also want LAN/other-device access.
     host: '127.0.0.1',
-    // Open dev on the same port as production (where uvicorn serves on 9534),
-    // so the URL is identical across environments. The backend runs on an
-    // internal port (8000) that Vite proxies to.
-    port: 9534,
-    strictPort: true,
     proxy: {
       // ws: true so the /api/ws WebSocket upgrade is proxied to the backend too.
       '/api': { target: 'http://127.0.0.1:8000', ws: true },
