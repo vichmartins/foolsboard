@@ -515,6 +515,49 @@
   color: var(--text-dim);
 }
 
+/* Live collaboration overlay (remote cursors + selections), inside the pane.
+   Positioned in flow coordinates and pointer-transparent. */
+.collab-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 6;
+}
+.collab-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  will-change: transform;
+}
+.collab-cursor__arrow {
+  flex: none;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+}
+.collab-cursor__label {
+  margin-top: 10px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.collab-select {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 2px solid;
+  border-radius: 8px;
+  pointer-events: none;
+  will-change: transform;
+}
+
 .theme-toggle {
   display: inline-flex;
   align-items: center;

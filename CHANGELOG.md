@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.27.0
+
+- Live cursors and selection highlights. On a board you share, you now see other
+  collaborators' mouse cursors moving in real time (each labelled with their name
+  in their presence color), and the objects they have selected are outlined in
+  that same color. Both ride the existing collaboration WebSocket — cursor
+  positions are sent in board coordinates so they stay accurate through pan and
+  zoom, throttled on the wire and rendered in a pointer-transparent overlay that
+  never interferes with your own editing. Cursors and outlines clear when a
+  collaborator leaves the board.
+
 ## v0.26.0
 
 - Real-time presence — the foundation for live collaboration. A shared

@@ -43,6 +43,8 @@ import {
   type StoryEdge,
   type StoryNode,
 } from '../types'
+import { realtime } from '../realtime'
+import CollabLayer from './CollabLayer'
 import ConfirmDialog from './ConfirmDialog'
 import ContextMenu from './ContextMenu'
 import ContextPanel from './ContextPanel'
@@ -128,6 +130,28 @@ function CanvasInner({
 }: CanvasProps) {
   const { screenToFlowPosition, getNodes, getEdges, getZoom, setCenter, fitView } =
     useReactFlow()
+
+  // --- Live collaboration: broadcast my cursor + selection to others ---------
+  const lastCursorSent = useRef(0)
+  const broadcastCursor = useCallback(
+    (e: React.PointerEvent) => {
+      const now = performance.now()
+      if (now - lastCursorSent.current < 45) return // ~22 fps cap on the wire
+      lastCursorSent.current = now
+      const p = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      realtime.sendCursor(p.x, p.y)
+    },
+    [screenToFlowPosition],
+  )
+  const lastSelSent = useRef('')
+  const broadcastSelection = useCallback(({ nodes: sel }: { nodes: Node[] }) => {
+    const ids = sel.map((n) => n.id)
+    const key = ids.join(',')
+    if (key === lastSelSent.current) return // skip redundant no-op changes
+    lastSelSent.current = key
+    realtime.sendSelection(ids)
+  }, [])
+
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -946,7 +970,7 @@ function CanvasInner({
 
   return (
     <BoardIdContext.Provider value={boardId}>
-    <div className="canvas-wrap">
+    <div className="canvas-wrap" onPointerMove={broadcastCursor}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -956,6 +980,7 @@ function CanvasInner({
         deleteKeyCode={['Delete', 'Backspace']}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onSelectionChange={broadcastSelection}
         onConnectStart={onConnectStart}
         onConnectEnd={onConnectEnd}
         onSelectionStart={onSelectionStart}
@@ -993,6 +1018,7 @@ function CanvasInner({
           nodeStrokeColor={(n) => (n.selected ? '#ffffff' : 'transparent')}
           nodeStrokeWidth={4}
         />
+        <CollabLayer boardId={boardId} nodes={nodes} />
       </ReactFlow>
 
       {selectionRect && <MinimapSelection rect={selectionRect} />}

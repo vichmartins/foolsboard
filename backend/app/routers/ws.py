@@ -15,7 +15,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from ..database import SessionLocal
 from ..deps import can_access_board
 from ..models import Board, User
-from ..realtime import hub
+from ..realtime import color_for, hub
 from ..security import decode_token
 
 router = APIRouter()
@@ -85,3 +85,26 @@ async def _handle(conn, user: User, raw: str) -> None:
             await hub.set_board(conn, None)
     elif kind == "leave":
         await hub.set_board(conn, None)
+    elif kind == "cursor":
+        x, y = msg.get("x"), msg.get("y")
+        if isinstance(x, (int, float)) and isinstance(y, (int, float)):
+            await hub.relay(conn, {
+                "type": "cursor",
+                "board_id": str(conn.board_id),
+                "user_id": str(conn.user_id),
+                "username": conn.username,
+                "color": color_for(conn.user_id),
+                "x": x,
+                "y": y,
+            })
+    elif kind == "select":
+        node_ids = msg.get("node_ids")
+        if isinstance(node_ids, list):
+            ids = [str(n) for n in node_ids[:200]]  # cap to bound a hostile payload
+            await hub.relay(conn, {
+                "type": "select",
+                "board_id": str(conn.board_id),
+                "user_id": str(conn.user_id),
+                "color": color_for(conn.user_id),
+                "node_ids": ids,
+            })

@@ -86,6 +86,16 @@ class Hub:
         targets = [c for c in self._conns if c.board_id == board_id]
         await self._send_many(targets, msg)
 
+    async def relay(self, sender: Conn, msg: dict) -> None:
+        """Forward a transient message (cursor, selection) to everyone else on the
+        sender's board. Not persisted; not echoed back to the sender."""
+        if sender.board_id is None:
+            return
+        targets = [
+            c for c in self._conns if c.board_id == sender.board_id and c is not sender
+        ]
+        await self._send_many(targets, msg)
+
     async def _send_many(self, targets: list[Conn], msg: dict) -> None:
         for c in targets:
             try:
