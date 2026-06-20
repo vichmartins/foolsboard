@@ -28,7 +28,7 @@
   font-family: inherit;
   font-weight: 700;
   font-size: 18px;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.02em;
   color: var(--text);
   cursor: pointer;
   padding: 4px 8px;
@@ -634,9 +634,9 @@
 .story-node__kind {
   align-self: flex-start;
   font-size: 10.5px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
   color: white;
   padding: 2px 7px;
   border-radius: 999px;
@@ -970,10 +970,10 @@
 }
 .panel__kind {
   align-self: flex-start;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.06em;
   color: #fff;
   padding: 2px 9px;
   border-radius: 999px;
@@ -981,7 +981,9 @@
 .panel__title {
   margin: 0;
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2231,7 +2233,9 @@
 .dialog__title {
   margin: 0;
   font-size: 19px;
-  letter-spacing: -0.3px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 .dialog__label {
   font-size: 12.5px;

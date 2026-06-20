@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.24.1
+
+- Typography consistency pass: comfortable global line-height plus grayscale
+  smoothing/legibility rendering; unified the dialog, panel, and logo titles to
+  one weight (700) and tracking (-0.02em); and made the node and panel type
+  badges match (700 / 0.06em), converting px letter-spacing to em.
+
 ## v0.24.0
 
 - The New Board dialog can now place the board in a folder: pick an existing
