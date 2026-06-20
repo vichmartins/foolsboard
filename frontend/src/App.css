@@ -3102,9 +3102,9 @@
 
 /* --- Gallery (every item on the current board) ---------------------------- */
 .gallery-dialog {
-  width: min(620px, calc(100vw - 48px));
+  width: min(880px, calc(100vw - 48px));
   max-width: none;
-  max-height: 82vh;
+  max-height: 88vh;
   padding: 0;
   gap: 0;
   display: flex;

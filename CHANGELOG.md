@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.17.1
+
+- Roomier Gallery dialog (wider and a touch taller) so more cards fit per row.
+
 ## v0.17.0
 
 - New Gallery (top-bar grid icon): a searchable browser of everything on the
