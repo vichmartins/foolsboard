@@ -2124,6 +2124,22 @@
   width: 16px;
   height: 16px;
 }
+/* New-board name field shown under the "New board" option in the move dialog. */
+.move-name {
+  width: calc(100% - 28px);
+  margin: 6px 0 2px 28px;
+  padding: 8px 10px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13.5px;
+  font-family: inherit;
+}
+.move-name:focus {
+  outline: none;
+  border-color: var(--accent);
+}
 
 .dialog--wide {
   width: min(540px, calc(100vw - 48px));

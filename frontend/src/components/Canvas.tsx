@@ -63,7 +63,7 @@ interface CanvasProps {
   onMergeHandled?: (merged: boolean) => void
   galleryOpen?: boolean
   onCloseGallery?: () => void
-  onExtractToNewBoard?: (nodeIds: string[]) => Promise<void> | void
+  onMoveSelection?: (nodeIds: string[]) => void
 }
 
 const PASTE_OFFSET = 48 // px nudge when pasting/duplicating within the same board
@@ -124,7 +124,7 @@ function CanvasInner({
   onMergeHandled,
   galleryOpen,
   onCloseGallery,
-  onExtractToNewBoard,
+  onMoveSelection,
 }: CanvasProps) {
   const { screenToFlowPosition, getNodes, getEdges, getZoom, setCenter, fitView } =
     useReactFlow()
@@ -640,13 +640,12 @@ function CanvasInner({
     setNodeMenu({ x: event.clientX, y: event.clientY })
   }, [])
 
-  // Move the selected objects into a brand-new board (handled by the parent,
-  // which creates the board, absorbs the nodes, and switches to it).
-  const doExtract = useCallback(async () => {
+  // Move the selected objects to another board: hand the ids to the parent,
+  // which opens the destination picker and performs the move.
+  const doMove = useCallback(() => {
     const ids = getNodes().filter((n) => n.selected).map((n) => n.id)
-    if (!ids.length) return
-    await onExtractToNewBoard?.(ids)
-  }, [getNodes, onExtractToNewBoard])
+    if (ids.length) onMoveSelection?.(ids)
+  }, [getNodes, onMoveSelection])
 
   const deleteEdgeById = useCallback(
     (edge: Edge) => {
@@ -1084,7 +1083,7 @@ function CanvasInner({
             { label: 'Copy', mnemonic: 'C', onClick: () => doCopy() },
             { label: 'Cut', mnemonic: 't', onClick: () => void doCut() },
             { label: 'Duplicate', mnemonic: 'D', onClick: () => void doDuplicate() },
-            { label: 'Move to New Board', mnemonic: 'M', onClick: () => void doExtract() },
+            { label: 'Move', mnemonic: 'M', onClick: () => doMove() },
             ...(clipboardHasContent()
               ? [{ label: 'Paste', mnemonic: 'P', onClick: () => void doPaste() }]
               : []),

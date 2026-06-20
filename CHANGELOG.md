@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.21.0
+
+- "Move to New Board" is now just "Move": right-clicking a selection opens a
+  dialog to pick the destination — an existing board, or a new board you name on
+  the spot. The canvas switches to the destination after moving.
+- Moved objects are placed beside any existing content on the target board
+  instead of landing on top of it.
+
 ## v0.20.1
 
 - Title-cased the "Move to New Board" context-menu item.

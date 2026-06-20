@@ -146,8 +146,21 @@ def absorb_nodes(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Object not found")
 
     moved_ids = {n.id for n in nodes}
+    # Shift the moved objects clear of whatever is already on the target board,
+    # so they don't land on top of existing content.
+    existing = list(
+        db.scalars(
+            select(Node).where(Node.board_id == target.id, Node.id.notin_(moved_ids))
+        )
+    )
+    dx = 0.0
+    if existing:
+        existing_max_x = max(n.x + (n.width or 220.0) for n in existing)
+        moved_min_x = min(n.x for n in nodes)
+        dx = max(0.0, existing_max_x + 80.0 - moved_min_x)
     for n in nodes:
         n.board_id = target.id
+        n.x += dx
     edges = list(
         db.scalars(
             select(Edge).where(

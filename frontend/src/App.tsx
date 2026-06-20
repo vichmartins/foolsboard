@@ -11,6 +11,7 @@ import LoginScreen from './components/LoginScreen'
 import ProfileMenu from './components/ProfileMenu'
 import PromptDialog from './components/PromptDialog'
 import MergeDialog from './components/MergeDialog'
+import MoveDialog, { type MoveTarget } from './components/MoveDialog'
 import TypeToConfirmDialog from './components/TypeToConfirmDialog'
 import ThemeToggle from './components/ThemeToggle'
 import {
@@ -34,6 +35,8 @@ function Workspace() {
   const [galleryOpen, setGalleryOpen] = useState(false)
   // Source boards to merge into the active board; handed to Canvas to import.
   const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
+  // Selected object ids awaiting a move destination (opens the move dialog).
+  const [moveIds, setMoveIds] = useState<string[] | null>(null)
 
   // Load boards; bootstrap a first board if the workspace is empty. Restore the
   // board the user last had open (falling back to the first).
@@ -189,17 +192,7 @@ function Workspace() {
             }}
             galleryOpen={galleryOpen}
             onCloseGallery={() => setGalleryOpen(false)}
-            onExtractToNewBoard={async (ids) => {
-              const board = await api.createBoard('New board')
-              try {
-                await api.absorbNodes(board.id, ids)
-              } catch (e) {
-                await api.deleteBoard(board.id).catch(() => {})
-                throw e
-              }
-              setBoards((bs) => [board, ...bs])
-              setActiveId(board.id)
-            }}
+            onMoveSelection={(ids) => setMoveIds(ids)}
           />
         ) : (
           <div className="loading">Loading…</div>
@@ -249,6 +242,40 @@ function Workspace() {
             setDialog(null)
           }}
           onCancel={() => setDialog(null)}
+        />
+      )}
+
+      {moveIds && (
+        <MoveDialog
+          boards={boards.filter((b) => b.id !== activeId)}
+          count={moveIds.length}
+          onCancel={() => setMoveIds(null)}
+          onConfirm={async (target: MoveTarget) => {
+            const ids = moveIds
+            setMoveIds(null)
+            if (!ids?.length) return
+            let boardId: string
+            let createdId: string | null = null
+            if ('newName' in target) {
+              const board = await api.createBoard(target.newName)
+              createdId = board.id
+              boardId = board.id
+              setBoards((bs) => [board, ...bs])
+            } else {
+              boardId = target.boardId
+            }
+            try {
+              await api.absorbNodes(boardId, ids)
+            } catch (e) {
+              if (createdId) {
+                const cid = createdId
+                await api.deleteBoard(cid).catch(() => {})
+                setBoards((bs) => bs.filter((b) => b.id !== cid))
+              }
+              throw e
+            }
+            setActiveId(boardId)
+          }}
         />
       )}
 
