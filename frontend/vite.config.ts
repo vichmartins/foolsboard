@@ -11,7 +11,8 @@ export default defineConfig({
     // Use `host: true` instead if you also want LAN/other-device access.
     host: '127.0.0.1',
     proxy: {
-      '/api': 'http://127.0.0.1:8000',
+      // ws: true so the /api/ws WebSocket upgrade is proxied to the backend too.
+      '/api': { target: 'http://127.0.0.1:8000', ws: true },
       '/media': 'http://127.0.0.1:8000',
     },
   },

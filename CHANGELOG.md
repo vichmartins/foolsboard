@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.26.0
+
+- Real-time presence — the foundation for live collaboration. A shared
+  WebSocket channel (`/api/ws`, authenticated by the same token as the REST API,
+  no new dependencies) now tracks who is viewing which board. When others are on
+  the board you have open, their colored avatars appear in the top bar and
+  update live as people join or leave. Access is re-checked on the socket, so
+  you only ever appear on boards you're allowed to see. (Live cursors, field
+  edits, and upload activity build on this channel next.)
+
 ## v0.25.0
 
 - Sharing & collaboration foundation. You can share a board (top-bar person-plus

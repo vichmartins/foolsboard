@@ -9,6 +9,7 @@ import Canvas from './components/Canvas'
 import FolderSelect from './components/FolderSelect'
 import ImportExportDialog from './components/ImportExportDialog'
 import LoginScreen from './components/LoginScreen'
+import PresenceBar from './components/PresenceBar'
 import ProfileMenu from './components/ProfileMenu'
 import PromptDialog from './components/PromptDialog'
 import MergeDialog from './components/MergeDialog'
@@ -30,12 +31,14 @@ import {
   TransferIcon,
   TrashIcon,
 } from './components/icons'
+import { realtime, useBoardPresence } from './realtime'
 import type { Board, Folder } from './types'
 import './App.css'
 
 type ShareTarget = { type: 'board' | 'folder'; id: string; name: string }
 
 function Workspace() {
+  const { user } = useAuth()
   const [boards, setBoards] = useState<Board[]>([])
   const [folders, setFolders] = useState<Folder[]>([])
   // Active folder filter for the board list (null = All Boards).
@@ -78,7 +81,16 @@ function Workspace() {
     if (activeId) localStorage.setItem('foolsboard:activeBoard', activeId)
   }, [activeId])
 
+  // Open the realtime collaboration channel while signed in.
+  useEffect(() => {
+    realtime.start()
+    return () => realtime.stop()
+  }, [])
+
   const activeBoard = boards.find((b) => b.id === activeId) ?? null
+  // Other collaborators currently viewing this board (excluding myself).
+  const presence = useBoardPresence(activeId)
+  const others = presence.filter((m) => m.id !== user?.id)
   // Boards shown in the picker: filtered to the active folder ("All" = every board).
   const visibleBoards =
     activeFolderId === null ? boards : boards.filter((b) => b.folder_id === activeFolderId)
@@ -291,6 +303,7 @@ function Workspace() {
           </button>
         </div>
 
+        <PresenceBar members={others} />
         <ThemeToggle />
         <ProfileMenu
           onOpenAccount={() => setAccountOpen(true)}

@@ -483,12 +483,42 @@
   background: var(--border);
 }
 
+/* Live presence: stacked avatars of collaborators on the current board. When
+   shown, this anchors the right-hand cluster (board actions sit to its left);
+   when hidden, .theme-toggle's own auto margin takes over. */
+.presence {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding-right: 4px;
+}
+.presence__avatar {
+  width: 26px;
+  height: 26px;
+  margin-left: -7px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-elev);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
+  cursor: default;
+}
+.presence__avatar:first-child {
+  margin-left: 0;
+}
+.presence__avatar--more {
+  background: var(--bg-elev-2);
+  color: var(--text-dim);
+}
+
 .theme-toggle {
   display: inline-flex;
   align-items: center;
   padding: 6px 8px;
-  /* Push the toggle to the right edge of the top bar. */
-  margin-left: auto;
 }
 .theme-toggle svg {
   width: 17px;
