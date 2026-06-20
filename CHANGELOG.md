@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.30.1
+
+- Fixed the folders migration to run on SQLite: it added a foreign key with a
+  raw `ALTER` (Postgres-only) instead of Alembic batch mode like the project's
+  other FK migrations. This blocked a fresh install on the default SQLite
+  database. The whole chain now applies cleanly on SQLite and Postgres.
+
 ## v0.30.0
 
 - Production packaging. foolsboard can now build as a self-contained Debian

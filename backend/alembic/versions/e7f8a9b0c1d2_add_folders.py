@@ -31,16 +31,21 @@ def upgrade() -> None:
     )
     op.create_index('ix_folders_owner_id', 'folders', ['owner_id'], unique=False)
 
-    op.add_column('boards', sa.Column('folder_id', sa.Uuid(), nullable=True))
+    # Batch mode so SQLite (which cannot ALTER ADD CONSTRAINT) recreates the
+    # table; on Postgres this emits a plain ALTER. Matches the project's other
+    # FK-adding migrations.
+    with op.batch_alter_table('boards', schema=None) as batch_op:
+        batch_op.add_column(sa.Column('folder_id', sa.Uuid(), nullable=True))
+        batch_op.create_foreign_key(
+            'fk_boards_folder_id', 'folders', ['folder_id'], ['id'], ondelete='SET NULL'
+        )
     op.create_index('ix_boards_folder_id', 'boards', ['folder_id'], unique=False)
-    op.create_foreign_key(
-        'fk_boards_folder_id', 'boards', 'folders', ['folder_id'], ['id'], ondelete='SET NULL'
-    )
 
 
 def downgrade() -> None:
-    op.drop_constraint('fk_boards_folder_id', 'boards', type_='foreignkey')
     op.drop_index('ix_boards_folder_id', table_name='boards')
-    op.drop_column('boards', 'folder_id')
+    with op.batch_alter_table('boards', schema=None) as batch_op:
+        batch_op.drop_constraint('fk_boards_folder_id', type_='foreignkey')
+        batch_op.drop_column('folder_id')
     op.drop_index('ix_folders_owner_id', table_name='folders')
     op.drop_table('folders')
