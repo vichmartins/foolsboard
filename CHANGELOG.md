@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.29.1
+
+- Reordered the top-bar board-action icons to a more natural grouping: Rename,
+  New, Move to Folder, Merge, Share, Delete (with Make a Private Copy still
+  beside Share on boards shared with you).
+
 ## v0.29.0
 
 - Collaborator upload activity. When someone uploads media to a board you're both

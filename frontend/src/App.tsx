@@ -230,13 +230,12 @@ function Workspace() {
             <PencilIcon />
           </button>
           <button
-            className="icon-btn icon-btn--danger"
-            title="Delete Board"
-            aria-label="Delete Board"
-            onClick={() => setDialog('delete')}
-            disabled={!activeBoard}
+            className="icon-btn"
+            onClick={() => setDialog('new')}
+            title="New Board"
+            aria-label="New Board"
           >
-            <TrashIcon />
+            <PlusIcon />
           </button>
           <button
             className="icon-btn"
@@ -246,6 +245,15 @@ function Workspace() {
             disabled={!activeBoard}
           >
             <FolderIcon />
+          </button>
+          <button
+            className="icon-btn"
+            onClick={() => setDialog('merge')}
+            disabled={boards.length < 2}
+            title="Merge Other Boards Into This One"
+            aria-label="Merge Boards"
+          >
+            <MergeIcon />
           </button>
           <button
             className="icon-btn"
@@ -270,21 +278,13 @@ function Workspace() {
             </button>
           )}
           <button
-            className="icon-btn"
-            onClick={() => setDialog('new')}
-            title="New Board"
-            aria-label="New Board"
+            className="icon-btn icon-btn--danger"
+            title="Delete Board"
+            aria-label="Delete Board"
+            onClick={() => setDialog('delete')}
+            disabled={!activeBoard}
           >
-            <PlusIcon />
-          </button>
-          <button
-            className="icon-btn"
-            onClick={() => setDialog('merge')}
-            disabled={boards.length < 2}
-            title="Merge Other Boards Into This One"
-            aria-label="Merge Boards"
-          >
-            <MergeIcon />
+            <TrashIcon />
           </button>
           <span className="topbar-sep" aria-hidden="true" />
           <button
