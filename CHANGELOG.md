@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.18.0
+
+- Invite codes now expire. When generating, pick a lifetime (5/10/30 min, 1 hr,
+  1/7/30 days); the code is only redeemable until then (registration rejects
+  expired codes). New invite_codes.expires_at column + migration.
+- Each code shows a live countdown while active; once it expires (or is used)
+  the row shows when it was created and when it expired/was used.
+- Select dropdowns now render in a portal, so they're no longer clipped by a
+  scrolling container (e.g. the admin panel body).
+
 ## v0.17.1
 
 - Roomier Gallery dialog (wider and a touch taller) so more cards fit per row.

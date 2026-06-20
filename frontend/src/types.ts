@@ -63,6 +63,7 @@ export interface Invite {
   id: string
   code: string
   created_at: string
+  expires_at: string | null
   used_by_id: string | null
   used_at: string | null
 }

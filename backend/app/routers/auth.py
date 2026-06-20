@@ -52,6 +52,8 @@ def register(payload: RegisterIn, db: Session = Depends(get_db)) -> Token:
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST, "Invalid or already-used invite code"
             )
+        if invite.expires_at is not None and invite.expires_at <= datetime.now(timezone.utc):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "This invite code has expired")
 
     if db.scalar(select(User).where(User.email == payload.email)) is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "That email is already registered")

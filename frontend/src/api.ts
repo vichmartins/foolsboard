@@ -111,8 +111,8 @@ export async function logout(): Promise<void> {
 export async function listInvites(): Promise<Invite[]> {
   return (await http.get('/invites')).data
 }
-export async function createInvite(): Promise<Invite> {
-  return (await http.post('/invites')).data
+export async function createInvite(expiresInMinutes: number): Promise<Invite> {
+  return (await http.post('/invites', { expires_in_minutes: expiresInMinutes })).data
 }
 export async function deleteInvite(id: string): Promise<void> {
   await http.delete(`/invites/${id}`)

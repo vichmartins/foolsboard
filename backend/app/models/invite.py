@@ -19,6 +19,10 @@ class InviteCode(UUIDMixin, TimestampMixin, Base):
     created_by_id: Mapped[UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
+    # When the code stops being redeemable. Null means it never expires (legacy
+    # codes created before expiry was added).
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # Set when the code is redeemed (single use).
     used_by_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True

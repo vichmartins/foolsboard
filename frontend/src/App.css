@@ -1081,6 +1081,12 @@
     transform 0.14s cubic-bezier(0.2, 0.9, 0.25, 1.15),
     visibility 0.14s;
 }
+/* Portaled to <body>: position via inline top/left/width, above dialogs. */
+.select__menu--portal {
+  position: fixed;
+  right: auto;
+  z-index: 300;
+}
 .select__menu--open {
   opacity: 1;
   transform: scale(1) translateY(0);
@@ -2558,13 +2564,26 @@
   opacity: 0.6;
 }
 .invite__code {
-  flex: 1;
-  min-width: 0;
+  flex: none;
   font-family: ui-monospace, monospace;
   font-size: 13px;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.invite__status {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.invite__timer {
+  color: var(--accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.invite--expired {
+  opacity: 0.7;
 }
 .invite__used {
   font-size: 11px;
@@ -2781,6 +2800,24 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+.admin-invites__head .dialog__text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.admin-invites__gen {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+.admin-invites__gen .select {
+  width: 150px;
+}
+.admin-invites__gen .btn {
+  flex: none;
+  white-space: nowrap;
 }
 
 /* Logs tab */

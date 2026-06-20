@@ -223,9 +223,15 @@ class Token(BaseModel):
     user: UserOut
 
 
+class InviteCreate(BaseModel):
+    # Lifetime in minutes; validated against the allowed presets by the router.
+    expires_in_minutes: int = 60
+
+
 class InviteOut(ORMModel):
     id: UUID
     code: str
     created_at: datetime
+    expires_at: datetime | None = None
     used_by_id: UUID | None = None
     used_at: datetime | None = None
