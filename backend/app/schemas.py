@@ -15,10 +15,30 @@ class ORMModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# --- Folder -----------------------------------------------------------------
+class FolderCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+
+
+class FolderUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+
+
+class FolderReorder(BaseModel):
+    folder_ids: list[UUID]
+
+
+class FolderOut(ORMModel):
+    id: UUID
+    name: str
+    created_at: datetime
+
+
 # --- Board ------------------------------------------------------------------
 class BoardCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: str | None = None
+    folder_id: UUID | None = None
 
 
 class BoardUpdate(BaseModel):
@@ -34,10 +54,15 @@ class BoardAbsorb(BaseModel):
     node_ids: list[UUID]
 
 
+class BoardMove(BaseModel):
+    folder_id: UUID | None = None
+
+
 class BoardOut(ORMModel):
     id: UUID
     name: str
     description: str | None
+    folder_id: UUID | None = None
     created_at: datetime
     updated_at: datetime
 

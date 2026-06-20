@@ -1,0 +1,92 @@
+"""Folder endpoints: organize a user's storyboards. Deleting a folder unfiles
+its boards (Board.folder_id is SET NULL by the FK) rather than deleting them."""
+from __future__ import annotations
+
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from ..audit import log_event
+from ..database import get_db
+from ..deps import get_current_user
+from ..models import Folder, User
+from ..schemas import FolderCreate, FolderOut, FolderReorder, FolderUpdate
+
+router = APIRouter(prefix="/api/folders", tags=["folders"])
+
+
+def _get_folder(folder_id: UUID, db: Session, user: User) -> Folder:
+    folder = db.get(Folder, folder_id)
+    if folder is None or folder.owner_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Folder not found")
+    return folder
+
+
+@router.get("", response_model=list[FolderOut])
+def list_folders(
+    db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> list[Folder]:
+    return list(
+        db.scalars(
+            select(Folder)
+            .where(Folder.owner_id == user.id)
+            .order_by(Folder.position.asc(), Folder.created_at.asc())
+        )
+    )
+
+
+@router.post("", response_model=FolderOut, status_code=status.HTTP_201_CREATED)
+def create_folder(
+    payload: FolderCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> Folder:
+    max_pos = db.scalar(select(func.max(Folder.position)).where(Folder.owner_id == user.id))
+    position = (max_pos + 1) if max_pos is not None else 0
+    folder = Folder(owner_id=user.id, name=payload.name.strip(), position=position)
+    db.add(folder)
+    db.commit()
+    db.refresh(folder)
+    log_event(db, user=user, action="folder.create", entity_type="folder",
+              entity_id=folder.id, summary=f"created folder “{folder.name}”")
+    return folder
+
+
+@router.patch("/reorder", status_code=status.HTTP_204_NO_CONTENT)
+def reorder_folders(
+    payload: FolderReorder, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> None:
+    owned = {f.id: f for f in db.scalars(select(Folder).where(Folder.owner_id == user.id))}
+    for index, fid in enumerate(payload.folder_ids):
+        folder = owned.get(fid)
+        if folder is not None:
+            folder.position = index
+    db.commit()
+
+
+@router.patch("/{folder_id}", response_model=FolderOut)
+def rename_folder(
+    folder_id: UUID,
+    payload: FolderUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> Folder:
+    folder = _get_folder(folder_id, db, user)
+    folder.name = payload.name.strip()
+    db.commit()
+    db.refresh(folder)
+    log_event(db, user=user, action="folder.update", entity_type="folder",
+              entity_id=folder.id, summary=f"renamed folder to “{folder.name}”")
+    return folder
+
+
+@router.delete("/{folder_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_folder(
+    folder_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> None:
+    folder = _get_folder(folder_id, db, user)
+    name = folder.name
+    db.delete(folder)  # the FK unfiles this folder's boards (SET NULL)
+    db.commit()
+    log_event(db, user=user, action="folder.delete", entity_type="folder",
+              summary=f"deleted folder “{name}”")

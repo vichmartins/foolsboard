@@ -10,12 +10,13 @@ from sqlalchemy.orm import Session
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import Asset, Board, Edge, Node, User
+from ..models import Asset, Board, Edge, Folder, Node, User
 from ..schemas import (
     AssetOut,
     BoardAbsorb,
     BoardCreate,
     BoardGraph,
+    BoardMove,
     BoardOut,
     BoardReorder,
     BoardUpdate,
@@ -49,6 +50,10 @@ def list_boards(
 def create_board(
     payload: BoardCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> Board:
+    if payload.folder_id is not None:
+        folder = db.get(Folder, payload.folder_id)
+        if folder is None or folder.owner_id != user.id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Folder not found")
     # New boards land at the top of the list.
     min_pos = db.scalar(select(func.min(Board.position)).where(Board.owner_id == user.id))
     position = (min_pos - 1) if min_pos is not None else 0
@@ -178,6 +183,28 @@ def absorb_nodes(
         db, user=user, action="board.absorb", entity_type="board", entity_id=target.id,
         summary=f"moved {len(moved_ids)} object(s) into “{target.name}”",
     )
+
+
+@router.patch("/{board_id}/folder", response_model=BoardOut)
+def move_board_to_folder(
+    board_id: UUID,
+    payload: BoardMove,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> Board:
+    board = _get_board(board_id, db, user)
+    if payload.folder_id is not None:
+        folder = db.get(Folder, payload.folder_id)
+        if folder is None or folder.owner_id != user.id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Folder not found")
+    board.folder_id = payload.folder_id
+    db.commit()
+    db.refresh(board)
+    log_event(
+        db, user=user, action="board.move", entity_type="board", entity_id=board.id,
+        summary="moved board to a folder" if payload.folder_id else "removed board from its folder",
+    )
+    return board
 
 
 @router.patch("/{board_id}", response_model=BoardOut)

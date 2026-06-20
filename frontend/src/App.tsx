@@ -6,15 +6,18 @@ import AdminPanel from './components/AdminPanel'
 import BoardSelect from './components/BoardSelect'
 import BrandMenu from './components/BrandMenu'
 import Canvas from './components/Canvas'
+import FolderSelect from './components/FolderSelect'
 import ImportExportDialog from './components/ImportExportDialog'
 import LoginScreen from './components/LoginScreen'
 import ProfileMenu from './components/ProfileMenu'
 import PromptDialog from './components/PromptDialog'
 import MergeDialog from './components/MergeDialog'
 import MoveDialog, { type MoveTarget } from './components/MoveDialog'
+import MoveToFolderDialog from './components/MoveToFolderDialog'
 import TypeToConfirmDialog from './components/TypeToConfirmDialog'
 import ThemeToggle from './components/ThemeToggle'
 import {
+  FolderIcon,
   GalleryIcon,
   MergeIcon,
   PencilIcon,
@@ -22,11 +25,16 @@ import {
   TransferIcon,
   TrashIcon,
 } from './components/icons'
-import type { Board } from './types'
+import type { Board, Folder } from './types'
 import './App.css'
 
 function Workspace() {
   const [boards, setBoards] = useState<Board[]>([])
+  const [folders, setFolders] = useState<Folder[]>([])
+  // Active folder filter for the board list (null = All Boards).
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null)
+  // Board awaiting a folder via the Move-to-Folder dialog.
+  const [moveFolderBoard, setMoveFolderBoard] = useState<Board | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'new' | 'rename' | 'delete' | 'merge' | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -53,6 +61,7 @@ function Workspace() {
       setBoards(list)
       setActiveId(saved && list.some((b) => b.id === saved) ? saved : list[0].id)
     })
+    api.listFolders().then(setFolders).catch(() => {})
   }, [])
 
   // Remember the active board so a refresh/restart reopens it.
@@ -61,12 +70,48 @@ function Workspace() {
   }, [activeId])
 
   const activeBoard = boards.find((b) => b.id === activeId) ?? null
+  // Boards shown in the picker: filtered to the active folder ("All" = every board).
+  const visibleBoards =
+    activeFolderId === null ? boards : boards.filter((b) => b.folder_id === activeFolderId)
 
   async function createBoard(name: string) {
-    const board = await api.createBoard(name)
+    // New boards inherit the currently-selected folder.
+    const board = await api.createBoard(name, undefined, activeFolderId)
     setBoards((b) => [board, ...b])
     setActiveId(board.id)
     setDialog(null)
+  }
+
+  function moveBoardToFolder(boardId: string, folderId: string | null) {
+    setBoards((bs) => bs.map((b) => (b.id === boardId ? { ...b, folder_id: folderId } : b)))
+    void api.moveBoardToFolder(boardId, folderId).catch(() => {})
+  }
+
+  async function createFolder(name: string) {
+    const folder = await api.createFolder(name)
+    setFolders((fs) => [...fs, folder])
+    setActiveFolderId(folder.id)
+  }
+  function renameFolder(id: string, name: string) {
+    setFolders((fs) => fs.map((f) => (f.id === id ? { ...f, name } : f)))
+    void api.renameFolder(id, name).catch(() => {})
+  }
+  function deleteFolder(id: string) {
+    setFolders((fs) => fs.filter((f) => f.id !== id))
+    setBoards((bs) => bs.map((b) => (b.folder_id === id ? { ...b, folder_id: null } : b)))
+    if (activeFolderId === id) setActiveFolderId(null)
+    void api.deleteFolder(id).catch(() => {})
+  }
+  function reorderFolders(ids: string[]) {
+    setFolders((fs) => ids.map((id) => fs.find((f) => f.id === id)).filter((f): f is Folder => !!f))
+    void api.reorderFolders(ids).catch(() => {})
+  }
+  function sortFolders(dir: 'asc' | 'desc') {
+    const sorted = [...folders].sort((a, b) =>
+      dir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+    )
+    setFolders(sorted)
+    void api.reorderFolders(sorted.map((f) => f.id)).catch(() => {})
   }
 
   async function renameBoard(name: string) {
@@ -97,9 +142,23 @@ function Workspace() {
       <header className="topbar">
         <BrandMenu />
 
-        <BoardSelect
+        <FolderSelect
+          folders={folders}
           boards={boards}
+          activeFolderId={activeFolderId}
+          onSelect={setActiveFolderId}
+          onCreate={createFolder}
+          onRename={renameFolder}
+          onDelete={deleteFolder}
+          onReorder={reorderFolders}
+          onSort={sortFolders}
+          onDropBoard={moveBoardToFolder}
+        />
+
+        <BoardSelect
+          boards={visibleBoards}
           activeId={activeId}
+          activeName={activeBoard?.name}
           onSelect={setActiveId}
           onReorder={(ids) => {
             setBoards((bs) =>
@@ -129,6 +188,15 @@ function Workspace() {
             disabled={!activeBoard}
           >
             <TrashIcon />
+          </button>
+          <button
+            className="icon-btn"
+            title="Move board to a folder"
+            aria-label="Move board to folder"
+            onClick={() => activeBoard && setMoveFolderBoard(activeBoard)}
+            disabled={!activeBoard}
+          >
+            <FolderIcon />
           </button>
           <span className="topbar-sep" aria-hidden="true" />
           <button
@@ -275,6 +343,19 @@ function Workspace() {
               throw e
             }
             setActiveId(boardId)
+          }}
+        />
+      )}
+
+      {moveFolderBoard && (
+        <MoveToFolderDialog
+          folders={folders}
+          boardName={moveFolderBoard.name}
+          currentFolderId={moveFolderBoard.folder_id}
+          onCancel={() => setMoveFolderBoard(null)}
+          onMove={(folderId) => {
+            moveBoardToFolder(moveFolderBoard.id, folderId)
+            setMoveFolderBoard(null)
           }}
         />
       )}

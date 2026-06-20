@@ -34,6 +34,12 @@ class Board(UUIDMixin, TimestampMixin, Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
     )
 
+    # Optional folder this board is organized under (null = unfiled). Deleting a
+    # folder just unfiles its boards (SET NULL), never deletes them.
+    folder_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("folders.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
     nodes: Mapped[list["Node"]] = relationship(
         back_populates="board",
         cascade="all, delete-orphan",

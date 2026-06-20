@@ -7,6 +7,7 @@ import type {
   Board,
   BoardGraph,
   ErrorLog,
+  Folder,
   Invite,
   LinkRef,
   RequestLog,
@@ -163,8 +164,36 @@ export async function listBoards(): Promise<Board[]> {
   return (await http.get('/boards')).data
 }
 
-export async function createBoard(name: string, description?: string): Promise<Board> {
-  return (await http.post('/boards', { name, description })).data
+export async function createBoard(
+  name: string,
+  description?: string,
+  folderId?: string | null,
+): Promise<Board> {
+  return (await http.post('/boards', { name, description, folder_id: folderId ?? null })).data
+}
+
+export async function moveBoardToFolder(
+  boardId: string,
+  folderId: string | null,
+): Promise<Board> {
+  return (await http.patch(`/boards/${boardId}/folder`, { folder_id: folderId })).data
+}
+
+// --- Folders ---------------------------------------------------------------
+export async function listFolders(): Promise<Folder[]> {
+  return (await http.get('/folders')).data
+}
+export async function createFolder(name: string): Promise<Folder> {
+  return (await http.post('/folders', { name })).data
+}
+export async function renameFolder(id: string, name: string): Promise<Folder> {
+  return (await http.patch(`/folders/${id}`, { name })).data
+}
+export async function deleteFolder(id: string): Promise<void> {
+  await http.delete(`/folders/${id}`)
+}
+export async function reorderFolders(folderIds: string[]): Promise<void> {
+  await http.patch('/folders/reorder', { folder_ids: folderIds })
 }
 
 export async function updateBoard(

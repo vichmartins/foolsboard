@@ -4,8 +4,15 @@ export interface Board {
   id: string
   name: string
   description: string | null
+  folder_id: string | null
   created_at: string
   updated_at: string
+}
+
+export interface Folder {
+  id: string
+  name: string
+  created_at: string
 }
 
 export interface User {

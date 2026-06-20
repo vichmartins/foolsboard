@@ -7,11 +7,20 @@ import type { Board } from '../types'
 interface Props {
   boards: Board[]
   activeId: string | null
+  activeName?: string // active board's name (it may be filtered out of `boards`)
   onSelect: (id: string) => void
   onReorder: (orderedIds: string[]) => void
 }
 
-export default function BoardSelect({ boards, activeId, onSelect, onReorder }: Props) {
+const BOARD_DND = 'application/x-foolsboard-board'
+
+export default function BoardSelect({
+  boards,
+  activeId,
+  activeName,
+  onSelect,
+  onReorder,
+}: Props) {
   const [open, setOpen] = useState(false)
   // Local copy so rows can shuffle live during a drag; resynced from props when
   // not dragging.
@@ -48,6 +57,8 @@ export default function BoardSelect({ boards, activeId, onSelect, onReorder }: P
     setDragIndex(i)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', String(i)) // required for Firefox to drag
+    // Lets the folder picker accept this board as a drop (move into a folder).
+    e.dataTransfer.setData(BOARD_DND, items[i].id)
   }
 
   function handleDragOver(e: React.DragEvent, i: number) {
@@ -78,7 +89,9 @@ export default function BoardSelect({ boards, activeId, onSelect, onReorder }: P
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className="board-select__current">{active?.name ?? 'Select board'}</span>
+        <span className="board-select__current">
+          {active?.name ?? activeName ?? 'Select board'}
+        </span>
         <span className={'board-select__chevron' + (open ? ' board-select__chevron--open' : '')}>
           ▾
         </span>

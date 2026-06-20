@@ -6,6 +6,7 @@ imported; this single import point guarantees that.
 from .asset import Asset
 from .board import Board
 from .edge import Edge
+from .folder import Folder
 from .invite import InviteCode
 from .logs import ActivityLog, ErrorLog, RequestLog
 from .node import Node
@@ -16,7 +17,7 @@ __all__ = [
     "Asset",
     "Board",
     "Edge",
-    "ErrorLog",
+    "Folder",
     "InviteCode",
     "Node",
     "RequestLog",

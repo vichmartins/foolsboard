@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.23.0
+
+- Organize storyboards into folders. A new Folder picker sits next to the board
+  picker (top-left); selecting a folder filters the board list ("All Boards"
+  shows everything). Create, rename, delete (boards are kept/unfiled),
+  drag-reorder, and A→Z / Z→A sort folders.
+- Move a board into a folder two ways: drag a board onto a folder (the folder
+  picker auto-opens during a board drag), or use the new folder icon to open a
+  "Move to Folder" dialog. New boards inherit the selected folder.
+- Backend: folders table + boards.folder_id (migration), folder CRUD + reorder
+  endpoints, a board→folder move endpoint, and create-with-folder. Deleting a
+  folder is SET NULL, so boards are never lost.
+
 ## v0.22.0
 
 - Faster media uploads: dropped files now upload with bounded concurrency (3 at
