@@ -189,6 +189,17 @@ function Workspace() {
             }}
             galleryOpen={galleryOpen}
             onCloseGallery={() => setGalleryOpen(false)}
+            onExtractToNewBoard={async (ids) => {
+              const board = await api.createBoard('New board')
+              try {
+                await api.absorbNodes(board.id, ids)
+              } catch (e) {
+                await api.deleteBoard(board.id).catch(() => {})
+                throw e
+              }
+              setBoards((bs) => [board, ...bs])
+              setActiveId(board.id)
+            }}
           />
         ) : (
           <div className="loading">Loading…</div>

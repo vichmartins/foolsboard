@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.20.0
+
+- Extract a selection to a new board: select objects, right-click → "Move to new
+  board". A new board is created, the objects are moved into it (true move —
+  positions, content, links, and attached media preserved; internal edges come
+  along, boundary-crossing edges are dropped), and the canvas switches to it.
+  Removes that content from the current board. Backed by a new
+  POST /api/boards/{id}/absorb endpoint.
+
 ## v0.19.0
 
 - Merging boards now consumes the sources: after picking boards, a confirmation

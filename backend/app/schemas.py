@@ -30,6 +30,10 @@ class BoardReorder(BaseModel):
     board_ids: list[UUID]
 
 
+class BoardAbsorb(BaseModel):
+    node_ids: list[UUID]
+
+
 class BoardOut(ORMModel):
     id: UUID
     name: str

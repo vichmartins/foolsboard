@@ -4,14 +4,22 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
 from ..models import Asset, Board, Edge, Node, User
-from ..schemas import AssetOut, BoardCreate, BoardGraph, BoardOut, BoardReorder, BoardUpdate
+from ..schemas import (
+    AssetOut,
+    BoardAbsorb,
+    BoardCreate,
+    BoardGraph,
+    BoardOut,
+    BoardReorder,
+    BoardUpdate,
+)
 from ..storage import storage
 
 router = APIRouter(prefix="/api/boards", tags=["boards"])
@@ -111,6 +119,52 @@ def list_board_assets(
             item.thumbnail_url = storage.url_for(a.thumbnail_key)
         out.append(item)
     return out
+
+
+@router.post("/{board_id}/absorb", status_code=status.HTTP_204_NO_CONTENT)
+def absorb_nodes(
+    board_id: UUID,
+    payload: BoardAbsorb,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> None:
+    """Move the given objects into this board (true move: reassign board_id).
+    Edges fully within the moved set come along; edges with one endpoint left
+    behind are dropped (they'd cross boards). Attached media stays put."""
+    target = _get_board(board_id, db, user)
+    if not payload.node_ids:
+        return
+    nodes = list(db.scalars(select(Node).where(Node.id.in_(set(payload.node_ids)))))
+    # Every node must belong to a board this user owns.
+    src_board_ids = {n.board_id for n in nodes}
+    owned = set(
+        db.scalars(
+            select(Board.id).where(Board.id.in_(src_board_ids), Board.owner_id == user.id)
+        )
+    )
+    if any(n.board_id not in owned for n in nodes):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Object not found")
+
+    moved_ids = {n.id for n in nodes}
+    for n in nodes:
+        n.board_id = target.id
+    edges = list(
+        db.scalars(
+            select(Edge).where(
+                or_(Edge.source_id.in_(moved_ids), Edge.target_id.in_(moved_ids))
+            )
+        )
+    )
+    for e in edges:
+        if e.source_id in moved_ids and e.target_id in moved_ids:
+            e.board_id = target.id
+        else:
+            db.delete(e)
+    db.commit()
+    log_event(
+        db, user=user, action="board.absorb", entity_type="board", entity_id=target.id,
+        summary=f"moved {len(moved_ids)} object(s) into “{target.name}”",
+    )
 
 
 @router.patch("/{board_id}", response_model=BoardOut)

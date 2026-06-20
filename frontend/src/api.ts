@@ -188,6 +188,12 @@ export async function listBoardAssets(boardId: string): Promise<Asset[]> {
   return (await http.get(`/boards/${boardId}/assets`)).data
 }
 
+// Move objects (and their internal edges) into a board -- a true move that keeps
+// positions, content, and attached media. Used to extract a selection.
+export async function absorbNodes(boardId: string, nodeIds: string[]): Promise<void> {
+  await http.post(`/boards/${boardId}/absorb`, { node_ids: nodeIds })
+}
+
 // Export selected boards as a .zip bundle (manifest + media). Returns the raw
 // archive bytes for the browser to download. The archive streams as it's built,
 // so `onProgress` ticks with the running byte count for a live indicator.
