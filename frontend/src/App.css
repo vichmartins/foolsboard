@@ -515,6 +515,67 @@
   color: var(--text-dim);
 }
 
+/* Collaborator upload activity (top bar): a chip per uploader with an
+   indeterminate loading bar in their presence color. */
+.uploads {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.upload-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 120px;
+  max-width: 200px;
+  padding: 4px 8px 5px;
+  border-radius: 8px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+}
+.upload-chip__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.upload-chip__dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.upload-chip__text {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.upload-chip__bar {
+  position: relative;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+.upload-chip__fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  border-radius: 2px;
+  animation: upload-indeterminate 1.1s ease-in-out infinite;
+}
+@keyframes upload-indeterminate {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(280%);
+  }
+}
+
 /* Live collaboration overlay (remote cursors + selections), inside the pane.
    Positioned in flow coordinates and pointer-transparent. */
 .collab-layer {

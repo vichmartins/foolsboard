@@ -28,6 +28,13 @@ export interface RemoteSelection {
   nodeIds: string[]
 }
 
+export interface BoardUpload {
+  userId: string
+  username: string
+  color: string
+  count: number
+}
+
 class Realtime {
   private ws: WebSocket | null = null
   private wantOpen = false
@@ -37,6 +44,7 @@ class Realtime {
   private presence: Record<string, PresenceMember[]> = {}
   private cursors: Record<string, Record<string, RemoteCursor>> = {}
   private selections: Record<string, Record<string, RemoteSelection>> = {}
+  private uploads: Record<string, Record<string, BoardUpload>> = {}
 
   private presenceListeners = new Set<() => void>()
   private collabListeners = new Set<() => void>()
@@ -63,6 +71,7 @@ class Realtime {
     this.presence = {}
     this.cursors = {}
     this.selections = {}
+    this.uploads = {}
     this.emitPresence()
     this.emitCollab()
   }
@@ -101,7 +110,7 @@ class Realtime {
       this.presence[board] = msg.members ?? []
       // Drop cursors/selections for anyone no longer on the board.
       const ids = new Set<string>((msg.members ?? []).map((m: PresenceMember) => m.id))
-      for (const map of [this.cursors[board], this.selections[board]]) {
+      for (const map of [this.cursors[board], this.selections[board], this.uploads[board]]) {
         if (map) for (const uid of Object.keys(map)) if (!ids.has(uid)) delete map[uid]
       }
       this.emitPresence()
@@ -123,6 +132,19 @@ class Realtime {
         delete map[msg.user_id]
       }
       this.emitCollab()
+    } else if (msg.type === 'upload') {
+      const map = (this.uploads[board] ??= {})
+      if (msg.active && msg.count > 0) {
+        map[msg.user_id] = {
+          userId: msg.user_id,
+          username: msg.username,
+          color: msg.color,
+          count: msg.count,
+        }
+      } else {
+        delete map[msg.user_id]
+      }
+      this.emitPresence()
     } else if (msg.type === 'node_move' || msg.type === 'board_dirty') {
       this.opListeners.forEach((l) => l(msg))
     }
@@ -166,6 +188,11 @@ class Realtime {
     this.send({ type: 'board_dirty' })
   }
 
+  // Announce my in-flight upload count so collaborators see an activity indicator.
+  sendUpload(active: boolean, count: number) {
+    this.send({ type: 'upload', active, count })
+  }
+
   membersFor(boardId: string | null): PresenceMember[] {
     if (!boardId) return []
     return this.presence[boardId] ?? []
@@ -179,6 +206,11 @@ class Realtime {
   selectionsFor(boardId: string | null): RemoteSelection[] {
     if (!boardId) return []
     return Object.values(this.selections[boardId] ?? {})
+  }
+
+  uploadsFor(boardId: string | null): BoardUpload[] {
+    if (!boardId) return []
+    return Object.values(this.uploads[boardId] ?? {})
   }
 
   subscribePresence(fn: () => void) {
@@ -217,6 +249,14 @@ export function useBoardPresence(boardId: string | null): PresenceMember[] {
     realtime.setBoard(boardId)
   }, [boardId])
   return realtime.membersFor(boardId)
+}
+
+// Collaborators currently uploading to this board (top-bar activity indicator).
+// Low-frequency, so it shares the presence channel.
+export function useBoardUploads(boardId: string | null): BoardUpload[] {
+  const [, force] = useState(0)
+  useEffect(() => realtime.subscribePresence(() => force((n) => n + 1)), [])
+  return realtime.uploadsFor(boardId)
 }
 
 // Live cursors + selection highlights for a board. Subscribes only to the

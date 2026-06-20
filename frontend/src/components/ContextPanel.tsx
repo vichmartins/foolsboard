@@ -21,6 +21,7 @@ import {
   type NearbyNode,
   type StoryNode,
 } from '../types'
+import { realtime } from '../realtime'
 import AnimationsField from './AnimationsField'
 import ConfirmDialog from './ConfirmDialog'
 import Gallery from './Gallery'
@@ -199,6 +200,18 @@ export default function ContextPanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [droppedFiles])
+
+  // Broadcast my upload activity so collaborators get a top-bar indicator; when a
+  // batch finishes, nudge them to refresh so the new media shows up.
+  const uploadCount = uploads.length
+  const prevUploadCount = useRef(0)
+  useEffect(() => {
+    realtime.sendUpload(uploadCount > 0, uploadCount)
+    if (prevUploadCount.current > 0 && uploadCount === 0) realtime.sendDirty()
+    prevUploadCount.current = uploadCount
+  }, [uploadCount])
+  // Clear my indicator if the panel closes mid-upload.
+  useEffect(() => () => realtime.sendUpload(false, 0), [])
 
   // While media is still being optimized in the background, poll for the
   // finished version. Paused while the gallery is open so a swap never

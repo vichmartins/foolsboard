@@ -11,6 +11,7 @@ import ImportExportDialog from './components/ImportExportDialog'
 import LoginScreen from './components/LoginScreen'
 import PresenceBar from './components/PresenceBar'
 import ProfileMenu from './components/ProfileMenu'
+import UploadActivity from './components/UploadActivity'
 import PromptDialog from './components/PromptDialog'
 import MergeDialog from './components/MergeDialog'
 import MoveDialog, { type MoveTarget } from './components/MoveDialog'
@@ -31,7 +32,7 @@ import {
   TransferIcon,
   TrashIcon,
 } from './components/icons'
-import { realtime, useBoardPresence } from './realtime'
+import { realtime, useBoardPresence, useBoardUploads } from './realtime'
 import type { Board, Folder } from './types'
 import './App.css'
 
@@ -91,6 +92,8 @@ function Workspace() {
   // Other collaborators currently viewing this board (excluding myself).
   const presence = useBoardPresence(activeId)
   const others = presence.filter((m) => m.id !== user?.id)
+  // Collaborators uploading media to this board right now.
+  const uploads = useBoardUploads(activeId).filter((u) => u.userId !== user?.id)
   // Boards shown in the picker: filtered to the active folder ("All" = every board).
   const visibleBoards =
     activeFolderId === null ? boards : boards.filter((b) => b.folder_id === activeFolderId)
@@ -304,6 +307,7 @@ function Workspace() {
         </div>
 
         <PresenceBar members={others} />
+        <UploadActivity uploads={uploads} />
         <ThemeToggle />
         <ProfileMenu
           onOpenAccount={() => setAccountOpen(true)}

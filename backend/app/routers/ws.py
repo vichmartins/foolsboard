@@ -127,3 +127,14 @@ async def _handle(conn, user: User, raw: str) -> None:
                 })
     elif kind == "board_dirty":
         await hub.relay(conn, {"type": "board_dirty", "board_id": str(conn.board_id)})
+    elif kind == "upload":
+        count = msg.get("count")
+        await hub.relay(conn, {
+            "type": "upload",
+            "board_id": str(conn.board_id),
+            "user_id": str(conn.user_id),
+            "username": conn.username,
+            "color": color_for(conn.user_id),
+            "active": bool(msg.get("active")),
+            "count": int(count) if isinstance(count, (int, float)) else 0,
+        })

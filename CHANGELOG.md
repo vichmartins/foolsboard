@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.29.0
+
+- Collaborator upload activity. When someone uploads media to a board you're both
+  on, a chip appears in your top bar — their name in their presence color with an
+  animated loading bar — for as long as their upload is in flight, and clears when
+  it finishes (or if they leave mid-upload). Completing a batch also nudges the
+  board to refresh so the new media shows up. This completes the collaboration
+  spec: sharing, presence, live cursors, selections, live editing, and now upload
+  visibility.
+
 ## v0.28.0
 
 - Live editing on shared boards. Changes a collaborator makes now appear on your
