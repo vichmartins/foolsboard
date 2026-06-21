@@ -240,20 +240,20 @@ function Workspace() {
         <div className="board-actions">
           <button
             className="icon-btn"
+            onClick={() => setDialog('new')}
+            title="Create"
+            aria-label="Create"
+          >
+            <PlusIcon />
+          </button>
+          <button
+            className="icon-btn"
             title="Rename"
             aria-label="Rename"
             onClick={() => setDialog('rename')}
             disabled={!activeBoard}
           >
             <PencilIcon />
-          </button>
-          <button
-            className="icon-btn"
-            onClick={() => setDialog('new')}
-            title="Create"
-            aria-label="Create"
-          >
-            <PlusIcon />
           </button>
           <button
             className="icon-btn"

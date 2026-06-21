@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.33.3
+
+- Reordered the top-bar board actions so Create is first, then Rename, Move,
+  Merge, Share, Delete.
+
 ## v0.33.2
 
 - Shortened the top-bar button labels/tooltips to: Rename, Create, Move, Merge,
