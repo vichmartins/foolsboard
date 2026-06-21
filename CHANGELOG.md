@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.35.3
+
+- Extended the highlighted-name treatment to the Share and Move-to-Folder
+  dialogs, so the board/folder name stands out (accent + semibold) there too —
+  matching Merge and Delete. (The top-bar Merge dialog already highlighted its
+  target.)
+
 ## v0.35.2
 
 - Highlight board names (accent color, semibold) in the Merge and Delete

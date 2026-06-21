@@ -26,7 +26,7 @@ export default function MoveToFolderDialog({
       <div className="dialog" onClick={(e) => e.stopPropagation()}>
         <h2 className="dialog__title">Move to Folder</h2>
         <p className="dialog__message">
-          Move “{boardName}” to:
+          Move <strong>{boardName}</strong> to:
         </p>
 
         <ul className="merge-list move-list">

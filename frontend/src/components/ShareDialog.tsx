@@ -66,8 +66,8 @@ export default function ShareDialog({ resourceType, resourceId, resourceName, on
       <div className="dialog" onMouseDown={(e) => e.stopPropagation()}>
         <h2 className="dialog__title">Share {resourceType === 'board' ? 'Board' : 'Folder'}</h2>
         <p className="dialog__message">
-          Share “{resourceName}” with another user by username or email. They can accept or
-          reject; once accepted you can collaborate on it.
+          Share <strong>{resourceName}</strong> with another user by username or email. They can
+          accept or reject; once accepted you can collaborate on it.
         </p>
         {error && <div className="auth-error">{error}</div>}
 
