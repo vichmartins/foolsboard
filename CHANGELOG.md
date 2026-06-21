@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.45.1
+
+- Replaced the owner crown with a two-person "users" icon (Feather outline style,
+  themed to the accent) on shared-out boards/folders.
+- Unshare button tooltip is now just "Unshare".
+
 ## v0.45.0
 
 - **Presence avatars now show what each collaborator is doing.** An avatar gains
