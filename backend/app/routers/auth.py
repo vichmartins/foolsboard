@@ -131,14 +131,10 @@ def get_me(user: User = Depends(get_current_user)) -> UserOut:
 
 
 @router.get("/colors", response_model=ColorsOut)
-def list_colors(
-    user: User = Depends(get_current_user), db: Session = Depends(get_db)
-) -> ColorsOut:
-    """The pickable palette, plus colors already taken by OTHER users."""
-    taken = db.scalars(
-        select(User.color).where(User.color.is_not(None), User.id != user.id)
-    )
-    return ColorsOut(palette=PALETTE, taken=[c for c in taken if c], current=user.color)
+def list_colors(user: User = Depends(get_current_user)) -> ColorsOut:
+    """The pickable palette + the caller's current color. Any color may be chosen;
+    collisions are resolved per-viewer on the client."""
+    return ColorsOut(palette=PALETTE, current=user.color)
 
 
 @router.patch("/me/color", response_model=UserOut)
@@ -150,9 +146,8 @@ def update_color(
     color = payload.color.strip().lower()
     if color not in PALETTE:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "That isn’t a selectable color")
-    clash = db.scalar(select(User).where(User.color == color, User.id != user.id))
-    if clash is not None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "That color is already in use")
+    # No uniqueness check: anyone can pick any color; collisions are disambiguated
+    # client-side (each viewer sees a clashing collaborator in a different color).
     user.color = color
     db.commit()
     db.refresh(user)

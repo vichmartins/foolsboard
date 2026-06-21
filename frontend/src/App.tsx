@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as api from './api'
 import { useAuth } from './auth'
 import AccountDialog from './components/AccountDialog'
+import PreferencesDialog from './components/PreferencesDialog'
 import AdminPanel from './components/AdminPanel'
 import BoardSelect from './components/BoardSelect'
 import BrandMenu from './components/BrandMenu'
@@ -80,6 +81,7 @@ function Workspace() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'new' | 'rename' | 'delete' | 'merge' | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [prefsOpen, setPrefsOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
   const [impexOpen, setImpexOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
@@ -134,6 +136,12 @@ function Workspace() {
   // Keep the board/folder lists (and their shared/crown badges) in sync when a
   // share is created, accepted, rejected, or removed anywhere.
   useEffect(() => realtime.subscribeShare(() => refreshLists()), [])
+
+  // Tell realtime my color so my own highlight stays fixed and a collaborator who
+  // shares my color is shown to me in a different one.
+  useEffect(() => {
+    if (user) realtime.setSelf(user.id, user.color)
+  }, [user?.id, user?.color])
 
   const activeBoard = boards.find((b) => b.id === activeId) ?? null
   // Other collaborators currently viewing this board (excluding myself).
@@ -398,6 +406,7 @@ function Workspace() {
         <ThemeToggle />
         <ProfileMenu
           onOpenAccount={() => setAccountOpen(true)}
+          onOpenPreferences={() => setPrefsOpen(true)}
           onOpenAdmin={() => setAdminOpen(true)}
         />
       </header>
@@ -589,6 +598,7 @@ function Workspace() {
       <ShareBanner onChanged={refreshLists} />
 
       {accountOpen && <AccountDialog onClose={() => setAccountOpen(false)} />}
+      {prefsOpen && <PreferencesDialog onClose={() => setPrefsOpen(false)} />}
       {adminOpen && <AdminPanel onClose={() => setAdminOpen(false)} />}
       {impexOpen && (
         <ImportExportDialog

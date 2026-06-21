@@ -106,7 +106,6 @@ export async function deleteAvatar(): Promise<User> {
 }
 export interface ColorsInfo {
   palette: string[]
-  taken: string[] // colors held by other users
   current: string | null
 }
 export async function getColors(): Promise<ColorsInfo> {

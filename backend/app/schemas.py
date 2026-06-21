@@ -247,7 +247,6 @@ class ColorUpdate(BaseModel):
 
 class ColorsOut(BaseModel):
     palette: list[str]
-    taken: list[str]  # colors held by OTHER users (disabled in the picker)
     current: str | None = None
 
 

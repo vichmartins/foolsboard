@@ -21,10 +21,13 @@ from starlette.websockets import WebSocket
 # A user picks one (stored on User.color); until then a deterministic palette
 # color is used. UUID.int is deterministic across restarts (unlike hash()), so a
 # user keeps the same default color.
+# Deliberately avoids the object-type colors (scene #0ea5e9, character #10b981,
+# dialog #f59e0b, event #ef4444, note #64748b, object #94a3b8) so a user's
+# highlight never looks like a node type.
 PALETTE = [
-    "#6366f1", "#ec4899", "#f59e0b", "#10b981",
-    "#06b6d4", "#8b5cf6", "#ef4444", "#14b8a6",
-    "#f97316", "#84cc16", "#3b82f6", "#d946ef",
+    "#6366f1", "#8b5cf6", "#a855f7", "#d946ef",
+    "#ec4899", "#f43f5e", "#f97316", "#14b8a6",
+    "#06b6d4", "#3b82f6", "#84cc16", "#eab308",
 ]
 
 

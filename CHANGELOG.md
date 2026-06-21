@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.44.1
+
+- Reworked the highlight-color picker per feedback:
+  - Moved it from Account Settings to a new **Preferences** dialog (profile menu).
+  - **Pick any color, always** — the uniqueness lock is gone. If your color
+    clashes with a collaborator's, each of you simply sees the *other* in a
+    different color (resolved per-viewer on the client); your own stays exactly
+    what you chose.
+  - The palette now **avoids the object-type colors** (scene/character/dialog/
+    event/note/object), so a highlight never looks like a node type.
+
 ## v0.44.0
 
 - **Pick your own collaborator color.** Account Settings now has a "Highlight

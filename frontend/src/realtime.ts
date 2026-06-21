@@ -7,6 +7,7 @@
 // high-frequency cursor stream only re-renders the canvas overlay, not the app.
 import { useEffect, useState } from 'react'
 import { getToken } from './api'
+import { HIGHLIGHT_PALETTE, collabColor } from './collab'
 
 export interface PresenceMember {
   id: string
@@ -40,6 +41,10 @@ class Realtime {
   private wantOpen = false
   private boardId: string | null = null
   private reconnectTimer: number | null = null
+
+  // Me, for per-viewer color disambiguation: my color stays fixed; a collaborator
+  // who happens to share my color is shown to me in a different one.
+  private self: { id: string; color: string } | null = null
 
   private presence: Record<string, PresenceMember[]> = {}
   private cursors: Record<string, Record<string, RemoteCursor>> = {}
@@ -246,29 +251,72 @@ class Realtime {
     this.send({ type: 'edit', node_id: nodeId, active: nodeId != null })
   }
 
+  // Set who I am so my own color is held fixed and clashing collaborators get a
+  // distinct display color (from my perspective only).
+  setSelf(id: string, color: string | null) {
+    this.self = { id, color: color || collabColor(id) }
+    this.emitPresence()
+    this.emitCollab()
+    this.emitEdit()
+  }
+
+  // Per-board map of userId -> the color to DISPLAY for them. Mine is fixed; a
+  // collaborator whose color collides with mine (or another) is reassigned the
+  // next free palette color, stably by user id.
+  private resolveColors(boardId: string): Record<string, string> {
+    const out: Record<string, string> = {}
+    const used = new Set<string>()
+    if (this.self) {
+      out[this.self.id] = this.self.color
+      used.add(this.self.color)
+    }
+    const members = (this.presence[boardId] ?? [])
+      .filter((m) => !this.self || m.id !== this.self.id)
+      .slice()
+      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    for (const m of members) {
+      let c = m.color
+      if (used.has(c)) c = HIGHLIGHT_PALETTE.find((p) => !used.has(p)) ?? c
+      out[m.id] = c
+      used.add(c)
+    }
+    return out
+  }
+
   // Map of nodeId -> the remote user editing it (used to lock + label nodes).
   editLocksFor(boardId: string | null): Record<string, { userId: string; username: string; color: string }> {
     const out: Record<string, { userId: string; username: string; color: string }> = {}
     if (!boardId) return out
+    const colors = this.resolveColors(boardId)
     for (const [uid, lock] of Object.entries(this.editing[boardId] ?? {})) {
-      if (!out[lock.nodeId]) out[lock.nodeId] = { userId: uid, username: lock.username, color: lock.color }
+      if (!out[lock.nodeId])
+        out[lock.nodeId] = { userId: uid, username: lock.username, color: colors[uid] ?? lock.color }
     }
     return out
   }
 
   membersFor(boardId: string | null): PresenceMember[] {
     if (!boardId) return []
-    return this.presence[boardId] ?? []
+    const colors = this.resolveColors(boardId)
+    return (this.presence[boardId] ?? []).map((m) => ({ ...m, color: colors[m.id] ?? m.color }))
   }
 
   cursorsFor(boardId: string | null): RemoteCursor[] {
     if (!boardId) return []
-    return Object.values(this.cursors[boardId] ?? {})
+    const colors = this.resolveColors(boardId)
+    return Object.values(this.cursors[boardId] ?? {}).map((c) => ({
+      ...c,
+      color: colors[c.userId] ?? c.color,
+    }))
   }
 
   selectionsFor(boardId: string | null): RemoteSelection[] {
     if (!boardId) return []
-    return Object.values(this.selections[boardId] ?? {})
+    const colors = this.resolveColors(boardId)
+    return Object.values(this.selections[boardId] ?? {}).map((s) => ({
+      ...s,
+      color: colors[s.userId] ?? s.color,
+    }))
   }
 
   uploadsFor(boardId: string | null): BoardUpload[] {
