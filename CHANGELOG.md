@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.37.1
+
+- The upload-rejection warning now auto-dismisses: it holds for ~5.5s, then fades
+  and collapses away with a smooth animation (instead of lingering until the next
+  upload).
+
 ## v0.37.0
 
 - Upload size limits, by type: images ≤ 5 MB, video ≤ 50 MB, audio ≤ 20 MB, and

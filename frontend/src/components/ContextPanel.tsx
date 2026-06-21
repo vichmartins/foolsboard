@@ -84,8 +84,9 @@ export default function ContextPanel({
   const [preview, setPreview] = useState<{ url: string; top: number } | null>(null)
   // In-flight uploads: progress 0-100 (100 = bytes sent, server still processing).
   const [uploads, setUploads] = useState<{ id: string; name: string; progress: number }[]>([])
-  // Last upload rejection (too large / failed); shown until the next upload.
+  // Last upload rejection (too large / failed); auto-dismisses with an animation.
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [errorLeaving, setErrorLeaving] = useState(false)
   // Busy while any upload is in flight (derived, so parallel uploads stay correct).
   const busy = uploads.length > 0
   const [mediaExpanded, setMediaExpanded] = useState(false)
@@ -227,6 +228,19 @@ export default function ContextPanel({
   }, [uploadCount])
   // Clear my indicator if the panel closes mid-upload.
   useEffect(() => () => realtime.sendUpload(false, 0), [])
+
+  // Auto-dismiss an upload error: hold a few seconds, play the exit animation,
+  // then remove it.
+  useEffect(() => {
+    if (!uploadError) return
+    setErrorLeaving(false)
+    const hide = window.setTimeout(() => setErrorLeaving(true), 5500)
+    const remove = window.setTimeout(() => setUploadError(null), 5500 + 320)
+    return () => {
+      window.clearTimeout(hide)
+      window.clearTimeout(remove)
+    }
+  }, [uploadError])
 
   // While media is still being optimized in the background, poll for the
   // finished version. Paused while the gallery is open so a swap never
@@ -566,7 +580,10 @@ export default function ContextPanel({
         </div>
 
         {uploadError && (
-          <p className="panel__upload-error" role="alert">
+          <p
+            className={'panel__upload-error' + (errorLeaving ? ' panel__upload-error--leaving' : '')}
+            role="alert"
+          >
             {uploadError}
           </p>
         )}
