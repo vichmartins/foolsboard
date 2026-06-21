@@ -104,12 +104,14 @@ export default function BoardSelect({
           {active?.name ?? activeName ?? 'Select board'}
         </span>
         {activeSharedOut ? (
-          <OwnerIcon
-            className={
-              'owner-crown owner-crown--' +
-              (activeId ? realtime.boardStatus(activeId, activeMemberIds) : 'offline')
-            }
-          />
+          <span className="pick-owner">
+            <OwnerIcon className="owner-crown" />
+            {activeId && (
+              <span
+                className={'pick-dot pick-dot--' + realtime.boardStatus(activeId, activeMemberIds)}
+              />
+            )}
+          </span>
         ) : activeShared ? (
           <span className="pick-owner" title={`Shared by ${activeOwnerName ?? 'someone'}`}>
             <span
@@ -155,7 +157,12 @@ export default function BoardSelect({
                   aria-hidden="true"
                 />
               ) : b.shared_out ? (
-                <OwnerIcon className={'owner-crown owner-crown--' + realtime.boardStatus(b.id, b.member_ids)} />
+                <span className="board-select__ownermark">
+                  <OwnerIcon className="owner-crown" />
+                  <span
+                    className={'board-select__dot board-select__dot--' + realtime.boardStatus(b.id, b.member_ids)}
+                  />
+                </span>
               ) : (
                 <span className="board-select__grip" aria-hidden="true">
                   ⠿

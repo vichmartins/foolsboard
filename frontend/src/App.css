@@ -3006,33 +3006,16 @@
   }
 }
 /* Owner mark: a board/folder you own and have shared out (two-person icon). On
-   boards it also reflects collaborator presence (here pulses, away dims, offline
-   greys), matching the recipient dots. */
+   boards it sits beside a presence dot (here/away/offline). */
 .owner-crown {
   flex: none;
   color: var(--accent);
-  transition: color 0.4s ease, opacity 0.4s ease, filter 0.4s ease;
 }
-.owner-crown--here {
-  color: var(--accent);
-  animation: owner-presence-pulse 2.2s ease-in-out infinite;
-}
-.owner-crown--away {
-  color: var(--accent);
-  opacity: 0.45;
-}
-.owner-crown--offline {
-  color: var(--text-dim);
-  opacity: 0.6;
-}
-@keyframes owner-presence-pulse {
-  0%,
-  100% {
-    filter: drop-shadow(0 0 1.5px rgba(99, 102, 241, 0.7));
-  }
-  50% {
-    filter: drop-shadow(0 0 4px rgba(99, 102, 241, 1));
-  }
+.board-select__ownermark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 .folder-row__crown {
   flex: none;
