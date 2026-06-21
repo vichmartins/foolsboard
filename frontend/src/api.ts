@@ -6,6 +6,7 @@ import type {
   Asset,
   Board,
   BoardGraph,
+  Category,
   ErrorLog,
   Folder,
   GalleryBoard,
@@ -113,6 +114,12 @@ export async function getColors(): Promise<ColorsInfo> {
 }
 export async function setMyColor(color: string): Promise<User> {
   return (await http.patch('/auth/me/color', { color })).data
+}
+export async function getCategories(): Promise<Category[]> {
+  return (await http.get('/auth/me/categories')).data.categories ?? []
+}
+export async function saveCategories(categories: Category[]): Promise<void> {
+  await http.put('/auth/me/categories', { categories })
 }
 export async function logout(): Promise<void> {
   // Record the sign-out server-side (best effort), then drop the token.

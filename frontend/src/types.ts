@@ -23,6 +23,14 @@ export interface Folder {
   created_at: string
 }
 
+// A user-defined explorer category (collapsible section) holding an ordered list
+// of folder/board ids. Stored per-user.
+export interface Category {
+  id: string
+  name: string
+  items: string[]
+}
+
 export interface ShareUser {
   id: string
   username: string

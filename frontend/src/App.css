@@ -246,6 +246,77 @@
   background: rgba(99, 102, 241, 0.16);
   box-shadow: inset 0 0 0 1px var(--accent);
 }
+
+/* User Categories: VSCode-style collapsible sections (Outline/Timeline feel). */
+.tree-top {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 6px;
+  border-radius: 7px;
+}
+.tree-top--drop {
+  background: rgba(99, 102, 241, 0.12);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.tree-cat {
+  margin-top: 4px;
+}
+.tree-cat__row {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  border-radius: 7px;
+  padding-right: 3px;
+}
+.tree-cat__row:hover {
+  background: var(--bg-hover);
+}
+.tree-cat__row--drop {
+  background: rgba(99, 102, 241, 0.16);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.tree-cat__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  padding: 6px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.tree-cat__count {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.tree-cat__tools {
+  display: none;
+  flex: none;
+}
+.tree-cat__row:hover .tree-cat__tools {
+  display: inline-flex;
+}
+.tree-cat__tools .icon-btn {
+  padding: 4px;
+}
+.tree-cat__tools .icon-btn svg {
+  width: 13px;
+  height: 13px;
+}
+.tree-input--cat {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
 .tree-input {
   width: calc(100% - 8px);
   margin: 2px 4px 6px;

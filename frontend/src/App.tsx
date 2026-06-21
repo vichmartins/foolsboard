@@ -39,7 +39,7 @@ import {
 } from './components/icons'
 import { realtime, useBoardActivity, useBoardPresence } from './realtime'
 import { useUpdateAvailable } from './useUpdateAvailable'
-import type { Board, Folder } from './types'
+import type { Board, Category, Folder } from './types'
 import './App.css'
 
 type ShareTarget = { type: 'board' | 'folder'; id: string; name: string }
@@ -200,6 +200,59 @@ function Workspace() {
     const folder = await api.createFolder(name)
     setFolders((fs) => [...fs, folder])
     setActiveFolderId(folder.id)
+  }
+
+  // --- Explorer categories (user-defined collapsible sections) --------------
+  const [categories, setCategories] = useState<Category[]>([])
+  useEffect(() => {
+    api.getCategories().then(setCategories).catch(() => {})
+  }, [])
+  const catsRef = useRef<Category[]>(categories)
+  catsRef.current = categories
+  function persistCategories(next: Category[]) {
+    setCategories(next)
+    void api.saveCategories(next).catch(() => {})
+  }
+  function createCategory(name: string) {
+    persistCategories([...catsRef.current, { id: crypto.randomUUID(), name, items: [] }])
+  }
+  function renameCategory(id: string, name: string) {
+    persistCategories(catsRef.current.map((c) => (c.id === id ? { ...c, name } : c)))
+  }
+  function deleteCategory(id: string) {
+    persistCategories(catsRef.current.filter((c) => c.id !== id))
+  }
+  function reorderCategories(ids: string[]) {
+    const by = new Map(catsRef.current.map((c) => [c.id, c]))
+    persistCategories(ids.map((id) => by.get(id)).filter((c): c is Category => !!c))
+  }
+  // Move a folder/board into a category (categoryId=null to uncategorize),
+  // optionally at a position. Removes it from any other category first.
+  function fileItem(itemId: string, categoryId: string | null, index?: number) {
+    const cleaned = catsRef.current.map((c) => ({
+      ...c,
+      items: c.items.filter((i) => i !== itemId),
+    }))
+    const next = !categoryId
+      ? cleaned
+      : cleaned.map((c) => {
+          if (c.id !== categoryId) return c
+          const items = c.items.filter((i) => i !== itemId)
+          items.splice(index ?? items.length, 0, itemId)
+          return { ...c, items }
+        })
+    persistCategories(next)
+  }
+  async function createFolderIn(categoryId: string | null, name: string) {
+    const folder = await api.createFolder(name)
+    setFolders((fs) => [...fs, folder])
+    if (categoryId) fileItem(folder.id, categoryId)
+  }
+  async function createBoardIn(categoryId: string | null, name: string) {
+    const board = await api.createBoard(name)
+    setBoards((b) => [board, ...b])
+    setActiveId(board.id)
+    if (categoryId) fileItem(board.id, categoryId)
   }
   function renameFolder(id: string, name: string) {
     setFolders((fs) => fs.map((f) => (f.id === id ? { ...f, name } : f)))
@@ -414,23 +467,28 @@ function Workspace() {
           open={sidebarOpen}
           boards={boards}
           folders={folders}
+          categories={categories}
           activeId={activeId}
           onSelectBoard={setActiveId}
-          onCreateFolder={createFolder}
           onRenameFolder={renameFolder}
           onDeleteFolder={deleteFolder}
           onMoveBoardToFolder={moveBoardToFolder}
-          onNewBoard={() => setDialog('new')}
           onShareBoard={(b) => setShareTarget({ type: 'board', id: b.id, name: b.name })}
           onRenameBoard={renameBoardById}
           onDeleteBoard={(b) => setDeleteTarget(b)}
           onMergeBoard={(b) => {
-            // Merge the clicked board INTO the active board (it's consumed after).
             if (b.id === activeId) showToast("A board can't merge into itself.")
             else setMergeConfirm(b)
           }}
           onUnshareBoard={unshareBoard}
           onCreatePrivateCopy={makePrivateCopy}
+          onCreateCategory={createCategory}
+          onRenameCategory={renameCategory}
+          onDeleteCategory={deleteCategory}
+          onReorderCategories={reorderCategories}
+          onFileItem={fileItem}
+          onCreateFolderIn={createFolderIn}
+          onCreateBoardIn={createBoardIn}
         />
         <main className="stage">
           {activeId ? (

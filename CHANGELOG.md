@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.50.0
+
+Explorer redesign — user-defined **Categories**:
+
+- The fixed Ungrouped / Shared / Shared-with-me sections are gone. Instead you
+  create your own **Categories** — collapsible sections (VSCode Outline/Timeline
+  style, expand/collapse with the arrow) — and file folders and boards into them.
+- **+ on a category** creates a new folder or board inside it; the header buttons
+  add a new Category or a top-level folder.
+- **Drag** a board or folder onto a category to file it; drag a board onto a
+  folder to move it inside; drag to the top area to uncategorize.
+- Boards/folders not in any category sit at the **top** with no header.
+- You can categorize **shared boards** too (saved per-user). Layout persists via
+  the new per-user categories store.
+
 ## v0.49.0
 
 - Explorer: boards you own and have shared out now collect into their own
