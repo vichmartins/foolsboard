@@ -45,7 +45,7 @@ import {
   type StoryEdge,
   type StoryNode,
 } from '../types'
-import { realtime } from '../realtime'
+import { realtime, useBoardEditLocks } from '../realtime'
 import CollabLayer from './CollabLayer'
 import ConfirmDialog from './ConfirmDialog'
 import ContextMenu from './ContextMenu'
@@ -202,6 +202,14 @@ function CanvasInner({
   const [edgeMenu, setEdgeMenu] = useState<{ x: number; y: number; edge: Edge } | null>(null)
   const [nodeMenu, setNodeMenu] = useState<{ x: number; y: number } | null>(null)
   const [editEdge, setEditEdge] = useState<Edge | null>(null)
+  // Nodes currently being edited by other collaborators (locked for me). Read via
+  // a ref in callbacks so they don't need to be re-created when locks change.
+  const editLocks = useBoardEditLocks(boardId)
+  const editLocksRef = useRef(editLocks)
+  editLocksRef.current = editLocks
+  // Brief notice shown when I try to open a node someone else is editing.
+  const [lockMsg, setLockMsg] = useState<string | null>(null)
+  const lockMsgTimer = useRef<number | null>(null)
   // The node + side a freshly drawn connection started from, captured on
   // connect-start so connect-end can build the edge from drop geometry.
   const connectStart = useRef<{ nodeId: string; side: Side } | null>(null)
@@ -885,16 +893,45 @@ function CanvasInner({
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // Open/close the edit panel with a slide animation. Close keeps the panel
-  // mounted briefly so its exit animation can play before it unmounts.
-  const openPanel = useCallback((nodeId: string) => {
-    if (panelCloseTimer.current !== null) {
-      clearTimeout(panelCloseTimer.current)
-      panelCloseTimer.current = null
-    }
-    setPanelClosing(false)
-    setSelectedId(nodeId)
+  // Flash a brief "X is editing" notice (e.g. when a locked node is double-clicked).
+  const showLockNotice = useCallback((text: string) => {
+    setLockMsg(text)
+    if (lockMsgTimer.current) window.clearTimeout(lockMsgTimer.current)
+    lockMsgTimer.current = window.setTimeout(() => setLockMsg(null), 2600)
   }, [])
+
+  // Open/close the edit panel with a slide animation. Close keeps the panel
+  // mounted briefly so its exit animation can play before it unmounts. Opening a
+  // node another collaborator is editing is blocked (read the lock via the ref).
+  const openPanel = useCallback(
+    (nodeId: string) => {
+      const lock = editLocksRef.current[nodeId]
+      if (lock) {
+        showLockNotice(`🔒 ${lock.username} is editing this — try again when they’re done`)
+        return
+      }
+      if (panelCloseTimer.current !== null) {
+        clearTimeout(panelCloseTimer.current)
+        panelCloseTimer.current = null
+      }
+      setPanelClosing(false)
+      setSelectedId(nodeId)
+    },
+    [showLockNotice],
+  )
+
+  // Broadcast which node I'm editing so collaborators can lock it; clear on close,
+  // board change, or unmount.
+  useEffect(() => {
+    realtime.sendEdit(selectedId)
+  }, [selectedId])
+  useEffect(
+    () => () => {
+      realtime.sendEdit(null)
+      if (lockMsgTimer.current) window.clearTimeout(lockMsgTimer.current)
+    },
+    [],
+  )
 
   const closePanel = useCallback(() => {
     if (panelCloseTimer.current !== null) return
@@ -1068,12 +1105,22 @@ function CanvasInner({
     })
   }, [nodes, edges, selectedId])
 
+  // A node another collaborator is editing can't be dragged (openPanel also
+  // blocks its editor). Identity is preserved when there are no locks.
+  const displayNodes = useMemo(
+    () =>
+      Object.keys(editLocks).length === 0
+        ? nodes
+        : nodes.map((n) => (editLocks[n.id] ? { ...n, draggable: false } : n)),
+    [nodes, editLocks],
+  )
+
   // Every item + connection on the board, for the gallery.
   return (
     <BoardIdContext.Provider value={boardId}>
     <div className="canvas-wrap" onPointerMove={broadcastCursor}>
       <ReactFlow
-        nodes={nodes}
+        nodes={displayNodes}
         edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -1120,7 +1167,7 @@ function CanvasInner({
           nodeStrokeColor={(n) => (n.selected ? '#ffffff' : 'transparent')}
           nodeStrokeWidth={4}
         />
-        <CollabLayer boardId={boardId} nodes={nodes} />
+        <CollabLayer boardId={boardId} nodes={displayNodes} editLocks={editLocks} />
       </ReactFlow>
 
       {selectionRect && <MinimapSelection rect={selectionRect} />}
@@ -1128,6 +1175,8 @@ function CanvasInner({
       {!nodes.length && (
         <div className="canvas-hint">Right-click anywhere to create your first object</div>
       )}
+
+      {lockMsg && <div className="toast">{lockMsg}</div>}
 
       {selectedStory && (
         <ContextPanel

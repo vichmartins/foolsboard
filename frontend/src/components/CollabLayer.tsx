@@ -6,9 +6,18 @@ import { useMemo } from 'react'
 import { useViewport, type Node } from '@xyflow/react'
 import { useCollab } from '../realtime'
 
-export default function CollabLayer({ boardId, nodes }: { boardId: string; nodes: Node[] }) {
+export default function CollabLayer({
+  boardId,
+  nodes,
+  editLocks = {},
+}: {
+  boardId: string
+  nodes: Node[]
+  editLocks?: Record<string, { userId: string; username: string; color: string }>
+}) {
   const { cursors, selections } = useCollab(boardId)
   const { x: tx, y: ty, zoom } = useViewport()
+  const lockEntries = Object.entries(editLocks)
 
   // Resolve each node's box once per render so selection outlines can be drawn.
   const boxes = useMemo(() => {
@@ -21,10 +30,32 @@ export default function CollabLayer({ boardId, nodes }: { boardId: string; nodes
     return m
   }, [nodes])
 
-  if (cursors.length === 0 && selections.length === 0) return null
+  if (cursors.length === 0 && selections.length === 0 && lockEntries.length === 0) return null
 
   return (
     <div className="collab-layer">
+      {lockEntries.map(([id, lock]) => {
+        const b = boxes.get(id)
+        if (!b) return null
+        return (
+          <div
+            key={'lock:' + id}
+            className="collab-edit"
+            style={{
+              transform: `translate(${b.x * zoom + tx}px, ${b.y * zoom + ty}px)`,
+              width: b.w * zoom,
+              height: b.h * zoom,
+              borderColor: lock.color,
+              boxShadow: `0 0 0 2px ${lock.color}`,
+            }}
+          >
+            <span className="collab-edit__label" style={{ background: lock.color }}>
+              ✎ {lock.username}
+            </span>
+          </div>
+        )
+      })}
+
       {selections.flatMap((sel) =>
         sel.nodeIds.map((id) => {
           const b = boxes.get(id)

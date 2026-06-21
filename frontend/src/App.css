@@ -967,6 +967,29 @@
   pointer-events: none;
   will-change: transform;
 }
+/* A node another collaborator is actively editing: solid ring + name tag. */
+.collab-edit {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border: 2px solid;
+  border-radius: 8px;
+  pointer-events: none;
+  will-change: transform;
+}
+.collab-edit__label {
+  position: absolute;
+  top: -10px;
+  left: 8px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
 
 .theme-toggle {
   display: inline-flex;

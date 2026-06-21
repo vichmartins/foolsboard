@@ -108,6 +108,20 @@ async def _handle(conn, user: User, raw: str) -> None:
                 "color": color_for(conn.user_id),
                 "node_ids": ids,
             })
+    elif kind == "edit":
+        # Edit lock: this user opened (active) or closed (active=false) a node's
+        # editor. Relayed so others can show "X is editing" and block concurrent
+        # edits. Released automatically when the user leaves (presence cleanup).
+        node_id = msg.get("node_id")
+        await hub.relay(conn, {
+            "type": "edit",
+            "board_id": str(conn.board_id),
+            "user_id": str(conn.user_id),
+            "username": conn.username,
+            "color": color_for(conn.user_id),
+            "node_id": str(node_id) if node_id else None,
+            "active": bool(msg.get("active")),
+        })
     elif kind == "node_move":
         positions = msg.get("positions")
         if isinstance(positions, list):

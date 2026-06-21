@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.40.0
+
+Collaborative edit locks (part 1 of the live-editing visibility work):
+
+- **One editor per node.** When you open a node's editor, collaborators see it
+  ringed in your color with an **"✎ {you} editing"** tag, and they can't open or
+  drag it until you close it. Trying to open a node someone else is editing shows
+  a brief "🔒 {name} is editing" notice instead.
+- The lock releases when you close the panel, switch nodes, or disconnect
+  (handled via the existing presence cleanup — no stuck locks).
+- Built on a dedicated low-frequency realtime channel so the canvas reacts to
+  lock changes without re-rendering on cursor traffic.
+
+Still to come: per-status activity colors on the presence avatars, owner-side
+visibility of who a board is shared with, and locking connections (edges) too.
+
 ## v0.39.1
 
 - Share status now distinguishes **"Pending"** (invite still live, unanswered)

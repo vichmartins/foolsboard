@@ -45,6 +45,9 @@ class Realtime {
   private cursors: Record<string, Record<string, RemoteCursor>> = {}
   private selections: Record<string, Record<string, RemoteSelection>> = {}
   private uploads: Record<string, Record<string, BoardUpload>> = {}
+  // Per board, the node each user currently has open for editing (one each), so
+  // others can show "X is editing" and block concurrent edits.
+  private editing: Record<string, Record<string, { nodeId: string; username: string; color: string }>> = {}
 
   private presenceListeners = new Set<() => void>()
   private collabListeners = new Set<() => void>()
@@ -57,6 +60,9 @@ class Realtime {
   // User-level share events (invite arrived / accepted / rejected / removed).
   // Not board-scoped, so they bypass the board maps and go straight to listeners.
   private shareListeners = new Set<(msg: any) => void>()
+  // Edit-lock changes -- a low-frequency channel (separate from cursors) so the
+  // canvas re-renders on lock changes without churning on every cursor move.
+  private editListeners = new Set<() => void>()
 
   start() {
     this.wantOpen = true
@@ -78,8 +84,10 @@ class Realtime {
     this.cursors = {}
     this.selections = {}
     this.uploads = {}
+    this.editing = {}
     this.emitPresence()
     this.emitCollab()
+    this.emitEdit()
   }
 
   private connect() {
@@ -121,13 +129,25 @@ class Realtime {
 
     if (msg.type === 'presence') {
       this.presence[board] = msg.members ?? []
-      // Drop cursors/selections for anyone no longer on the board.
+      // Drop cursors/selections/edit-locks for anyone no longer on the board
+      // (this is also how a disconnected user's edit lock is released).
       const ids = new Set<string>((msg.members ?? []).map((m: PresenceMember) => m.id))
       for (const map of [this.cursors[board], this.selections[board], this.uploads[board]]) {
         if (map) for (const uid of Object.keys(map)) if (!ids.has(uid)) delete map[uid]
       }
+      const editMap = this.editing[board]
+      if (editMap) for (const uid of Object.keys(editMap)) if (!ids.has(uid)) delete editMap[uid]
       this.emitPresence()
       this.emitCollab()
+      this.emitEdit()
+    } else if (msg.type === 'edit') {
+      const map = (this.editing[board] ??= {})
+      if (msg.active && msg.node_id) {
+        map[msg.user_id] = { nodeId: msg.node_id, username: msg.username, color: msg.color }
+      } else {
+        delete map[msg.user_id]
+      }
+      this.emitEdit()
     } else if (msg.type === 'cursor') {
       ;(this.cursors[board] ??= {})[msg.user_id] = {
         userId: msg.user_id,
@@ -206,6 +226,22 @@ class Realtime {
     this.send({ type: 'upload', active, count })
   }
 
+  // Announce the node I'm now editing (or null when I close the editor) so others
+  // can show a lock and block concurrent edits.
+  sendEdit(nodeId: string | null) {
+    this.send({ type: 'edit', node_id: nodeId, active: nodeId != null })
+  }
+
+  // Map of nodeId -> the remote user editing it (used to lock + label nodes).
+  editLocksFor(boardId: string | null): Record<string, { userId: string; username: string; color: string }> {
+    const out: Record<string, { userId: string; username: string; color: string }> = {}
+    if (!boardId) return out
+    for (const [uid, lock] of Object.entries(this.editing[boardId] ?? {})) {
+      if (!out[lock.nodeId]) out[lock.nodeId] = { userId: uid, username: lock.username, color: lock.color }
+    }
+    return out
+  }
+
   membersFor(boardId: string | null): PresenceMember[] {
     if (!boardId) return []
     return this.presence[boardId] ?? []
@@ -243,6 +279,15 @@ class Realtime {
     return () => {
       this.shareListeners.delete(fn)
     }
+  }
+  subscribeEdit(fn: () => void) {
+    this.editListeners.add(fn)
+    return () => {
+      this.editListeners.delete(fn)
+    }
+  }
+  private emitEdit() {
+    this.editListeners.forEach((l) => l())
   }
   subscribeCollab(fn: () => void) {
     this.collabListeners.add(fn)
@@ -282,6 +327,16 @@ export function useBoardUploads(boardId: string | null): BoardUpload[] {
   const [, force] = useState(0)
   useEffect(() => realtime.subscribePresence(() => force((n) => n + 1)), [])
   return realtime.uploadsFor(boardId)
+}
+
+// nodeId -> the remote collaborator editing it (lock + "X is editing" label).
+// Re-renders only when a lock changes, not on cursor traffic.
+export function useBoardEditLocks(
+  boardId: string | null,
+): Record<string, { userId: string; username: string; color: string }> {
+  const [, force] = useState(0)
+  useEffect(() => realtime.subscribeEdit(() => force((n) => n + 1)), [])
+  return realtime.editLocksFor(boardId)
 }
 
 // Live cursors + selection highlights for a board. Subscribes only to the
