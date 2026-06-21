@@ -51,6 +51,9 @@ class Realtime {
   // Board ops (node_move, board_dirty) are apply-and-forget, so they go to
   // direct handlers (the canvas) rather than into rendered state.
   private opListeners = new Set<(msg: any) => void>()
+  // Fired each time the socket (re)connects -- e.g. after a deploy restarts the
+  // server -- used to check for a newer app version.
+  private connectListeners = new Set<() => void>()
 
   start() {
     this.wantOpen = true
@@ -88,6 +91,7 @@ class Realtime {
 
     ws.onopen = () => {
       if (this.boardId) this.send({ type: 'join', board_id: this.boardId })
+      this.connectListeners.forEach((l) => l())
     }
     ws.onmessage = (e) => this.onMessage(e)
     ws.onclose = () => {
@@ -217,6 +221,12 @@ class Realtime {
     this.presenceListeners.add(fn)
     return () => {
       this.presenceListeners.delete(fn)
+    }
+  }
+  subscribeConnect(fn: () => void) {
+    this.connectListeners.add(fn)
+    return () => {
+      this.connectListeners.delete(fn)
     }
   }
   subscribeCollab(fn: () => void) {

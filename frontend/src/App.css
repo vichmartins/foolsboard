@@ -286,6 +286,60 @@
   }
 }
 
+/* "A new version is available" prompt — top-center, gentle (never forces). */
+.update-banner {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 8px 8px 8px 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+  animation: update-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes update-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -14px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+.update-banner__text {
+  font-size: 13.5px;
+  color: var(--text);
+}
+.update-banner__btn {
+  padding: 5px 14px;
+  font-size: 13px;
+}
+.update-banner__dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: none;
+  border: none;
+  border-radius: 7px;
+  color: var(--text-dim);
+  font-size: 13px;
+  cursor: pointer;
+}
+.update-banner__dismiss:hover {
+  background: var(--bg-elev-2);
+  color: var(--text);
+}
+
 /* --- Top bar -------------------------------------------------------------- */
 .topbar {
   display: flex;

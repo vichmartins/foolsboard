@@ -13,6 +13,7 @@ import LoginScreen from './components/LoginScreen'
 import PresenceBar from './components/PresenceBar'
 import ProfileMenu from './components/ProfileMenu'
 import Sidebar from './components/Sidebar'
+import UpdateBanner from './components/UpdateBanner'
 import UploadActivity from './components/UploadActivity'
 import PromptDialog from './components/PromptDialog'
 import MergeDialog from './components/MergeDialog'
@@ -36,6 +37,7 @@ import {
   TrashIcon,
 } from './components/icons'
 import { realtime, useBoardPresence, useBoardUploads } from './realtime'
+import { useUpdateAvailable } from './useUpdateAvailable'
 import type { Board, Folder } from './types'
 import './App.css'
 
@@ -84,6 +86,9 @@ function Workspace() {
   const [pendingFocus, setPendingFocus] = useState<{ boardId: string; nodeId: string } | null>(
     null,
   )
+  // "New version deployed" prompt (production only); dismissible.
+  const updateAvailable = useUpdateAvailable()
+  const [updateDismissed, setUpdateDismissed] = useState(false)
 
   // Load boards; bootstrap a first board if the workspace is empty. Restore the
   // board the user last had open (falling back to the first).
@@ -560,6 +565,13 @@ function Workspace() {
         <div className="toast" role="status">
           {toast}
         </div>
+      )}
+
+      {updateAvailable && !updateDismissed && (
+        <UpdateBanner
+          onReload={() => window.location.reload()}
+          onDismiss={() => setUpdateDismissed(true)}
+        />
       )}
     </div>
   )

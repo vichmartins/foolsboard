@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.36.0
+
+- "New version available" prompt. When a newer build is deployed, open tabs now
+  show a small top-center banner with a Reload button instead of silently running
+  stale code — it never force-reloads, so it can't interrupt your work, and it's
+  dismissible. The running bundle knows its build version; the deploy ships a
+  version.json, and the app compares them when the collaboration socket
+  reconnects (which happens on every deploy), on window focus, and on a slow
+  interval. Production only — dev keeps using Vite's hot reload.
+
 ## v0.35.3
 
 - Extended the highlighted-name treatment to the Share and Move-to-Folder
