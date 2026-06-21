@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.33.0
+
+- Added a collapsible left "Explorer" sidebar for organizing folders and boards.
+  A toggle button at the top-left slides it in/out (smoothly, remembered across
+  reloads). It shows folders as an expandable tree with their boards nested, plus
+  an Ungrouped section; click a board to open it, drag a board onto a folder (or
+  Ungrouped) to file/unfile it, and create/rename/delete folders inline. The
+  existing top-bar pickers still work alongside it.
+
 ## v0.32.0
 
 - Import/Export now handles folders, not just boards. The Export tab lists your

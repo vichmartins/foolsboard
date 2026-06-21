@@ -11,6 +11,7 @@ import ImportExportDialog from './components/ImportExportDialog'
 import LoginScreen from './components/LoginScreen'
 import PresenceBar from './components/PresenceBar'
 import ProfileMenu from './components/ProfileMenu'
+import Sidebar from './components/Sidebar'
 import UploadActivity from './components/UploadActivity'
 import PromptDialog from './components/PromptDialog'
 import MergeDialog from './components/MergeDialog'
@@ -29,6 +30,7 @@ import {
   PencilIcon,
   PlusIcon,
   ShareIcon,
+  SidebarIcon,
   TransferIcon,
   TrashIcon,
 } from './components/icons'
@@ -58,6 +60,13 @@ function Workspace() {
   const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
   // Selected object ids awaiting a move destination (opens the move dialog).
   const [moveIds, setMoveIds] = useState<string[] | null>(null)
+  // Left explorer sidebar open/closed (remembered across reloads).
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(
+    () => localStorage.getItem('foolsboard:sidebar') === '1',
+  )
+  useEffect(() => {
+    localStorage.setItem('foolsboard:sidebar', sidebarOpen ? '1' : '0')
+  }, [sidebarOpen])
 
   // Load boards; bootstrap a first board if the workspace is empty. Restore the
   // board the user last had open (falling back to the first).
@@ -185,6 +194,15 @@ function Workspace() {
   return (
     <div className="app">
       <header className="topbar">
+        <button
+          className={'icon-btn sidebar-toggle' + (sidebarOpen ? ' icon-btn--active' : '')}
+          title={sidebarOpen ? 'Hide Explorer' : 'Show Explorer'}
+          aria-label="Toggle Explorer"
+          aria-pressed={sidebarOpen}
+          onClick={() => setSidebarOpen((o) => !o)}
+        >
+          <SidebarIcon />
+        </button>
         <BrandMenu />
 
         <FolderSelect
@@ -315,8 +333,21 @@ function Workspace() {
         />
       </header>
 
-      <main className="stage">
-        {activeId ? (
+      <div className="workspace-body">
+        <Sidebar
+          open={sidebarOpen}
+          boards={boards}
+          folders={folders}
+          activeId={activeId}
+          onSelectBoard={setActiveId}
+          onCreateFolder={createFolder}
+          onRenameFolder={renameFolder}
+          onDeleteFolder={deleteFolder}
+          onMoveBoardToFolder={moveBoardToFolder}
+          onNewBoard={() => setDialog('new')}
+        />
+        <main className="stage">
+          {activeId ? (
           <Canvas
             key={activeId}
             boardId={activeId}
@@ -338,7 +369,8 @@ function Workspace() {
         ) : (
           <div className="loading">Loading…</div>
         )}
-      </main>
+        </main>
+      </div>
 
       {dialog === 'new' && (
         <NewBoardDialog
