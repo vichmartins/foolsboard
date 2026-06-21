@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.48.3
+
+- For a recipient, the board picker dropdown now shows the presence dot on the
+  **right**, beside the owner's name (instead of on the left), matching the
+  owner's layout.
+
 ## v0.48.2
 
 - In the board picker dropdown, an owner's shared-out board now shows the

@@ -151,19 +151,24 @@ export default function BoardSelect({
               }}
             >
               {b.shared ? (
-                <span
-                  className={'board-select__dot board-select__dot--' + realtime.boardStatus(b.id, b.member_ids)}
-                  title={`Shared by ${b.owner_name ?? 'someone'}`}
-                  aria-hidden="true"
-                />
+                <span className="board-select__lead" aria-hidden="true" />
               ) : (
                 <span className="board-select__grip" aria-hidden="true">
                   ⠿
                 </span>
               )}
               <span className="board-select__name">{b.name}</span>
-              {b.shared && b.owner_name && (
-                <span className="board-select__owner">{b.owner_name}</span>
+              {b.shared && (
+                <span
+                  className="board-select__sharedby"
+                  title={`Shared by ${b.owner_name ?? 'someone'}`}
+                >
+                  <span
+                    className={'board-select__dot board-select__dot--' + realtime.boardStatus(b.id, b.member_ids)}
+                    aria-hidden="true"
+                  />
+                  {b.owner_name && <span className="board-select__owner">{b.owner_name}</span>}
+                </span>
               )}
               {b.shared_out && (
                 <span className="board-select__ownermark">

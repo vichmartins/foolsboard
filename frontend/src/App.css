@@ -3040,9 +3040,22 @@
   white-space: nowrap;
 }
 /* Owner's name on a shared board row (right-aligned, muted). */
+/* Recipient's "shared by" cluster on the right of a row: presence dot + owner. */
+.board-select__sharedby {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 8px;
+  max-width: 50%;
+}
+/* Empty leading slot on shared rows so names line up with grip'd owned rows. */
+.board-select__lead {
+  flex: none;
+  width: 13px;
+}
 .board-select__owner {
   flex: none;
-  margin-left: 8px;
   font-size: 11px;
   color: var(--text-dim);
   overflow: hidden;
