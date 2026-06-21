@@ -35,6 +35,7 @@ import {
   SidebarIcon,
   TransferIcon,
   TrashIcon,
+  UnshareIcon,
 } from './components/icons'
 import { realtime, useBoardPresence, useBoardUploads } from './realtime'
 import { useUpdateAvailable } from './useUpdateAvailable'
@@ -176,6 +177,17 @@ function Workspace() {
     setBoards((b) => [copy, ...b])
     setActiveId(copy.id)
     setActiveFolderId(null)
+  }
+
+  // Stop sharing a board: owner unshares it for everyone, a recipient leaves it.
+  // A recipient loses access, so drop it from view if it was open.
+  async function unshareBoard(board: Board) {
+    await api.unshareBoard(board.id).catch(() => {})
+    if (board.shared) {
+      setBoards((bs) => bs.filter((b) => b.id !== board.id))
+      if (board.id === activeId) setActiveId(null)
+    }
+    refreshLists()
   }
 
   async function createFolder(name: string) {
@@ -331,24 +343,36 @@ function Workspace() {
             <ShareIcon />
           </button>
           {activeBoard?.shared && (
+            <>
+              <button
+                className="icon-btn"
+                title="Create Private Copy"
+                aria-label="Create Private Copy"
+                onClick={() => activeBoard && void makePrivateCopy(activeBoard)}
+              >
+                <CopyIcon />
+              </button>
+              <button
+                className="icon-btn icon-btn--danger"
+                title="Unshare (remove from my boards)"
+                aria-label="Unshare"
+                onClick={() => activeBoard && void unshareBoard(activeBoard)}
+              >
+                <UnshareIcon />
+              </button>
+            </>
+          )}
+          {!activeBoard?.shared && (
             <button
-              className="icon-btn"
-              title="Make a Private Copy"
-              aria-label="Make a Private Copy"
-              onClick={() => activeBoard && void makePrivateCopy(activeBoard)}
+              className="icon-btn icon-btn--danger"
+              title="Delete"
+              aria-label="Delete"
+              onClick={() => activeBoard && setDeleteTarget(activeBoard)}
+              disabled={!activeBoard}
             >
-              <CopyIcon />
+              <TrashIcon />
             </button>
           )}
-          <button
-            className="icon-btn icon-btn--danger"
-            title="Delete"
-            aria-label="Delete"
-            onClick={() => activeBoard && setDeleteTarget(activeBoard)}
-            disabled={!activeBoard}
-          >
-            <TrashIcon />
-          </button>
           <span className="topbar-sep" aria-hidden="true" />
           <button
             className="icon-btn"
@@ -398,6 +422,8 @@ function Workspace() {
             if (b.id === activeId) showToast("A board can't merge into itself.")
             else setMergeConfirm(b)
           }}
+          onUnshareBoard={unshareBoard}
+          onCreatePrivateCopy={makePrivateCopy}
         />
         <main className="stage">
           {activeId ? (

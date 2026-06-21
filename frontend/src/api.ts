@@ -262,6 +262,10 @@ export async function lapseShare(id: string): Promise<void> {
 export async function removeShare(id: string): Promise<void> {
   await http.delete(`/shares/${id}`)
 }
+// Unshare a board without a share id: owner stops sharing it; recipient leaves.
+export async function unshareBoard(boardId: string): Promise<void> {
+  await http.delete(`/shares/by-board/${boardId}`)
+}
 
 // Export selected boards as a .zip bundle (manifest + media). Returns the raw
 // archive bytes for the browser to download. The archive streams as it's built,

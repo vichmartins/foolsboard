@@ -59,6 +59,19 @@ export function ShareIcon() {
   )
 }
 
+// Person-with-x = unshare / leave a shared board.
+export function UnshareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <line x1="17" y1="8" x2="22" y2="13" />
+      <line x1="22" y1="8" x2="17" y2="13" />
+    </svg>
+  )
+}
+
 // Overlapping sheets = make a copy.
 export function CopyIcon() {
   return (

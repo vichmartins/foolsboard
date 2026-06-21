@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.43.0
+
+- **Selection highlights now match at any zoom.** Remote selection/edit outlines
+  scale their border, radius, and glow with the viewport zoom, so a selected node
+  looks the same on every screen (just tinted per user) instead of a fixed-width
+  ring that drifted from the card at non-100% zoom.
+- **Sharing management.** Right-clicking a shared board in the explorer now offers
+  **Unshare** and **Create Private Copy** (owner or recipient); a recipient can no
+  longer Delete the owner's board — the top bar shows Unshare instead of Delete
+  for shared boards. New `DELETE /api/shares/by-board/{id}` (owner unshares for
+  all; recipient leaves), pushed live to the other party.
+- Renamed **"Make a Private Copy" → "Create Private Copy"**.
+
 ## v0.42.1
 
 - Redrew the owner crown as a thin **outline icon** in the same Feather/line style

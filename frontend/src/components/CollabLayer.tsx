@@ -46,7 +46,9 @@ export default function CollabLayer({
               width: b.w * zoom,
               height: b.h * zoom,
               borderColor: lock.color,
-              boxShadow: `0 0 0 2px ${lock.color}`,
+              borderWidth: 2 * zoom,
+              borderRadius: 12 * zoom,
+              boxShadow: `0 0 0 ${2 * zoom}px ${lock.color}`,
             }}
           >
             <span className="collab-edit__label" style={{ background: lock.color }}>
@@ -69,7 +71,9 @@ export default function CollabLayer({
                 width: b.w * zoom,
                 height: b.h * zoom,
                 borderColor: sel.color,
-                boxShadow: `0 0 0 2px ${sel.color}55`,
+                borderWidth: 2 * zoom,
+                borderRadius: 12 * zoom,
+                boxShadow: `0 0 0 ${2 * zoom}px ${sel.color}55`,
               }}
             />
           )

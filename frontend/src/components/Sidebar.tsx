@@ -34,6 +34,8 @@ interface Props {
   onRenameBoard: (id: string, name: string) => void
   onDeleteBoard: (board: Board) => void
   onMergeBoard: (board: Board) => void
+  onUnshareBoard: (board: Board) => void
+  onCreatePrivateCopy: (board: Board) => void
 }
 
 export default function Sidebar({
@@ -51,6 +53,8 @@ export default function Sidebar({
   onRenameBoard,
   onDeleteBoard,
   onMergeBoard,
+  onUnshareBoard,
+  onCreatePrivateCopy,
 }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     try {
@@ -150,14 +154,10 @@ export default function Sidebar({
       <div
         key={b.id}
         className={'tree-board-row' + (b.id === activeId ? ' tree-board-row--active' : '')}
-        onContextMenu={
-          b.shared
-            ? undefined
-            : (e) => {
-                e.preventDefault()
-                setMenu({ x: e.clientX, y: e.clientY, board: b })
-              }
-        }
+        onContextMenu={(e) => {
+          e.preventDefault()
+          setMenu({ x: e.clientX, y: e.clientY, board: b })
+        }}
       >
         <button
           className="tree-board"
@@ -361,12 +361,38 @@ export default function Sidebar({
       <ContextMenu
         x={menu.x}
         y={menu.y}
-        items={[
-          { label: 'Rename', mnemonic: 'r', onClick: () => startRenameBoard(menu.board) },
-          { label: 'Share', mnemonic: 's', onClick: () => onShareBoard(menu.board) },
-          { label: 'Merge', mnemonic: 'm', onClick: () => onMergeBoard(menu.board) },
-          { label: 'Delete', mnemonic: 'd', danger: true, onClick: () => onDeleteBoard(menu.board) },
-        ]}
+        items={
+          menu.board.shared
+            ? [
+                { label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) },
+                {
+                  label: 'Create Private Copy',
+                  mnemonic: 'c',
+                  onClick: () => onCreatePrivateCopy(menu.board),
+                },
+              ]
+            : [
+                { label: 'Rename', mnemonic: 'r', onClick: () => startRenameBoard(menu.board) },
+                { label: 'Share', mnemonic: 's', onClick: () => onShareBoard(menu.board) },
+                { label: 'Merge', mnemonic: 'm', onClick: () => onMergeBoard(menu.board) },
+                ...(menu.board.shared_out
+                  ? [
+                      {
+                        label: 'Create Private Copy',
+                        mnemonic: 'c',
+                        onClick: () => onCreatePrivateCopy(menu.board),
+                      },
+                      { label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) },
+                    ]
+                  : []),
+                {
+                  label: 'Delete',
+                  mnemonic: 'd',
+                  danger: true,
+                  onClick: () => onDeleteBoard(menu.board),
+                },
+              ]
+        }
         onClose={() => setMenu(null)}
       />
     )}

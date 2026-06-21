@@ -190,6 +190,39 @@ def lapse_share(
         _notify(share.owner_id, "updated", share, db)
 
 
+@router.delete("/by-board/{board_id}", status_code=status.HTTP_204_NO_CONTENT)
+def unshare_board(
+    board_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> None:
+    """Stop sharing a board without needing a share id. The owner removes every
+    share of it; a recipient removes only their own access ("leave"). Either way
+    the other parties get a live update."""
+    board = db.get(Board, board_id)
+    if board is not None and board.owner_id == user.id:
+        shares = list(
+            db.scalars(select(Share).where(Share.board_id == board_id, Share.owner_id == user.id))
+        )
+    else:
+        shares = list(
+            db.scalars(
+                select(Share).where(
+                    Share.board_id == board_id, Share.shared_with_id == user.id
+                )
+            )
+        )
+    notify: list[tuple] = []
+    for s in shares:
+        other_id = s.shared_with_id if s.owner_id == user.id else s.owner_id
+        notify.append((other_id, _to_out(s, db).model_dump(mode="json")))
+        db.delete(s)
+    db.commit()
+    for other_id, payload in notify:
+        try:
+            hub.notify_user(other_id, {"type": "share", "action": "removed", "share": payload})
+        except Exception:
+            pass
+
+
 @router.delete("/{share_id}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_share(
     share_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
