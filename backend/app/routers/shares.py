@@ -12,9 +12,22 @@ from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
 from ..models import Board, Folder, Share, User
+from ..realtime import hub
 from ..schemas import ShareCreate, ShareOut, ShareUserOut
 
 router = APIRouter(prefix="/api/shares", tags=["shares"])
+
+
+def _notify(target_id: UUID, action: str, share: Share, db: Session) -> None:
+    """Push a live share update to a user's open tabs (recipient on a new invite,
+    owner on accept/reject) so neither side has to refresh to see the change."""
+    try:
+        hub.notify_user(
+            target_id,
+            {"type": "share", "action": action, "share": _to_out(share, db).model_dump(mode="json")},
+        )
+    except Exception:
+        pass
 
 
 def _user_out(u: User | None) -> ShareUserOut | None:
@@ -85,6 +98,8 @@ def create_share(
             existing.status = "pending"
             db.commit()
             db.refresh(existing)
+        if existing.status == "pending":
+            _notify(existing.shared_with_id, "incoming", existing, db)
         return _to_out(existing, db)
 
     share = Share(
@@ -96,6 +111,7 @@ def create_share(
     db.add(share)
     db.commit()
     db.refresh(share)
+    _notify(share.shared_with_id, "incoming", share, db)
     kind = "board" if payload.board_id else "folder"
     log_event(db, user=user, action="share.create", entity_type="share", entity_id=share.id,
               summary=f"shared a {kind} with {recipient.username}")
@@ -135,6 +151,7 @@ def accept_share(
     share.status = "accepted"
     db.commit()
     db.refresh(share)
+    _notify(share.owner_id, "updated", share, db)
     log_event(db, user=user, action="share.accept", entity_type="share", entity_id=share.id,
               summary="accepted a share")
     return _to_out(share, db)
@@ -149,6 +166,8 @@ def reject_share(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Share not found")
     share.status = "rejected"
     db.commit()
+    db.refresh(share)
+    _notify(share.owner_id, "updated", share, db)
 
 
 @router.delete("/{share_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -159,5 +178,12 @@ def remove_share(
     share = db.get(Share, share_id)
     if share is None or (share.owner_id != user.id and share.shared_with_id != user.id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Share not found")
+    # Tell the other party (their share list/banner refreshes) before it's gone.
+    other_id = share.shared_with_id if share.owner_id == user.id else share.owner_id
+    payload = _to_out(share, db).model_dump(mode="json")
     db.delete(share)
     db.commit()
+    try:
+        hub.notify_user(other_id, {"type": "share", "action": "removed", "share": payload})
+    except Exception:
+        pass

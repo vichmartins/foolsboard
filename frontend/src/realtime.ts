@@ -54,6 +54,9 @@ class Realtime {
   // Fired each time the socket (re)connects -- e.g. after a deploy restarts the
   // server -- used to check for a newer app version.
   private connectListeners = new Set<() => void>()
+  // User-level share events (invite arrived / accepted / rejected / removed).
+  // Not board-scoped, so they bypass the board maps and go straight to listeners.
+  private shareListeners = new Set<(msg: any) => void>()
 
   start() {
     this.wantOpen = true
@@ -108,6 +111,12 @@ class Realtime {
     } catch {
       return
     }
+
+    if (msg.type === 'share') {
+      this.shareListeners.forEach((l) => l(msg))
+      return
+    }
+
     const board = msg.board_id as string
 
     if (msg.type === 'presence') {
@@ -227,6 +236,12 @@ class Realtime {
     this.connectListeners.add(fn)
     return () => {
       this.connectListeners.delete(fn)
+    }
+  }
+  subscribeShare(fn: (msg: any) => void) {
+    this.shareListeners.add(fn)
+    return () => {
+      this.shareListeners.delete(fn)
     }
   }
   subscribeCollab(fn: () => void) {

@@ -3,10 +3,13 @@
 // out just dismisses it (the share stays pending). One banner shows at a time.
 import { useEffect, useRef, useState } from 'react'
 import * as api from '../api'
+import { realtime } from '../realtime'
 import type { Share } from '../types'
 
 const COUNTDOWN_MS = 12000
-const POLL_MS = 15000
+// A WebSocket push delivers invites instantly; this poll is just a fallback for
+// invites that arrived while the tab was disconnected, so it can be slow.
+const POLL_MS = 30000
 
 export default function ShareBanner({ onChanged }: { onChanged: () => void }) {
   const [queue, setQueue] = useState<Share[]>([])
@@ -33,9 +36,18 @@ export default function ShareBanner({ onChanged }: { onChanged: () => void }) {
     }
     poll()
     const id = window.setInterval(poll, POLL_MS)
+    // Instant delivery: enqueue the moment the server pushes a new invite.
+    const unsub = realtime.subscribeShare((msg) => {
+      if (msg.action !== 'incoming' || !msg.share) return
+      const s = msg.share as Share
+      if (s.status !== 'pending' || seen.current.has(s.id)) return
+      seen.current.add(s.id)
+      setQueue((q) => [...q, s])
+    })
     return () => {
       alive = false
       window.clearInterval(id)
+      unsub()
     }
   }, [])
 

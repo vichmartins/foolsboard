@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.39.0
+
+Real-time share invites & status:
+
+- **Invites arrive instantly.** A new share now pushes over the WebSocket to the
+  recipient's open tabs the moment it's created, instead of waiting up to 15s for
+  the next poll (the poll stays as a 30s fallback for offline tabs).
+- **The owner sees responses live.** Accept/reject/remove now push to the owner,
+  so the Share dialog updates the recipient's status without a refresh or reopen.
+- **Clearer status wording.** A recipient who hasn't answered shows as
+  **"No response"** (was the raw "pending"), so doing nothing never reads as
+  "Rejected" — only an explicit Reject does.
+
 ## v0.38.0
 
 Security hardening pass:

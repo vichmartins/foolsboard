@@ -2,7 +2,16 @@
 // it's already shared with and lets the owner revoke.
 import { useEffect, useState } from 'react'
 import * as api from '../api'
+import { realtime } from '../realtime'
 import type { Share } from '../types'
+
+// The owner's view of each recipient's response. "pending" means they haven't
+// answered yet -- shown as "No response", never "Rejected".
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'No response',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+}
 
 interface Props {
   resourceType: 'board' | 'folder'
@@ -35,6 +44,10 @@ export default function ShareDialog({ resourceType, resourceId, resourceName, on
       alive = false
     }
   }, [resourceId, resourceType, tick])
+
+  // Refresh the moment a recipient accepts/rejects (or a share is removed), so
+  // the owner sees the new status live without reopening the dialog.
+  useEffect(() => realtime.subscribeShare(() => setTick((t) => t + 1)), [])
 
   async function share() {
     const r = recipient.trim()
@@ -93,7 +106,7 @@ export default function ShareDialog({ resourceType, resourceId, resourceName, on
               <li className="share-row" key={s.id}>
                 <span className="share-row__name">{s.shared_with?.username ?? '—'}</span>
                 <span className={'share-row__status share-row__status--' + s.status}>
-                  {s.status}
+                  {STATUS_LABEL[s.status] ?? s.status}
                 </span>
                 <button
                   type="button"

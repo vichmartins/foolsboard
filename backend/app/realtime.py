@@ -41,8 +41,12 @@ class Hub:
     def __init__(self) -> None:
         self._conns: set[Conn] = set()
         self._lock = asyncio.Lock()
+        # The running event loop, captured on first connect so synchronous REST
+        # handlers (which run in a threadpool) can schedule pushes onto it.
+        self._loop: asyncio.AbstractEventLoop | None = None
 
     async def register(self, ws: WebSocket, user) -> Conn:
+        self._loop = asyncio.get_running_loop()
         conn = Conn(ws=ws, user_id=user.id, username=user.username)
         async with self._lock:
             self._conns.add(conn)
@@ -95,6 +99,24 @@ class Hub:
             c for c in self._conns if c.board_id == sender.board_id and c is not sender
         ]
         await self._send_many(targets, msg)
+
+    async def send_to_user(self, user_id: UUID, msg: dict) -> None:
+        """Push a message to every socket belonging to one user, on whatever board
+        they're viewing -- for cross-board notifications like share invites."""
+        targets = [c for c in self._conns if c.user_id == user_id]
+        await self._send_many(targets, msg)
+
+    def notify_user(self, user_id: UUID, msg: dict) -> None:
+        """Schedule a user push from synchronous code (REST handlers run in a
+        threadpool). No-op until the event loop has been captured by a connection;
+        if the target user isn't connected, the push simply reaches no one."""
+        loop = self._loop
+        if loop is None:
+            return
+        try:
+            asyncio.run_coroutine_threadsafe(self.send_to_user(user_id, msg), loop)
+        except RuntimeError:
+            pass
 
     async def _send_many(self, targets: list[Conn], msg: dict) -> None:
         for c in targets:
