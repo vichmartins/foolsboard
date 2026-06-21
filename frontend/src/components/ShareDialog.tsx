@@ -5,10 +5,11 @@ import * as api from '../api'
 import { realtime } from '../realtime'
 import type { Share } from '../types'
 
-// The owner's view of each recipient's response. "pending" means they haven't
-// answered yet -- shown as "No response", never "Rejected".
+// The owner's view of each recipient's response. "pending" = invite still live
+// and unanswered; "lapsed" = they let the countdown run out without deciding.
 const STATUS_LABEL: Record<string, string> = {
-  pending: 'No response',
+  pending: 'Pending',
+  lapsed: 'No response',
   accepted: 'Accepted',
   rejected: 'Rejected',
 }

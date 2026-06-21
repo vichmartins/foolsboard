@@ -2941,6 +2941,10 @@
   color: var(--text-dim);
   background: var(--bg-elev);
 }
+.share-row__status--lapsed {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.14);
+}
 /* Tidy, fixed-size remove control so it doesn't crowd the status pill. */
 .share-row .icon-btn {
   flex: none;

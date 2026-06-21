@@ -94,7 +94,8 @@ def create_share(
         )
     )
     if existing is not None:
-        if existing.status == "rejected":  # re-offer a previously rejected share
+        # Re-offer a share the recipient previously rejected or let lapse.
+        if existing.status in ("rejected", "lapsed"):
             existing.status = "pending"
             db.commit()
             db.refresh(existing)
@@ -168,6 +169,23 @@ def reject_share(
     db.commit()
     db.refresh(share)
     _notify(share.owner_id, "updated", share, db)
+
+
+@router.post("/{share_id}/no_response", status_code=status.HTTP_204_NO_CONTENT)
+def lapse_share(
+    share_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> None:
+    """The recipient let the invite's countdown run out without deciding. Distinct
+    from a reject -- the owner sees "No response". Only applies while still pending
+    (an accept/reject in another tab wins)."""
+    share = db.get(Share, share_id)
+    if share is None or share.shared_with_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Share not found")
+    if share.status == "pending":
+        share.status = "lapsed"
+        db.commit()
+        db.refresh(share)
+        _notify(share.owner_id, "updated", share, db)
 
 
 @router.delete("/{share_id}", status_code=status.HTTP_204_NO_CONTENT)

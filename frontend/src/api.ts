@@ -255,6 +255,10 @@ export async function acceptShare(id: string): Promise<Share> {
 export async function rejectShare(id: string): Promise<void> {
   await http.post(`/shares/${id}/reject`)
 }
+// The invite's countdown ran out without a decision -> owner sees "No response".
+export async function lapseShare(id: string): Promise<void> {
+  await http.post(`/shares/${id}/no_response`)
+}
 export async function removeShare(id: string): Promise<void> {
   await http.delete(`/shares/${id}`)
 }

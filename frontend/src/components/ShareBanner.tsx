@@ -58,10 +58,11 @@ export default function ShareBanner({ onChanged }: { onChanged: () => void }) {
     setQueue((q) => q.slice(1))
   }, [current, queue])
 
-  // Auto-dismiss after the countdown.
+  // Letting the countdown run out is a "no response" (distinct from a reject);
+  // the owner's Share view updates from pending to "No response".
   useEffect(() => {
     if (!current) return
-    timer.current = window.setTimeout(() => close(), COUNTDOWN_MS)
+    timer.current = window.setTimeout(() => lapse(), COUNTDOWN_MS)
     return () => {
       if (timer.current) window.clearTimeout(timer.current)
     }
@@ -74,6 +75,13 @@ export default function ShareBanner({ onChanged }: { onChanged: () => void }) {
       setCurrent(null)
       setLeaving(false)
     }, 260)
+  }
+
+  function lapse() {
+    if (!current) return
+    const id = current.id
+    close()
+    api.lapseShare(id).catch(() => {})
   }
 
   async function accept() {

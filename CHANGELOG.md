@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.39.1
+
+- Share status now distinguishes **"Pending"** (invite still live, unanswered)
+  from **"No response"** (the recipient let the countdown run out). Previously an
+  unanswered invite showed "No response" right away. Letting the banner lapse now
+  records a distinct `lapsed` state and pushes it to the owner live; re-sharing a
+  lapsed (or rejected) invite re-offers it.
+
 ## v0.39.0
 
 Real-time share invites & status:
