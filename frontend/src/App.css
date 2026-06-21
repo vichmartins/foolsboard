@@ -285,6 +285,19 @@
     transform: translate(-50%, 0);
   }
 }
+.toast--leaving {
+  animation: toast-out 0.3s ease forwards;
+}
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+}
 
 /* "A new version is available" prompt — top-center, gentle (never forces). */
 .update-banner {

@@ -57,14 +57,25 @@ function Workspace() {
   const [deleteTarget, setDeleteTarget] = useState<Board | null>(null)
   // Board to merge INTO the active board (pending confirmation).
   const [mergeConfirm, setMergeConfirm] = useState<Board | null>(null)
-  // Brief toast message that auto-dismisses (e.g. "can't merge a board into itself").
+  // Brief toast message that auto-dismisses with an animation (e.g. "can't merge
+  // a board into itself"). The seq counter lets the same message re-trigger.
   const [toast, setToast] = useState<string | null>(null)
-  const toastTimer = useRef<number | null>(null)
+  const [toastSeq, setToastSeq] = useState(0)
+  const [toastLeaving, setToastLeaving] = useState(false)
   function showToast(message: string) {
     setToast(message)
-    if (toastTimer.current) window.clearTimeout(toastTimer.current)
-    toastTimer.current = window.setTimeout(() => setToast(null), 2600)
+    setToastSeq((s) => s + 1)
   }
+  useEffect(() => {
+    if (!toast) return
+    setToastLeaving(false)
+    const hide = window.setTimeout(() => setToastLeaving(true), 2600)
+    const remove = window.setTimeout(() => setToast(null), 2600 + 300)
+    return () => {
+      window.clearTimeout(hide)
+      window.clearTimeout(remove)
+    }
+  }, [toast, toastSeq])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'new' | 'rename' | 'delete' | 'merge' | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -562,7 +573,7 @@ function Workspace() {
       )}
 
       {toast && (
-        <div className="toast" role="status">
+        <div className={'toast' + (toastLeaving ? ' toast--leaving' : '')} role="status">
           {toast}
         </div>
       )}

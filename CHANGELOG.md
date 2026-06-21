@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.37.2
+
+- The toast (e.g. "A board can't merge into itself.") now fades and slides away
+  on exit instead of vanishing abruptly, mirroring its entrance. Repeated
+  identical messages re-trigger it.
+
 ## v0.37.1
 
 - The upload-rejection warning now auto-dismisses: it holds for ~5.5s, then fades
