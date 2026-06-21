@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.46.1
+
+- Presence dots now ease smoothly between here/away/offline, and the lit ("here")
+  dot softly pulses, instead of snapping between states.
+
 ## v0.46.0
 
 - **Shared-board dots now show the owner's live presence.** In the explorer and
