@@ -28,10 +28,11 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
   server: {
-    // Bind the IPv4 loopback so both 127.0.0.1 and localhost reach the app
-    // (Vite's default binds IPv6 ::1 only, which 127.0.0.1 can't reach).
-    // Use `host: true` instead if you also want LAN/other-device access.
-    host: '127.0.0.1',
+    // Bind all interfaces (0.0.0.0 + ::) so the dev app is reachable from other
+    // devices on the LAN (e.g. http://<this-machine-ip>:5173) for multi-user /
+    // multi-device testing -- not just localhost. The backend can stay on
+    // 127.0.0.1 since the proxy below reaches it on this same machine.
+    host: true,
     proxy: {
       // ws: true so the /api/ws WebSocket upgrade is proxied to the backend too.
       '/api': { target: 'http://127.0.0.1:8000', ws: true },
