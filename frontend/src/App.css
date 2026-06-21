@@ -2673,7 +2673,8 @@
   color: var(--text-dim);
 }
 .dialog__message strong {
-  color: var(--text);
+  color: var(--accent);
+  font-weight: 600;
 }
 .dialog__input {
   background: var(--bg-elev-2);

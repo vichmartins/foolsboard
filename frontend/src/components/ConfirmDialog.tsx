@@ -1,9 +1,9 @@
 // A confirm/cancel modal reusing the gradient overlay + dialog styling.
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 
 interface Props {
   title: string
-  message: string
+  message: ReactNode
   confirmLabel?: string
   cancelLabel?: string
   danger?: boolean

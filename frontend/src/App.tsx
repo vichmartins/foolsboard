@@ -436,7 +436,12 @@ function Workspace() {
       {deleteTarget && (
         <TypeToConfirmDialog
           title="Delete Storyboard?"
-          message={`"${deleteTarget.name}" and all of its objects, links, and media will be permanently deleted. This can't be undone.`}
+          message={
+            <>
+              <strong>{deleteTarget.name}</strong> and all of its objects, links, and media will
+              be permanently deleted. This can't be undone.
+            </>
+          }
           requiredText={deleteTarget.name}
           confirmLabel="Delete board"
           danger
@@ -460,7 +465,14 @@ function Workspace() {
       {mergeConfirm && activeBoard && (
         <ConfirmDialog
           title="Merge Board?"
-          message={`"${mergeConfirm.name}" will be merged into "${activeBoard.name}". After merging, "${mergeConfirm.name}" will be permanently deleted. This can't be undone.`}
+          message={
+            <>
+              <strong>{mergeConfirm.name}</strong> will be merged into{' '}
+              <strong>{activeBoard.name}</strong>. After merging,{' '}
+              <strong>{mergeConfirm.name}</strong> will be permanently deleted. This can't be
+              undone.
+            </>
+          }
           confirmLabel="Merge"
           onConfirm={() => {
             setMergeSourceIds([mergeConfirm.id])

@@ -1,10 +1,10 @@
 // A high-friction confirm dialog: the user must type an exact phrase (e.g. the
 // board name) before the destructive action is enabled. Pasting is allowed.
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 interface Props {
   title: string
-  message: string
+  message: ReactNode
   requiredText: string
   confirmLabel: string
   danger?: boolean

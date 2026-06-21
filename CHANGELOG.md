@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.35.2
+
+- Highlight board names (accent color, semibold) in the Merge and Delete
+  confirmation dialogs, so it's clear at a glance which board is affected.
+
 ## v0.35.1
 
 - Explorer Merge now merges the clicked board *into the active board*: it shows a
