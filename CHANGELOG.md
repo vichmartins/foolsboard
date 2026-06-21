@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.35.1
+
+- Explorer Merge now merges the clicked board *into the active board*: it shows a
+  confirmation naming the target (the active board) and warning that the clicked
+  board will be deleted afterward. Trying to merge the active board into itself
+  shows a brief toast ("A board can't merge into itself.") instead.
+
 ## v0.35.0
 
 - The Explorer sidebar can now manage boards, not just open them. Each board row

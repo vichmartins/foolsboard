@@ -6,6 +6,7 @@ import AdminPanel from './components/AdminPanel'
 import BoardSelect from './components/BoardSelect'
 import BrandMenu from './components/BrandMenu'
 import Canvas from './components/Canvas'
+import ConfirmDialog from './components/ConfirmDialog'
 import FolderSelect from './components/FolderSelect'
 import ImportExportDialog from './components/ImportExportDialog'
 import LoginScreen from './components/LoginScreen'
@@ -52,6 +53,16 @@ function Workspace() {
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
   // Board awaiting delete confirmation (type-to-confirm dialog).
   const [deleteTarget, setDeleteTarget] = useState<Board | null>(null)
+  // Board to merge INTO the active board (pending confirmation).
+  const [mergeConfirm, setMergeConfirm] = useState<Board | null>(null)
+  // Brief toast message that auto-dismisses (e.g. "can't merge a board into itself").
+  const [toast, setToast] = useState<string | null>(null)
+  const toastTimer = useRef<number | null>(null)
+  function showToast(message: string) {
+    setToast(message)
+    if (toastTimer.current) window.clearTimeout(toastTimer.current)
+    toastTimer.current = window.setTimeout(() => setToast(null), 2600)
+  }
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'new' | 'rename' | 'delete' | 'merge' | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -361,9 +372,9 @@ function Workspace() {
           onRenameBoard={renameBoardById}
           onDeleteBoard={(b) => setDeleteTarget(b)}
           onMergeBoard={(b) => {
-            // Merge targets the active board, so switch to it first.
-            setActiveId(b.id)
-            setDialog('merge')
+            // Merge the clicked board INTO the active board (it's consumed after).
+            if (b.id === activeId) showToast("A board can't merge into itself.")
+            else setMergeConfirm(b)
           }}
         />
         <main className="stage">
@@ -446,6 +457,19 @@ function Workspace() {
         />
       )}
 
+      {mergeConfirm && activeBoard && (
+        <ConfirmDialog
+          title="Merge Board?"
+          message={`"${mergeConfirm.name}" will be merged into "${activeBoard.name}". After merging, "${mergeConfirm.name}" will be permanently deleted. This can't be undone.`}
+          confirmLabel="Merge"
+          onConfirm={() => {
+            setMergeSourceIds([mergeConfirm.id])
+            setMergeConfirm(null)
+          }}
+          onCancel={() => setMergeConfirm(null)}
+        />
+      )}
+
       {moveIds && (
         <MoveDialog
           boards={boards.filter((b) => b.id !== activeId)}
@@ -518,6 +542,12 @@ function Workspace() {
             api.listFolders().then(setFolders).catch(() => {})
           }}
         />
+      )}
+
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
       )}
     </div>
   )
