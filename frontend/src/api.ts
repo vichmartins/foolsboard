@@ -8,6 +8,7 @@ import type {
   BoardGraph,
   ErrorLog,
   Folder,
+  GalleryBoard,
   Invite,
   LinkRef,
   RequestLog,
@@ -227,6 +228,11 @@ export async function absorbNodes(boardId: string, nodeIds: string[]): Promise<v
 // Make a private, unshared copy of a board the caller can access.
 export async function copyBoard(boardId: string): Promise<Board> {
   return (await http.post(`/boards/${boardId}/copy`)).data
+}
+
+// Every accessible board with its nodes/edges/assets, for the workspace-wide Gallery.
+export async function getGallery(): Promise<{ boards: GalleryBoard[] }> {
+  return (await http.get('/boards/gallery')).data
 }
 
 // --- Sharing ---------------------------------------------------------------

@@ -124,6 +124,16 @@ export interface StoryEdge {
   updated_at: string
 }
 
+// One board's contents for the workspace-wide Gallery.
+export interface GalleryBoard {
+  id: string
+  name: string
+  folder_id: string | null
+  nodes: StoryNode[]
+  edges: StoryEdge[]
+  assets: Asset[]
+}
+
 export interface Asset {
   id: string
   node_id: string

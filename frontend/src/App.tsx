@@ -365,6 +365,9 @@ function Workspace() {
             galleryOpen={galleryOpen}
             onCloseGallery={() => setGalleryOpen(false)}
             onMoveSelection={(ids) => setMoveIds(ids)}
+            boards={boards}
+            folders={folders}
+            onOpenBoard={setActiveId}
           />
         ) : (
           <div className="loading">Loading…</div>

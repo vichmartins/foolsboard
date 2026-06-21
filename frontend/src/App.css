@@ -3947,6 +3947,32 @@
   padding: 2px 20px 14px;
   border-bottom: 1px solid var(--border);
 }
+.gallery-scope {
+  max-width: 320px;
+}
+/* Small pill showing which board a result lives on (in "All boards" scope). */
+.gallery-board-tag {
+  display: inline-block;
+  max-width: 150px;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: var(--bg-elev-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gallery-item .gallery-board-tag {
+  align-self: flex-start;
+  margin-left: 0;
+  margin-top: 4px;
+}
 .gallery-cats {
   flex-wrap: wrap;
 }

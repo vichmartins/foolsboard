@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.34.0
+
+- The Gallery is now workspace-wide. A scope selector switches between "All
+  boards" and any single board (grouped under its folder), so you can browse and
+  search every object, media file, link, and connection across the whole
+  workspace without first switching boards. Results in "All boards" are tagged
+  with the board they live on; picking an item on the current board jumps to it,
+  and picking one on another board opens that board. Backed by a single
+  GET /api/boards/gallery endpoint over all accessible boards.
+
 ## v0.33.3
 
 - Reordered the top-bar board actions so Create is first, then Rename, Move,

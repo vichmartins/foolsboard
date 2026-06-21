@@ -20,6 +20,8 @@ from ..schemas import (
     BoardOut,
     BoardReorder,
     BoardUpdate,
+    GalleryBoardOut,
+    GalleryOut,
 )
 from ..storage import storage
 
@@ -40,6 +42,41 @@ def _get_accessible_board(board_id: UUID, db: Session, user: User) -> Board:
     if board is None or not can_access_board(board, user, db):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Board not found")
     return board
+
+
+def _accessible_boards(db: Session, user: User) -> list[Board]:
+    """Every board the user can open: owned + accepted shares (direct or via a
+    shared folder)."""
+    owned = list(db.scalars(select(Board).where(Board.owner_id == user.id)))
+    board_ids = set(
+        db.scalars(
+            select(Share.board_id).where(
+                Share.shared_with_id == user.id,
+                Share.status == "accepted",
+                Share.board_id.is_not(None),
+            )
+        )
+    )
+    folder_ids = set(
+        db.scalars(
+            select(Share.folder_id).where(
+                Share.shared_with_id == user.id,
+                Share.status == "accepted",
+                Share.folder_id.is_not(None),
+            )
+        )
+    )
+    conds = []
+    if board_ids:
+        conds.append(Board.id.in_(board_ids))
+    if folder_ids:
+        conds.append(Board.folder_id.in_(folder_ids))
+    shared = (
+        list(db.scalars(select(Board).where(Board.owner_id != user.id, or_(*conds))))
+        if conds
+        else []
+    )
+    return owned + shared
 
 
 def _board_out(board: Board, user: User, db: Session, owner_names: dict) -> BoardOut:
@@ -96,6 +133,36 @@ def list_boards(
     shared.sort(key=lambda b: b.name.lower())
     owner_names: dict = {}
     return [_board_out(b, user, db, owner_names) for b in [*owned, *shared]]
+
+
+@router.get("/gallery", response_model=GalleryOut)
+def board_gallery(
+    db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> GalleryOut:
+    """Every accessible board with its nodes, edges, and assets -- powers the
+    workspace-wide Gallery (browse/search across boards without switching)."""
+    out: list[GalleryBoardOut] = []
+    for board in _accessible_boards(db, user):
+        nodes = list(db.scalars(select(Node).where(Node.board_id == board.id)))
+        edges = list(db.scalars(select(Edge).where(Edge.board_id == board.id)))
+        node_ids = [n.id for n in nodes]
+        assets_out: list[AssetOut] = []
+        if node_ids:
+            for a in db.scalars(
+                select(Asset).where(Asset.node_id.in_(node_ids)).order_by(Asset.created_at.desc())
+            ):
+                item = AssetOut.model_validate(a)
+                item.url = storage.url_for(a.storage_key)
+                if a.thumbnail_key:
+                    item.thumbnail_url = storage.url_for(a.thumbnail_key)
+                assets_out.append(item)
+        out.append(
+            GalleryBoardOut(
+                id=board.id, name=board.name, folder_id=board.folder_id,
+                nodes=nodes, edges=edges, assets=assets_out,
+            )
+        )
+    return GalleryOut(boards=out)
 
 
 @router.post("", response_model=BoardOut, status_code=status.HTTP_201_CREATED)

@@ -187,6 +187,20 @@ class BoardGraph(BaseModel):
     edges: list[EdgeOut]
 
 
+class GalleryBoardOut(BaseModel):
+    """One board's contents for the workspace-wide Gallery."""
+    id: UUID
+    name: str
+    folder_id: UUID | None = None
+    nodes: list[NodeOut]
+    edges: list[EdgeOut]
+    assets: list[AssetOut]
+
+
+class GalleryOut(BaseModel):
+    boards: list[GalleryBoardOut]
+
+
 # --- Auth / Users -----------------------------------------------------------
 class RegisterIn(BaseModel):
     email: str = Field(min_length=3, max_length=320)

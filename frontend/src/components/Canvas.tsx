@@ -37,6 +37,8 @@ import {
   KIND_COLORS,
   nodePreview,
   OBJECT_COLOR,
+  type Board,
+  type Folder,
   type LinkRef,
   type NearbyNode,
   type Side,
@@ -66,6 +68,10 @@ interface CanvasProps {
   galleryOpen?: boolean
   onCloseGallery?: () => void
   onMoveSelection?: (nodeIds: string[]) => void
+  // Workspace context for the (workspace-wide) Gallery.
+  boards?: Board[]
+  folders?: Folder[]
+  onOpenBoard?: (boardId: string) => void
 }
 
 const PASTE_OFFSET = 48 // px nudge when pasting/duplicating within the same board
@@ -127,6 +133,9 @@ function CanvasInner({
   galleryOpen,
   onCloseGallery,
   onMoveSelection,
+  boards = [],
+  folders = [],
+  onOpenBoard,
 }: CanvasProps) {
   const { screenToFlowPosition, getNodes, getEdges, getZoom, setCenter, fitView } =
     useReactFlow()
@@ -1041,24 +1050,6 @@ function CanvasInner({
   }, [nodes, edges, selectedId])
 
   // Every item + connection on the board, for the gallery.
-  const galleryItems = useMemo(
-    () =>
-      nodes
-        .map((n) => n.data?.story as StoryNode | undefined)
-        .filter((s): s is StoryNode => !!s),
-    [nodes],
-  )
-  const galleryEdges = useMemo(
-    () =>
-      edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        label: typeof e.label === 'string' ? e.label : '',
-      })),
-    [edges],
-  )
-
   return (
     <BoardIdContext.Provider value={boardId}>
     <div className="canvas-wrap" onPointerMove={broadcastCursor}>
@@ -1136,14 +1127,18 @@ function CanvasInner({
       {galleryOpen && (
         <NodeGallery
           boardId={boardId}
-          nodes={galleryItems}
-          edges={galleryEdges}
+          boards={boards}
+          folders={folders}
           onPickNode={(id) => {
             focusNode(id)
             onCloseGallery?.()
           }}
           onPickEdge={(s, t) => {
             focusEdge(s, t)
+            onCloseGallery?.()
+          }}
+          onOpenBoard={(bid) => {
+            onOpenBoard?.(bid)
             onCloseGallery?.()
           }}
           onClose={() => onCloseGallery?.()}
