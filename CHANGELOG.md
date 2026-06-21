@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.44.3
+
+- The minimap now paints selected nodes in your highlight color too (was a fixed
+  indigo), matching the canvas and the shift-drag box.
+
 ## v0.44.2
 
 - The shift-drag selection box (and its minimap mirror) now uses your chosen
