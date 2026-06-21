@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.48.2
+
+- In the board picker dropdown, an owner's shared-out board now shows the
+  two-person owner mark (+ presence dot) on the **right** of the row (with the
+  drag grip back on the left), instead of on the left.
+
 ## v0.48.1
 
 - The owner now sees a presence dot beside the two-person owner mark on their
