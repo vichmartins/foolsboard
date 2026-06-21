@@ -3,6 +3,7 @@
 // dragged to reorder the board list, which is persisted per user.
 import { useEffect, useRef, useState } from 'react'
 import type { Board } from '../types'
+import CrownIcon from './CrownIcon'
 
 interface Props {
   boards: Board[]
@@ -10,6 +11,7 @@ interface Props {
   activeName?: string // active board's name (it may be filtered out of `boards`)
   activeShared?: boolean // active board is shared with me
   activeSharedOut?: boolean // I own the active board and have shared it out
+  activeOwnerName?: string | null // who owns the active board, when shared with me
   onSelect: (id: string) => void
   onReorder: (orderedIds: string[]) => void
 }
@@ -22,6 +24,7 @@ export default function BoardSelect({
   activeName,
   activeShared,
   activeSharedOut,
+  activeOwnerName,
   onSelect,
   onReorder,
 }: Props) {
@@ -93,16 +96,17 @@ export default function BoardSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        {activeSharedOut ? (
-          <span className="pick-crown" title="You own this — shared with others" aria-hidden="true">
-            👑
-          </span>
-        ) : activeShared ? (
-          <span className="pick-dot" title="Shared with you" />
-        ) : null}
         <span className="board-select__current">
           {active?.name ?? activeName ?? 'Select board'}
         </span>
+        {activeSharedOut ? (
+          <CrownIcon className="owner-crown" />
+        ) : activeShared ? (
+          <span className="pick-owner" title={`Shared by ${activeOwnerName ?? 'someone'}`}>
+            <span className="pick-dot" />
+            {activeOwnerName && <span className="pick-owner__name">{activeOwnerName}</span>}
+          </span>
+        ) : null}
         <span className={'board-select__chevron' + (open ? ' board-select__chevron--open' : '')}>
           ▾
         </span>
@@ -137,15 +141,16 @@ export default function BoardSelect({
                   aria-hidden="true"
                 />
               ) : b.shared_out ? (
-                <span className="board-select__crown" title="Shared with others" aria-hidden="true">
-                  👑
-                </span>
+                <CrownIcon className="owner-crown" />
               ) : (
                 <span className="board-select__grip" aria-hidden="true">
                   ⠿
                 </span>
               )}
               <span className="board-select__name">{b.name}</span>
+              {b.shared && b.owner_name && (
+                <span className="board-select__owner">{b.owner_name}</span>
+              )}
             </button>
           </li>
         ))}

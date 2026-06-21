@@ -2896,20 +2896,42 @@
   width: 7px;
   height: 7px;
 }
-/* Crown: owner of a board/folder that's shared out (instead of the dot/grip). */
-.pick-crown,
-.board-select__crown,
+/* Owner crown: a board/folder you own and have shared out (muted gold). */
+.owner-crown {
+  flex: none;
+  color: #d8a93f;
+}
 .folder-row__crown {
   flex: none;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 14px;
-  font-size: 11px;
-  line-height: 1;
-}
-.folder-row__crown {
   cursor: grab;
+}
+/* Recipient: a dot + the owner's name, on the right of the picker pill. */
+.pick-owner {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 120px;
+}
+.pick-owner__name {
+  font-size: 12px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Owner's name on a shared board row (right-aligned, muted). */
+.board-select__owner {
+  flex: none;
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 90px;
 }
 
 /* Share dialog */

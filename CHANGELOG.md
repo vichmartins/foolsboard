@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.41.1
+
+- Refined the shared indicators in the navbar pickers:
+  - The owner marker is now a **flat themed crown** (muted-gold SVG) instead of
+    the 👑 emoji, so it fits the dark theme.
+  - The dot/crown moved to the **right** of the board/folder pill.
+  - A recipient now sees the **owner's name** next to the dot (e.g. the board
+    Steven shared shows "· Steven"), and on shared rows in the dropdown.
+
 ## v0.41.0
 
 - **Shared-item badges in the top navbar.** Boards and folders now show, on the

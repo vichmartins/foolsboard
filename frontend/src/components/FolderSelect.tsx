@@ -4,6 +4,7 @@
 // board picker, moving the board into that folder (or unfiling it).
 import { useEffect, useRef, useState } from 'react'
 import type { Board, Folder } from '../types'
+import CrownIcon from './CrownIcon'
 
 const BOARD_DND = 'application/x-foolsboard-board'
 const FOLDER_DND = 'application/x-foolsboard-folder'
@@ -155,14 +156,15 @@ export default function FolderSelect({
         title="Folders"
       >
         <span className="folder-select__icon">🗀</span>
-        {active?.shared_out ? (
-          <span className="pick-crown" title="You own this — shared with others" aria-hidden="true">
-            👑
-          </span>
-        ) : active?.shared ? (
-          <span className="pick-dot" title={`Shared by ${active.owner_name ?? 'someone'}`} />
-        ) : null}
         <span className="board-select__current">{active?.name ?? 'All Boards'}</span>
+        {active?.shared_out ? (
+          <CrownIcon className="owner-crown" />
+        ) : active?.shared ? (
+          <span className="pick-owner" title={`Shared by ${active.owner_name ?? 'someone'}`}>
+            <span className="pick-dot" />
+            {active.owner_name && <span className="pick-owner__name">{active.owner_name}</span>}
+          </span>
+        ) : null}
         <span className={'board-select__chevron' + (open ? ' board-select__chevron--open' : '')}>
           ▾
         </span>
@@ -243,9 +245,8 @@ export default function FolderSelect({
                       onDragStart={(e) => onFolderDragStart(e, i)}
                       onDragEnd={onFolderDragEnd}
                       title="Shared with others — drag to reorder"
-                      aria-hidden="true"
                     >
-                      👑
+                      <CrownIcon className="owner-crown" />
                     </span>
                   ) : (
                     <span
