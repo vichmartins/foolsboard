@@ -1174,10 +1174,10 @@ function CanvasInner({
           onClick={onMinimapClick}
           nodeColor={(n) =>
             n.selected
-              ? '#818cf8'
+              ? myColor
               : KIND_COLORS[(n.data?.kind as string) ?? 'note'] ?? OBJECT_COLOR
           }
-          nodeStrokeColor={(n) => (n.selected ? '#ffffff' : 'transparent')}
+          nodeStrokeColor={(n) => (n.selected ? myColor : 'transparent')}
           nodeStrokeWidth={4}
         />
         <CollabLayer boardId={boardId} nodes={displayNodes} editLocks={editLocks} />
