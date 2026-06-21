@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.50.1
+
+- Explorer header now has **three** create buttons: New Board, New Folder, New
+  Category.
+- **Folders gained board-level actions**: a "+" to create a board inside, Share,
+  Rename, Delete — both as hover tools and a right-click context menu.
+
 ## v0.50.0
 
 Explorer redesign — user-defined **Categories**:

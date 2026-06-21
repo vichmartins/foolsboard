@@ -8,6 +8,7 @@ import { useGlobalPresence } from '../realtime'
 import ContextMenu from './ContextMenu'
 import ShareMark from './ShareMark'
 import {
+  CategoryPlusIcon,
   ChevronIcon,
   FolderIcon,
   FolderPlusIcon,
@@ -32,6 +33,8 @@ interface Props {
   onSelectBoard: (id: string) => void
   onRenameFolder: (id: string, name: string) => void
   onDeleteFolder: (id: string) => void
+  onShareFolder: (folder: Folder) => void
+  onCreateBoardInFolder: (folderId: string, name: string) => void
   onMoveBoardToFolder: (boardId: string, folderId: string | null) => void
   onShareBoard: (board: Board) => void
   onRenameBoard: (id: string, name: string) => void
@@ -48,7 +51,8 @@ interface Props {
   onCreateBoardIn: (categoryId: string | null, name: string) => void
 }
 
-type Creating = { catId: string | null; kind: 'folder' | 'board' }
+// target: 'top' | 'cat:<id>' | 'folder:<id>' (folder target always creates a board)
+type Creating = { target: string; kind: 'folder' | 'board' }
 
 function loadSet(key: string): Set<string> {
   try {
@@ -68,6 +72,8 @@ export default function Sidebar(props: Props) {
     onSelectBoard,
     onRenameFolder,
     onDeleteFolder,
+    onShareFolder,
+    onCreateBoardInFolder,
     onMoveBoardToFolder,
     onShareBoard,
     onRenameBoard,
@@ -96,6 +102,7 @@ export default function Sidebar(props: Props) {
   const [createName, setCreateName] = useState('')
   const [dropTarget, setDropTarget] = useState<string | null>(null) // folder id / 'cat:<id>' / 'top'
   const [menu, setMenu] = useState<{ x: number; y: number; board: Board } | null>(null)
+  const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; folder: Folder } | null>(null)
   const [addMenu, setAddMenu] = useState<{ x: number; y: number; catId: string } | null>(null)
 
   const toggle = (set: Set<string>, key: string, id: string, save: (s: Set<string>) => void) => {
@@ -142,10 +149,30 @@ export default function Sidebar(props: Props) {
   function submitCreate() {
     const name = createName.trim()
     if (name && creating) {
-      ;(creating.kind === 'folder' ? onCreateFolderIn : onCreateBoardIn)(creating.catId, name)
+      const { target, kind } = creating
+      if (target.startsWith('folder:')) onCreateBoardInFolder(target.slice(7), name)
+      else {
+        const catId = target.startsWith('cat:') ? target.slice(4) : null
+        ;(kind === 'folder' ? onCreateFolderIn : onCreateBoardIn)(catId, name)
+      }
     }
     setCreating(null)
     setCreateName('')
+  }
+  function beginCreate(target: string, kind: 'folder' | 'board') {
+    setCreateName('')
+    setCreating({ target, kind })
+    // Make sure the destination is open so the inline input is visible.
+    if (target.startsWith('folder:')) {
+      const fid = target.slice(7)
+      setExpanded((s) => new Set(s).add(fid))
+    } else if (target.startsWith('cat:')) {
+      setCollapsedCats((s) => {
+        const n = new Set(s)
+        n.delete(target.slice(4))
+        return n
+      })
+    }
   }
 
   // --- drag and drop --------------------------------------------------------
@@ -280,6 +307,14 @@ export default function Sidebar(props: Props) {
           onDragOver={(e) => overIf(e, [BOARD_DND], f.id)}
           onDragLeave={() => setDropTarget((d) => (d === f.id ? null : d))}
           onDrop={(e) => dropOnFolder(e, f.id)}
+          onContextMenu={
+            f.shared
+              ? undefined
+              : (e) => {
+                  e.preventDefault()
+                  setFolderMenu({ x: e.clientX, y: e.clientY, folder: f })
+                }
+          }
         >
           <button
             className={'tree-chevron' + (isOpen ? ' tree-chevron--open' : '')}
@@ -295,6 +330,17 @@ export default function Sidebar(props: Props) {
           </button>
           {!f.shared && (
             <span className="tree-folder__tools">
+              <button
+                className="icon-btn"
+                title="New board in folder"
+                aria-label="New board in folder"
+                onClick={() => beginCreate('folder:' + f.id, 'board')}
+              >
+                <PlusIcon />
+              </button>
+              <button className="icon-btn" title="Share" aria-label="Share folder" onClick={() => onShareFolder(f)}>
+                <ShareIcon />
+              </button>
               <button
                 className="icon-btn"
                 title="Rename"
@@ -314,7 +360,12 @@ export default function Sidebar(props: Props) {
         </div>
         {isOpen && (
           <div className="tree-children">
-            {inside.length === 0 ? <div className="tree-empty">Empty</div> : inside.map(boardRow)}
+            {createInput('folder:' + f.id)}
+            {inside.length === 0 && creating?.target !== 'folder:' + f.id ? (
+              <div className="tree-empty">Empty</div>
+            ) : (
+              inside.map(boardRow)
+            )}
           </div>
         )}
       </div>
@@ -329,8 +380,8 @@ export default function Sidebar(props: Props) {
     return null
   }
 
-  const createInput = (catId: string | null) =>
-    creating && creating.catId === catId ? (
+  const createInput = (target: string) =>
+    creating && creating.target === target ? (
       <input
         className="tree-input"
         autoFocus
@@ -354,12 +405,9 @@ export default function Sidebar(props: Props) {
             <div className="sidebar__actions">
               <button
                 className="icon-btn"
-                title="New Category"
-                aria-label="New Category"
-                onClick={() => {
-                  setCatName('')
-                  setCreatingCat(true)
-                }}
+                title="New Board"
+                aria-label="New Board"
+                onClick={() => beginCreate('top', 'board')}
               >
                 <PlusIcon />
               </button>
@@ -367,12 +415,20 @@ export default function Sidebar(props: Props) {
                 className="icon-btn"
                 title="New Folder"
                 aria-label="New Folder"
-                onClick={() => {
-                  setCreateName('')
-                  setCreating({ catId: null, kind: 'folder' })
-                }}
+                onClick={() => beginCreate('top', 'folder')}
               >
                 <FolderPlusIcon />
+              </button>
+              <button
+                className="icon-btn"
+                title="New Category"
+                aria-label="New Category"
+                onClick={() => {
+                  setCatName('')
+                  setCreatingCat(true)
+                }}
+              >
+                <CategoryPlusIcon />
               </button>
             </div>
           </div>
@@ -385,7 +441,7 @@ export default function Sidebar(props: Props) {
               onDragLeave={() => setDropTarget((d) => (d === 'top' ? null : d))}
               onDrop={(e) => dropOnCat(e, null)}
             >
-              {creating?.catId === null && createInput(null)}
+              {createInput('top')}
               {topFolders.map(folderNode)}
               {topBoards.map(boardRow)}
               {topFolders.length === 0 && topBoards.length === 0 && !creating && (
@@ -475,9 +531,9 @@ export default function Sidebar(props: Props) {
                   )}
                   {isOpen && (
                     <div className="tree-children">
-                      {createInput(c.id)}
+                      {createInput('cat:' + c.id)}
                       {c.items.map(renderItem)}
-                      {c.items.length === 0 && creating?.catId !== c.id && (
+                      {c.items.length === 0 && creating?.target !== 'cat:' + c.id && (
                         <div className="tree-empty">Empty — use + or drag items here</div>
                       )}
                     </div>
@@ -524,21 +580,45 @@ export default function Sidebar(props: Props) {
             {
               label: 'New Folder',
               mnemonic: 'f',
-              onClick: () => {
-                setCreateName('')
-                setCreating({ catId: addMenu.catId, kind: 'folder' })
-              },
+              onClick: () => beginCreate('cat:' + addMenu.catId, 'folder'),
             },
             {
               label: 'New Board',
               mnemonic: 'b',
-              onClick: () => {
-                setCreateName('')
-                setCreating({ catId: addMenu.catId, kind: 'board' })
-              },
+              onClick: () => beginCreate('cat:' + addMenu.catId, 'board'),
             },
           ]}
           onClose={() => setAddMenu(null)}
+        />
+      )}
+
+      {folderMenu && (
+        <ContextMenu
+          x={folderMenu.x}
+          y={folderMenu.y}
+          items={[
+            {
+              label: 'New Board',
+              mnemonic: 'b',
+              onClick: () => beginCreate('folder:' + folderMenu.folder.id, 'board'),
+            },
+            { label: 'Share', mnemonic: 's', onClick: () => onShareFolder(folderMenu.folder) },
+            {
+              label: 'Rename',
+              mnemonic: 'r',
+              onClick: () => {
+                setEditingId(folderMenu.folder.id)
+                setEditName(folderMenu.folder.name)
+              },
+            },
+            {
+              label: 'Delete',
+              mnemonic: 'd',
+              danger: true,
+              onClick: () => onDeleteFolder(folderMenu.folder.id),
+            },
+          ]}
+          onClose={() => setFolderMenu(null)}
         />
       )}
     </>

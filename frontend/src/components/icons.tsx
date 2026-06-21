@@ -59,6 +59,20 @@ export function ShareIcon() {
   )
 }
 
+// Stacked lines + a plus = create a new category (section).
+export function CategoryPlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="6" x2="15" y2="6" />
+      <line x1="3" y1="12" x2="11" y2="12" />
+      <line x1="3" y1="18" x2="11" y2="18" />
+      <line x1="18" y1="13" x2="18" y2="21" />
+      <line x1="14" y1="17" x2="22" y2="17" />
+    </svg>
+  )
+}
+
 // Person-with-x = unshare / leave a shared board.
 export function UnshareIcon() {
   return (

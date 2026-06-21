@@ -254,6 +254,11 @@ function Workspace() {
     setActiveId(board.id)
     if (categoryId) fileItem(board.id, categoryId)
   }
+  async function createBoardInFolder(folderId: string, name: string) {
+    const board = await api.createBoard(name, undefined, folderId)
+    setBoards((b) => [board, ...b])
+    setActiveId(board.id)
+  }
   function renameFolder(id: string, name: string) {
     setFolders((fs) => fs.map((f) => (f.id === id ? { ...f, name } : f)))
     void api.renameFolder(id, name).catch(() => {})
@@ -472,6 +477,8 @@ function Workspace() {
           onSelectBoard={setActiveId}
           onRenameFolder={renameFolder}
           onDeleteFolder={deleteFolder}
+          onShareFolder={(f) => setShareTarget({ type: 'folder', id: f.id, name: f.name })}
+          onCreateBoardInFolder={createBoardInFolder}
           onMoveBoardToFolder={moveBoardToFolder}
           onShareBoard={(b) => setShareTarget({ type: 'board', id: b.id, name: b.name })}
           onRenameBoard={renameBoardById}
