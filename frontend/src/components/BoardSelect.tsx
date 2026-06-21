@@ -150,13 +150,9 @@ export default function BoardSelect({
                 setOpen(false)
               }}
             >
-              {b.shared ? (
-                <span className="board-select__lead" aria-hidden="true" />
-              ) : (
-                <span className="board-select__grip" aria-hidden="true">
-                  ⠿
-                </span>
-              )}
+              <span className="board-select__grip" aria-hidden="true">
+                ⠿
+              </span>
               <span className="board-select__name">{b.name}</span>
               {b.shared && (
                 <span

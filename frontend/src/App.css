@@ -3049,11 +3049,6 @@
   margin-left: 8px;
   max-width: 50%;
 }
-/* Empty leading slot on shared rows so names line up with grip'd owned rows. */
-.board-select__lead {
-  flex: none;
-  width: 13px;
-}
 .board-select__owner {
   flex: none;
   font-size: 11px;

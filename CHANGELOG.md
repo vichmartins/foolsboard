@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.48.4
+
+- Restored the drag grip on the left of shared board rows in the picker dropdown
+  (it now shows on every row), now that the presence dot moved to the right.
+
 ## v0.48.3
 
 - For a recipient, the board picker dropdown now shows the presence dot on the
