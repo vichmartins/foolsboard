@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.49.0
+
+- Explorer: boards you own and have shared out now collect into their own
+  **"Shared"** category (shown only when you have some), mirroring "Shared with
+  me". They're pulled out of their folders / Ungrouped while shared.
+
 ## v0.48.5
 
 - Unified the sharing indicator into a right-aligned **share mark** = presence dot

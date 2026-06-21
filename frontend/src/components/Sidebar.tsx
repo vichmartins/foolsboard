@@ -94,8 +94,12 @@ export default function Sidebar({
   // (like Ungrouped), and shared folders aren't shown as folders -- their boards
   // are flattened into "Shared with me".
   const ownedFolders = folders.filter((f) => !f.shared)
-  const boardsIn = (fid: string) => boards.filter((b) => b.folder_id === fid && !b.shared)
-  const ungrouped = boards.filter((b) => !b.folder_id && !b.shared)
+  // Boards I own and share out get their own "Shared" section (like "Shared with
+  // me"), so they're pulled out of folders + Ungrouped.
+  const boardsIn = (fid: string) =>
+    boards.filter((b) => b.folder_id === fid && !b.shared && !b.shared_out)
+  const ungrouped = boards.filter((b) => !b.folder_id && !b.shared && !b.shared_out)
+  const sharedOut = boards.filter((b) => b.shared_out)
   const sharedBoards = boards.filter((b) => b.shared)
 
   function submitCreate() {
@@ -349,6 +353,15 @@ export default function Sidebar({
               ungrouped.map(boardRow)
             )}
           </div>
+
+          {sharedOut.length > 0 && (
+            <>
+              <div className="tree-section tree-section--shared">Shared</div>
+              <div className="tree-children tree-children--root">
+                {sharedOut.map(boardRow)}
+              </div>
+            </>
+          )}
 
           {sharedBoards.length > 0 && (
             <>
