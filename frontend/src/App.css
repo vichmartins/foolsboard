@@ -1076,6 +1076,7 @@
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  z-index: 7; /* above the collaborator overlay (z-index 6) */
 }
 .react-flow__controls-button {
   background: var(--bg-elev);
@@ -1097,6 +1098,7 @@
   background-color: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: 8px;
+  z-index: 7; /* above the collaborator overlay so selections don't bleed over it */
 }
 .react-flow__minimap-mask {
   fill: var(--minimap-mask);

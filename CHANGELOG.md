@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.40.1
+
+- Edit-lock polish: a node someone else is editing is now also **non-selectable**,
+  so your highlight can't overlap their "editing" name tag.
+- Collaborator selection/edit outlines no longer **bleed over the minimap or
+  zoom controls** (raised those above the collaborator overlay).
+
 ## v0.40.0
 
 Collaborative edit locks (part 1 of the live-editing visibility work):

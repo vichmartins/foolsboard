@@ -1105,13 +1105,16 @@ function CanvasInner({
     })
   }, [nodes, edges, selectedId])
 
-  // A node another collaborator is editing can't be dragged (openPanel also
-  // blocks its editor). Identity is preserved when there are no locks.
+  // A node another collaborator is editing can't be dragged or selected (so my
+  // highlight never overlaps their "editing" tag; openPanel also blocks its
+  // editor). Identity is preserved when there are no locks.
   const displayNodes = useMemo(
     () =>
       Object.keys(editLocks).length === 0
         ? nodes
-        : nodes.map((n) => (editLocks[n.id] ? { ...n, draggable: false } : n)),
+        : nodes.map((n) =>
+            editLocks[n.id] ? { ...n, draggable: false, selectable: false } : n,
+          ),
     [nodes, editLocks],
   )
 
