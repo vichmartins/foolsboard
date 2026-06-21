@@ -28,7 +28,7 @@ interface Props {
   folders: Folder[]
   onPickNode: (id: string) => void
   onPickEdge: (source: string, target: string) => void
-  onOpenBoard: (boardId: string) => void
+  onOpenBoard: (boardId: string, nodeId?: string) => void
   onClose: () => void
 }
 
@@ -186,11 +186,12 @@ export default function NodeGallery({
           : shownConns.length
   const mediaAssets = shownMedia.map((m) => m.a)
 
-  // Jump within the current board; otherwise open the item's board.
+  // Jump within the current board; otherwise open the item's board, targeting
+  // the picked node (the source node, for a connection) so it pans there.
   const pickNode = (bid: string, nodeId: string) =>
-    bid === boardId ? onPickNode(nodeId) : onOpenBoard(bid)
+    bid === boardId ? onPickNode(nodeId) : onOpenBoard(bid, nodeId)
   const pickEdge = (bid: string, s: string, t: string) =>
-    bid === boardId ? onPickEdge(s, t) : onOpenBoard(bid)
+    bid === boardId ? onPickEdge(s, t) : onOpenBoard(bid, s)
 
   const scopeOptions = useMemo(() => {
     const opts = [{ value: 'all', label: 'All boards' }]

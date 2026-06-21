@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.34.1
+
+- Picking a Gallery result that lives on another board now pans straight to that
+  node (selecting it and opening its panel) after switching boards, instead of
+  just opening the board. Connections frame their source node.
+
 ## v0.34.0
 
 - The Gallery is now workspace-wide. A scope selector switches between "All

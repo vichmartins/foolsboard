@@ -67,6 +67,10 @@ function Workspace() {
   useEffect(() => {
     localStorage.setItem('foolsboard:sidebar', sidebarOpen ? '1' : '0')
   }, [sidebarOpen])
+  // A node to pan to after switching boards (from the workspace-wide Gallery).
+  const [pendingFocus, setPendingFocus] = useState<{ boardId: string; nodeId: string } | null>(
+    null,
+  )
 
   // Load boards; bootstrap a first board if the workspace is empty. Restore the
   // board the user last had open (falling back to the first).
@@ -367,7 +371,14 @@ function Workspace() {
             onMoveSelection={(ids) => setMoveIds(ids)}
             boards={boards}
             folders={folders}
-            onOpenBoard={setActiveId}
+            onOpenBoard={(bid, nid) => {
+              setActiveId(bid)
+              setPendingFocus(nid ? { boardId: bid, nodeId: nid } : null)
+            }}
+            focusNodeId={
+              pendingFocus && pendingFocus.boardId === activeId ? pendingFocus.nodeId : null
+            }
+            onFocusHandled={() => setPendingFocus(null)}
           />
         ) : (
           <div className="loading">Loading…</div>

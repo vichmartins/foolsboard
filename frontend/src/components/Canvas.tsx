@@ -71,7 +71,11 @@ interface CanvasProps {
   // Workspace context for the (workspace-wide) Gallery.
   boards?: Board[]
   folders?: Folder[]
-  onOpenBoard?: (boardId: string) => void
+  onOpenBoard?: (boardId: string, nodeId?: string) => void
+  // When this board is opened targeting a specific node (e.g. from the Gallery
+  // on another board), pan to it once loaded, then call onFocusHandled.
+  focusNodeId?: string | null
+  onFocusHandled?: () => void
 }
 
 const PASTE_OFFSET = 48 // px nudge when pasting/duplicating within the same board
@@ -136,6 +140,8 @@ function CanvasInner({
   boards = [],
   folders = [],
   onOpenBoard,
+  focusNodeId,
+  onFocusHandled,
 }: CanvasProps) {
   const { screenToFlowPosition, getNodes, getEdges, getZoom, setCenter, fitView } =
     useReactFlow()
@@ -938,6 +944,19 @@ function CanvasInner({
     [fitView, selectNodes],
   )
 
+  // Opened to a specific node (e.g. picked in the workspace-wide Gallery while on
+  // another board): once this board's graph has loaded, pan to that node. The
+  // short delay lets React Flow measure nodes and run its initial fitView first,
+  // so this centering wins.
+  useEffect(() => {
+    if (!focusNodeId || !getNodes().some((n) => n.id === focusNodeId)) return
+    const t = window.setTimeout(() => {
+      focusNode(focusNodeId)
+      onFocusHandled?.()
+    }, 240)
+    return () => window.clearTimeout(t)
+  }, [focusNodeId, nodes, getNodes, focusNode, onFocusHandled])
+
   // Esc cascade: the gallery drawer (handled in ContextPanel, which stops the
   // event) takes priority; otherwise close the open panel; otherwise clear any
   // node selection.
@@ -1137,8 +1156,8 @@ function CanvasInner({
             focusEdge(s, t)
             onCloseGallery?.()
           }}
-          onOpenBoard={(bid) => {
-            onOpenBoard?.(bid)
+          onOpenBoard={(bid, nid) => {
+            onOpenBoard?.(bid, nid)
             onCloseGallery?.()
           }}
           onClose={() => onCloseGallery?.()}
