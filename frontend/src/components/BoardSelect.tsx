@@ -3,8 +3,8 @@
 // dragged to reorder the board list, which is persisted per user.
 import { useEffect, useRef, useState } from 'react'
 import type { Board } from '../types'
-import { realtime, useGlobalPresence } from '../realtime'
-import OwnerIcon from './OwnerIcon'
+import { useGlobalPresence } from '../realtime'
+import ShareMark from './ShareMark'
 
 interface Props {
   boards: Board[]
@@ -103,26 +103,14 @@ export default function BoardSelect({
         <span className="board-select__current">
           {active?.name ?? activeName ?? 'Select board'}
         </span>
-        {activeSharedOut ? (
-          <span className="pick-owner">
-            <OwnerIcon className="owner-crown" />
-            {activeId && (
-              <span
-                className={'pick-dot pick-dot--' + realtime.boardStatus(activeId, activeMemberIds)}
-              />
-            )}
-          </span>
-        ) : activeShared ? (
-          <span className="pick-owner" title={`Shared by ${activeOwnerName ?? 'someone'}`}>
-            <span
-              className={
-                'pick-dot pick-dot--' +
-                (activeId ? realtime.boardStatus(activeId, activeMemberIds) : 'offline')
-              }
-            />
-            {activeOwnerName && <span className="pick-owner__name">{activeOwnerName}</span>}
-          </span>
-        ) : null}
+        {(activeSharedOut || activeShared) && activeId && (
+          <ShareMark
+            boardId={activeId}
+            memberIds={activeMemberIds}
+            owner={!!activeSharedOut}
+            title={activeShared ? `Shared by ${activeOwnerName ?? 'someone'}` : 'Shared with others'}
+          />
+        )}
         <span className={'board-select__chevron' + (open ? ' board-select__chevron--open' : '')}>
           ▾
         </span>
@@ -154,25 +142,13 @@ export default function BoardSelect({
                 ⠿
               </span>
               <span className="board-select__name">{b.name}</span>
-              {b.shared && (
-                <span
-                  className="board-select__sharedby"
-                  title={`Shared by ${b.owner_name ?? 'someone'}`}
-                >
-                  <span
-                    className={'board-select__dot board-select__dot--' + realtime.boardStatus(b.id, b.member_ids)}
-                    aria-hidden="true"
-                  />
-                  {b.owner_name && <span className="board-select__owner">{b.owner_name}</span>}
-                </span>
-              )}
-              {b.shared_out && (
-                <span className="board-select__ownermark">
-                  <OwnerIcon className="owner-crown" />
-                  <span
-                    className={'board-select__dot board-select__dot--' + realtime.boardStatus(b.id, b.member_ids)}
-                  />
-                </span>
+              {(b.shared || b.shared_out) && (
+                <ShareMark
+                  boardId={b.id}
+                  memberIds={b.member_ids}
+                  owner={!!b.shared_out}
+                  title={b.shared ? `Shared by ${b.owner_name ?? 'someone'}` : 'Shared with others'}
+                />
               )}
             </button>
           </li>

@@ -4,8 +4,9 @@
 // folders inline. Reuses the workspace's existing folder/board handlers.
 import { useState } from 'react'
 import type { Board, Folder } from '../types'
-import { realtime, useGlobalPresence } from '../realtime'
+import { useGlobalPresence } from '../realtime'
 import ContextMenu from './ContextMenu'
+import ShareMark from './ShareMark'
 import {
   ChevronIcon,
   FolderIcon,
@@ -19,12 +20,6 @@ import {
 
 const BOARD_DND = 'application/x-foolsboard-board'
 const EXPANDED_KEY = 'foolsboard:sidebar-expanded'
-
-function presenceTitle(status: 'here' | 'away' | 'offline'): string {
-  if (status === 'here') return 'A collaborator is on this board'
-  if (status === 'away') return 'A collaborator is online (on another board)'
-  return 'No collaborators online'
-}
 
 interface Props {
   open: boolean
@@ -174,22 +169,15 @@ export default function Sidebar({
           onClick={() => onSelectBoard(b.id)}
           title={b.name}
         >
-          {b.shared || b.shared_out ? (
-            (() => {
-              const status = realtime.boardStatus(b.id, b.member_ids)
-              return (
-                <span
-                  className={'tree-board__dot tree-board__dot--shared tree-board__dot--' + status}
-                  title={presenceTitle(status)}
-                />
-              )
-            })()
-          ) : (
-            <span className="tree-board__dot" aria-hidden="true" />
-          )}
+          <span className="tree-board__dot" aria-hidden="true" />
           <span className="tree-board__name">{b.name}</span>
-          {b.shared && b.owner_name && (
-            <span className="tree-board__owner">{b.owner_name}</span>
+          {(b.shared || b.shared_out) && (
+            <ShareMark
+              boardId={b.id}
+              memberIds={b.member_ids}
+              owner={!!b.shared_out}
+              title={b.shared ? `Shared by ${b.owner_name ?? 'someone'}` : 'Shared with others'}
+            />
           )}
         </button>
         {!b.shared && (

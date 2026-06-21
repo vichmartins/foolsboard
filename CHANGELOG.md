@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.48.5
+
+- Unified the sharing indicator into a right-aligned **share mark** = presence dot
+  + two-person icon, used in the board picker (pill + dropdown) and the file
+  explorer:
+  - **Owner** (shared out): accent/purple icon, with the dot now *before* the
+    icon (flipped).
+  - **Recipient** (shared with you): the same icon in **grey**, replacing the
+    owner's name (owner still shown on hover).
+
 ## v0.48.4
 
 - Restored the drag grip on the left of shared board rows in the picker dropdown

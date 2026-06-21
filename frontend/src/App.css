@@ -3005,11 +3005,45 @@
     box-shadow: 0 0 6px 1px rgba(20, 184, 166, 1);
   }
 }
-/* Owner mark: a board/folder you own and have shared out (two-person icon). On
-   boards it sits beside a presence dot (here/away/offline). */
+
+/* Right-aligned share mark: presence dot + two-person icon. */
+.share-mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 8px;
+}
+.presence-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #14b8a6;
+  transition: background 0.4s ease, opacity 0.4s ease, box-shadow 0.4s ease;
+}
+.presence-dot--here {
+  background: #14b8a6;
+  opacity: 1;
+  animation: dot-presence-pulse 2.2s ease-in-out infinite;
+}
+.presence-dot--away {
+  background: #14b8a6;
+  opacity: 0.4;
+}
+.presence-dot--offline {
+  background: var(--text-dim);
+  opacity: 0.5;
+}
+
+/* Owner mark: a board/folder you own and have shared out (two-person icon),
+   accent-coloured; grey (--recipient) when the board is shared with you. */
 .owner-crown {
   flex: none;
   color: var(--accent);
+}
+.owner-crown--recipient {
+  color: var(--text-dim);
 }
 .board-select__ownermark {
   flex: none;
