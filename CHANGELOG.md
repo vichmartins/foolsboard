@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.46.0
+
+- **Shared-board dots now show the owner's live presence.** In the explorer and
+  the board picker, a shared board's dot is **lit (with a glow)** when its owner
+  is on that board, **dimmed** when they're online but on another board, and
+  **dark/grey** when they're offline. Hover for "<owner> is on this board /
+  online (another board) / offline".
+- Backend broadcasts a lightweight global presence roster (who's online + which
+  board) to all clients; boards now expose `owner_id`. Single-process only (a
+  multi-worker deploy would need external pub/sub).
+
 ## v0.45.1
 
 - Replaced the owner crown with a two-person "users" icon (Feather outline style,

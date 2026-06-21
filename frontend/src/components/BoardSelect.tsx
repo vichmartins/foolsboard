@@ -3,6 +3,7 @@
 // dragged to reorder the board list, which is persisted per user.
 import { useEffect, useRef, useState } from 'react'
 import type { Board } from '../types'
+import { realtime, useGlobalPresence } from '../realtime'
 import OwnerIcon from './OwnerIcon'
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
   activeShared?: boolean // active board is shared with me
   activeSharedOut?: boolean // I own the active board and have shared it out
   activeOwnerName?: string | null // who owns the active board, when shared with me
+  activeOwnerId?: string | null // owner of the active board, for the presence dot
   onSelect: (id: string) => void
   onReorder: (orderedIds: string[]) => void
 }
@@ -25,9 +27,11 @@ export default function BoardSelect({
   activeShared,
   activeSharedOut,
   activeOwnerName,
+  activeOwnerId,
   onSelect,
   onReorder,
 }: Props) {
+  useGlobalPresence() // re-render presence dots on collaborator move/leave
   const [open, setOpen] = useState(false)
   // Local copy so rows can shuffle live during a drag; resynced from props when
   // not dragging.
@@ -103,7 +107,12 @@ export default function BoardSelect({
           <OwnerIcon className="owner-crown" />
         ) : activeShared ? (
           <span className="pick-owner" title={`Shared by ${activeOwnerName ?? 'someone'}`}>
-            <span className="pick-dot" />
+            <span
+              className={
+                'pick-dot pick-dot--' +
+                (activeId ? realtime.ownerStatus(activeId, activeOwnerId) : 'offline')
+              }
+            />
             {activeOwnerName && <span className="pick-owner__name">{activeOwnerName}</span>}
           </span>
         ) : null}
@@ -136,7 +145,7 @@ export default function BoardSelect({
             >
               {b.shared ? (
                 <span
-                  className="board-select__dot"
+                  className={'board-select__dot board-select__dot--' + realtime.ownerStatus(b.id, b.owner_id)}
                   title={`Shared by ${b.owner_name ?? 'someone'}`}
                   aria-hidden="true"
                 />

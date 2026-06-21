@@ -70,6 +70,7 @@ class BoardOut(ORMModel):
     name: str
     description: str | None
     folder_id: UUID | None = None
+    owner_id: UUID | None = None
     # True when this board was shared with the caller (not owned by them).
     shared: bool = False
     # True when the caller owns this board and has shared it out (crown badge).

@@ -62,6 +62,7 @@ class Hub:
         )
         async with self._lock:
             self._conns.add(conn)
+        await self.broadcast_global()
         return conn
 
     async def unregister(self, conn: Conn) -> None:
@@ -69,6 +70,7 @@ class Hub:
             self._conns.discard(conn)
         if conn.board_id is not None:
             await self.broadcast_presence(conn.board_id)
+        await self.broadcast_global()
 
     async def set_board(self, conn: Conn, board_id: UUID | None) -> None:
         old = conn.board_id
@@ -79,6 +81,22 @@ class Hub:
             await self.broadcast_presence(old)
         if board_id is not None:
             await self.broadcast_presence(board_id)
+        await self.broadcast_global()
+
+    def _global_roster(self) -> dict[str, list[str]]:
+        """Every online user -> the board(s) they're currently viewing (may be
+        empty). Lets clients show a presence dot per shared board (here / away /
+        offline). Single-process only; a multi-worker deploy would need pub/sub."""
+        roster: dict[str, list[str]] = {}
+        for c in self._conns:
+            boards = roster.setdefault(str(c.user_id), [])
+            if c.board_id is not None and str(c.board_id) not in boards:
+                boards.append(str(c.board_id))
+        return roster
+
+    async def broadcast_global(self) -> None:
+        msg = {"type": "global_presence", "users": self._global_roster()}
+        await self._send_many(list(self._conns), msg)
 
     def _members(self, board_id: UUID) -> list[dict]:
         """Distinct users currently viewing the board (a user may have several

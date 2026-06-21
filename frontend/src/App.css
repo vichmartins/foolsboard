@@ -2967,6 +2967,29 @@
   width: 7px;
   height: 7px;
 }
+/* Shared-board presence dot — the owner is on this board (here, lit), online
+   elsewhere (away, dimmed), or offline (dark). */
+.tree-board__dot--here,
+.board-select__dot--here,
+.pick-dot--here {
+  background: #14b8a6;
+  opacity: 1;
+  box-shadow: 0 0 5px 0 rgba(20, 184, 166, 0.9);
+}
+.tree-board__dot--away,
+.board-select__dot--away,
+.pick-dot--away {
+  background: #14b8a6;
+  opacity: 0.4;
+  box-shadow: none;
+}
+.tree-board__dot--offline,
+.board-select__dot--offline,
+.pick-dot--offline {
+  background: var(--text-dim);
+  opacity: 0.5;
+  box-shadow: none;
+}
 /* Owner mark: a board/folder you own and have shared out (two-person icon). */
 .owner-crown {
   flex: none;

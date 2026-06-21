@@ -78,6 +78,10 @@ class Realtime {
   // Edit-lock changes -- a low-frequency channel (separate from cursors) so the
   // canvas re-renders on lock changes without churning on every cursor move.
   private editListeners = new Set<() => void>()
+  // Global presence: which board(s) each online user is viewing, for the
+  // here/away/offline dots on shared boards in the explorer + picker.
+  private globalPresence: Record<string, string[]> = {}
+  private globalListeners = new Set<() => void>()
 
   start() {
     this.wantOpen = true
@@ -100,9 +104,11 @@ class Realtime {
     this.selections = {}
     this.uploads = {}
     this.editing = {}
+    this.globalPresence = {}
     this.emitPresence()
     this.emitCollab()
     this.emitEdit()
+    this.globalListeners.forEach((l) => l())
   }
 
   private connect() {
@@ -137,6 +143,12 @@ class Realtime {
 
     if (msg.type === 'share') {
       this.shareListeners.forEach((l) => l(msg))
+      return
+    }
+
+    if (msg.type === 'global_presence') {
+      this.globalPresence = msg.users ?? {}
+      this.globalListeners.forEach((l) => l())
       return
     }
 
@@ -343,6 +355,15 @@ class Realtime {
     return Object.values(this.uploads[boardId] ?? {})
   }
 
+  // The owner's live presence for a shared board's dot: on this board ('here'),
+  // online elsewhere ('away'), or offline ('offline').
+  ownerStatus(boardId: string, ownerId: string | null | undefined): 'here' | 'away' | 'offline' {
+    if (!ownerId) return 'offline'
+    const boards = this.globalPresence[ownerId]
+    if (!boards) return 'offline'
+    return boards.includes(boardId) ? 'here' : 'away'
+  }
+
   // Other collaborators on the board + what each is doing (uploading > editing >
   // idle), with display colors resolved. Excludes me.
   activityFor(boardId: string | null): MemberActivity[] {
@@ -389,6 +410,12 @@ class Realtime {
       this.editListeners.delete(fn)
     }
   }
+  subscribeGlobal(fn: () => void) {
+    this.globalListeners.add(fn)
+    return () => {
+      this.globalListeners.delete(fn)
+    }
+  }
   private emitEdit() {
     this.editListeners.forEach((l) => l())
   }
@@ -430,6 +457,14 @@ export function useBoardUploads(boardId: string | null): BoardUpload[] {
   const [, force] = useState(0)
   useEffect(() => realtime.subscribePresence(() => force((n) => n + 1)), [])
   return realtime.uploadsFor(boardId)
+}
+
+// Re-renders when anyone's online location changes, so shared-board presence
+// dots (here/away/offline) stay current. Read status via realtime.ownerStatus().
+export function useGlobalPresence(): number {
+  const [tick, setTick] = useState(0)
+  useEffect(() => realtime.subscribeGlobal(() => setTick((n) => n + 1)), [])
+  return tick
 }
 
 // Other collaborators on the board + what each is currently doing. Updates on

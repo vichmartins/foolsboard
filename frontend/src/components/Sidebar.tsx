@@ -4,6 +4,7 @@
 // folders inline. Reuses the workspace's existing folder/board handlers.
 import { useState } from 'react'
 import type { Board, Folder } from '../types'
+import { realtime, useGlobalPresence } from '../realtime'
 import ContextMenu from './ContextMenu'
 import {
   ChevronIcon,
@@ -18,6 +19,13 @@ import {
 
 const BOARD_DND = 'application/x-foolsboard-board'
 const EXPANDED_KEY = 'foolsboard:sidebar-expanded'
+
+function presenceTitle(status: 'here' | 'away' | 'offline', ownerName: string | null): string {
+  const who = ownerName ?? 'The owner'
+  if (status === 'here') return `${who} is on this board`
+  if (status === 'away') return `${who} is online (on another board)`
+  return `${who} is offline`
+}
 
 interface Props {
   open: boolean
@@ -72,6 +80,7 @@ export default function Sidebar({
   const [dropTarget, setDropTarget] = useState<string | null>(null) // folder id or 'root'
   // Right-click menu for a board row.
   const [menu, setMenu] = useState<{ x: number; y: number; board: Board } | null>(null)
+  useGlobalPresence() // re-render the presence dots when anyone moves/leaves
 
   function startRenameBoard(b: Board) {
     setEditingBoardId(b.id)
@@ -166,10 +175,19 @@ export default function Sidebar({
           onClick={() => onSelectBoard(b.id)}
           title={b.name}
         >
-          <span
-            className={'tree-board__dot' + (b.shared ? ' tree-board__dot--shared' : '')}
-            aria-hidden="true"
-          />
+          {b.shared ? (
+            (() => {
+              const status = realtime.ownerStatus(b.id, b.owner_id)
+              return (
+                <span
+                  className={'tree-board__dot tree-board__dot--shared tree-board__dot--' + status}
+                  title={presenceTitle(status, b.owner_name)}
+                />
+              )
+            })()
+          ) : (
+            <span className="tree-board__dot" aria-hidden="true" />
+          )}
           <span className="tree-board__name">{b.name}</span>
           {b.shared && b.owner_name && (
             <span className="tree-board__owner">{b.owner_name}</span>
