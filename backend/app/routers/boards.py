@@ -145,8 +145,39 @@ def list_boards(
             )
         )
     )
+    result = [*owned, *shared]
+    # Accepted collaborators per board (owner + sharees, shared directly or via a
+    # folder) -> used for the live presence dots.
+    members: dict = {b.id: {b.owner_id} for b in result}
+    boards_by_folder: dict = {}
+    for b in result:
+        if b.folder_id is not None:
+            boards_by_folder.setdefault(b.folder_id, []).append(b.id)
+    conds = []
+    if result:
+        conds.append(Share.board_id.in_([b.id for b in result]))
+    if boards_by_folder:
+        conds.append(Share.folder_id.in_(list(boards_by_folder)))
+    if conds:
+        rows = db.execute(
+            select(Share.board_id, Share.folder_id, Share.shared_with_id).where(
+                Share.status == "accepted", or_(*conds)
+            )
+        ).all()
+        for board_id, folder_id, uid in rows:
+            if board_id is not None and board_id in members:
+                members[board_id].add(uid)
+            elif folder_id is not None:
+                for bid in boards_by_folder.get(folder_id, []):
+                    members[bid].add(uid)
+
     owner_names: dict = {}
-    return [_board_out(b, user, db, owner_names, shared_out_ids) for b in [*owned, *shared]]
+    outs = []
+    for b in result:
+        item = _board_out(b, user, db, owner_names, shared_out_ids)
+        item.member_ids = list(members.get(b.id, {b.owner_id}))
+        outs.append(item)
+    return outs
 
 
 @router.get("/gallery", response_model=GalleryOut)

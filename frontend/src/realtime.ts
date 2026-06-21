@@ -355,13 +355,14 @@ class Realtime {
     return Object.values(this.uploads[boardId] ?? {})
   }
 
-  // The owner's live presence for a shared board's dot: on this board ('here'),
-  // online elsewhere ('away'), or offline ('offline').
-  ownerStatus(boardId: string, ownerId: string | null | undefined): 'here' | 'away' | 'offline' {
-    if (!ownerId) return 'offline'
-    const boards = this.globalPresence[ownerId]
-    if (!boards) return 'offline'
-    return boards.includes(boardId) ? 'here' : 'away'
+  // Collaborator presence for a board's dot, from my perspective (excluding me):
+  // someone is on this board ('here'), a collaborator is online elsewhere
+  // ('away'), or none are online ('offline').
+  boardStatus(boardId: string, memberIds: string[] | undefined): 'here' | 'away' | 'offline' {
+    const others = (memberIds ?? []).filter((id) => id !== this.self?.id)
+    if (!others.length) return 'offline'
+    if (others.some((id) => this.globalPresence[id]?.includes(boardId))) return 'here'
+    return others.some((id) => this.globalPresence[id]) ? 'away' : 'offline'
   }
 
   // Other collaborators on the board + what each is doing (uploading > editing >
@@ -460,7 +461,7 @@ export function useBoardUploads(boardId: string | null): BoardUpload[] {
 }
 
 // Re-renders when anyone's online location changes, so shared-board presence
-// dots (here/away/offline) stay current. Read status via realtime.ownerStatus().
+// dots (here/away/offline) stay current. Read status via realtime.boardStatus().
 export function useGlobalPresence(): number {
   const [tick, setTick] = useState(0)
   useEffect(() => realtime.subscribeGlobal(() => setTick((n) => n + 1)), [])

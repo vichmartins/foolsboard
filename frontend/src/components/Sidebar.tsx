@@ -20,11 +20,10 @@ import {
 const BOARD_DND = 'application/x-foolsboard-board'
 const EXPANDED_KEY = 'foolsboard:sidebar-expanded'
 
-function presenceTitle(status: 'here' | 'away' | 'offline', ownerName: string | null): string {
-  const who = ownerName ?? 'The owner'
-  if (status === 'here') return `${who} is on this board`
-  if (status === 'away') return `${who} is online (on another board)`
-  return `${who} is offline`
+function presenceTitle(status: 'here' | 'away' | 'offline'): string {
+  if (status === 'here') return 'A collaborator is on this board'
+  if (status === 'away') return 'A collaborator is online (on another board)'
+  return 'No collaborators online'
 }
 
 interface Props {
@@ -175,13 +174,13 @@ export default function Sidebar({
           onClick={() => onSelectBoard(b.id)}
           title={b.name}
         >
-          {b.shared ? (
+          {b.shared || b.shared_out ? (
             (() => {
-              const status = realtime.ownerStatus(b.id, b.owner_id)
+              const status = realtime.boardStatus(b.id, b.member_ids)
               return (
                 <span
                   className={'tree-board__dot tree-board__dot--shared tree-board__dot--' + status}
-                  title={presenceTitle(status, b.owner_name)}
+                  title={presenceTitle(status)}
                 />
               )
             })()

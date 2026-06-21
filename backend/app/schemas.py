@@ -75,6 +75,8 @@ class BoardOut(ORMModel):
     shared: bool = False
     # True when the caller owns this board and has shared it out (crown badge).
     shared_out: bool = False
+    # Everyone with access (owner + accepted collaborators), for presence dots.
+    member_ids: list[UUID] = []
     owner_name: str | None = None
     created_at: datetime
     updated_at: datetime

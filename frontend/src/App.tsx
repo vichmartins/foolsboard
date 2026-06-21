@@ -289,7 +289,7 @@ function Workspace() {
           activeShared={activeBoard?.shared}
           activeSharedOut={activeBoard?.shared_out}
           activeOwnerName={activeBoard?.owner_name}
-          activeOwnerId={activeBoard?.owner_id}
+          activeMemberIds={activeBoard?.member_ids}
           onSelect={setActiveId}
           onReorder={(ids) => {
             setBoards((bs) =>

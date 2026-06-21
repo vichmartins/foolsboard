@@ -6,6 +6,7 @@ export interface Board {
   description: string | null
   folder_id: string | null
   owner_id: string | null
+  member_ids?: string[] // everyone with access (owner + accepted collaborators)
   shared: boolean // shared with me (not owned by me)
   shared_out?: boolean // I own it and have shared it out (crown badge)
   owner_name: string | null

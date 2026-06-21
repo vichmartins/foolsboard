@@ -13,7 +13,7 @@ interface Props {
   activeShared?: boolean // active board is shared with me
   activeSharedOut?: boolean // I own the active board and have shared it out
   activeOwnerName?: string | null // who owns the active board, when shared with me
-  activeOwnerId?: string | null // owner of the active board, for the presence dot
+  activeMemberIds?: string[] // collaborators on the active board, for the presence dot
   onSelect: (id: string) => void
   onReorder: (orderedIds: string[]) => void
 }
@@ -27,7 +27,7 @@ export default function BoardSelect({
   activeShared,
   activeSharedOut,
   activeOwnerName,
-  activeOwnerId,
+  activeMemberIds,
   onSelect,
   onReorder,
 }: Props) {
@@ -104,13 +104,18 @@ export default function BoardSelect({
           {active?.name ?? activeName ?? 'Select board'}
         </span>
         {activeSharedOut ? (
-          <OwnerIcon className="owner-crown" />
+          <OwnerIcon
+            className={
+              'owner-crown owner-crown--' +
+              (activeId ? realtime.boardStatus(activeId, activeMemberIds) : 'offline')
+            }
+          />
         ) : activeShared ? (
           <span className="pick-owner" title={`Shared by ${activeOwnerName ?? 'someone'}`}>
             <span
               className={
                 'pick-dot pick-dot--' +
-                (activeId ? realtime.ownerStatus(activeId, activeOwnerId) : 'offline')
+                (activeId ? realtime.boardStatus(activeId, activeMemberIds) : 'offline')
               }
             />
             {activeOwnerName && <span className="pick-owner__name">{activeOwnerName}</span>}
@@ -145,12 +150,12 @@ export default function BoardSelect({
             >
               {b.shared ? (
                 <span
-                  className={'board-select__dot board-select__dot--' + realtime.ownerStatus(b.id, b.owner_id)}
+                  className={'board-select__dot board-select__dot--' + realtime.boardStatus(b.id, b.member_ids)}
                   title={`Shared by ${b.owner_name ?? 'someone'}`}
                   aria-hidden="true"
                 />
               ) : b.shared_out ? (
-                <OwnerIcon className="owner-crown" />
+                <OwnerIcon className={'owner-crown owner-crown--' + realtime.boardStatus(b.id, b.member_ids)} />
               ) : (
                 <span className="board-select__grip" aria-hidden="true">
                   ⠿

@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.48.0
+
+- **Presence dots now reflect *any* collaborator, not just the owner.** A shared
+  board's dot is lit when **anyone** (owner or another sharee) is on that board,
+  dimmed when a collaborator is online elsewhere, and dark when none are online —
+  so it no longer reads "empty" while two sharees are actively collaborating.
+- **Works on the owner's side too:** the two-person owner mark on your shared-out
+  boards now pulses/dims/greys with that same presence.
+- Backend exposes each board's `member_ids` (owner + accepted collaborators,
+  including via shared folders) to drive it.
+
 ## v0.47.0
 
 - **Search boxes now support regular expressions.** The node drawer search, the
