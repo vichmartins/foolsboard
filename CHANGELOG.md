@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.33.2
+
+- Shortened the top-bar button labels/tooltips to: Rename, Create, Move, Merge,
+  Share, Delete, Gallery, Import/Export.
+
 ## v0.33.1
 
 - Keep the logo pinned to the far left of the top bar; the Explorer toggle now

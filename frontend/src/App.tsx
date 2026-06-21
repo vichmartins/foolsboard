@@ -240,8 +240,8 @@ function Workspace() {
         <div className="board-actions">
           <button
             className="icon-btn"
-            title="Rename Board"
-            aria-label="Rename Board"
+            title="Rename"
+            aria-label="Rename"
             onClick={() => setDialog('rename')}
             disabled={!activeBoard}
           >
@@ -250,15 +250,15 @@ function Workspace() {
           <button
             className="icon-btn"
             onClick={() => setDialog('new')}
-            title="New Board"
-            aria-label="New Board"
+            title="Create"
+            aria-label="Create"
           >
             <PlusIcon />
           </button>
           <button
             className="icon-btn"
-            title="Move Board to a Folder"
-            aria-label="Move Board to a Folder"
+            title="Move"
+            aria-label="Move"
             onClick={() => activeBoard && setMoveFolderBoard(activeBoard)}
             disabled={!activeBoard}
           >
@@ -268,15 +268,15 @@ function Workspace() {
             className="icon-btn"
             onClick={() => setDialog('merge')}
             disabled={boards.length < 2}
-            title="Merge Other Boards Into This One"
-            aria-label="Merge Boards"
+            title="Merge"
+            aria-label="Merge"
           >
             <MergeIcon />
           </button>
           <button
             className="icon-btn"
-            title={activeBoard?.shared ? 'Only the owner can share' : 'Share Board'}
-            aria-label="Share Board"
+            title={activeBoard?.shared ? 'Only the owner can share' : 'Share'}
+            aria-label="Share"
             onClick={() =>
               activeBoard &&
               setShareTarget({ type: 'board', id: activeBoard.id, name: activeBoard.name })
@@ -297,8 +297,8 @@ function Workspace() {
           )}
           <button
             className="icon-btn icon-btn--danger"
-            title="Delete Board"
-            aria-label="Delete Board"
+            title="Delete"
+            aria-label="Delete"
             onClick={() => setDialog('delete')}
             disabled={!activeBoard}
           >
@@ -308,8 +308,8 @@ function Workspace() {
           <button
             className="icon-btn"
             onClick={() => setGalleryOpen(true)}
-            title="Gallery — Browse All Items on This Board"
-            aria-label="Open Gallery"
+            title="Gallery"
+            aria-label="Gallery"
             disabled={!activeBoard}
           >
             <GalleryIcon />
@@ -317,8 +317,8 @@ function Workspace() {
           <button
             className="icon-btn"
             onClick={() => setImpexOpen(true)}
-            title="Import or Export Boards"
-            aria-label="Import or Export Boards"
+            title="Import/Export"
+            aria-label="Import/Export"
           >
             <TransferIcon />
           </button>
