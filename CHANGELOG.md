@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.44.2
+
+- The shift-drag selection box (and its minimap mirror) now uses your chosen
+  highlight color instead of a fixed indigo.
+
 ## v0.44.1
 
 - Reworked the highlight-color picker per feedback:

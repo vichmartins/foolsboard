@@ -46,6 +46,8 @@ import {
   type StoryNode,
 } from '../types'
 import { realtime, useBoardEditLocks } from '../realtime'
+import { useAuth } from '../auth'
+import { collabColor } from '../collab'
 import CollabLayer from './CollabLayer'
 import ConfirmDialog from './ConfirmDialog'
 import ContextMenu from './ContextMenu'
@@ -207,6 +209,10 @@ function CanvasInner({
   const editLocks = useBoardEditLocks(boardId)
   const editLocksRef = useRef(editLocks)
   editLocksRef.current = editLocks
+  // My highlight color, used for the shift-drag selection box (and its minimap
+  // mirror) via the --me-color CSS variable on the canvas.
+  const { user } = useAuth()
+  const myColor = user?.color ?? (user ? collabColor(user.id) : '#6366f1')
   // Brief notice shown when I try to open a node someone else is editing.
   const [lockMsg, setLockMsg] = useState<string | null>(null)
   const lockMsgTimer = useRef<number | null>(null)
@@ -1121,7 +1127,11 @@ function CanvasInner({
   // Every item + connection on the board, for the gallery.
   return (
     <BoardIdContext.Provider value={boardId}>
-    <div className="canvas-wrap" onPointerMove={broadcastCursor}>
+    <div
+      className="canvas-wrap"
+      style={{ '--me-color': myColor } as React.CSSProperties}
+      onPointerMove={broadcastCursor}
+    >
       <ReactFlow
         nodes={displayNodes}
         edges={edges}

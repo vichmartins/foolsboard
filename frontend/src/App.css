@@ -1120,18 +1120,19 @@
   pointer-events: none;
 }
 .minimap-selection rect {
-  fill: rgba(99, 102, 241, 0.2);
-  stroke: var(--accent);
+  fill: var(--me-color, #6366f1);
+  fill-opacity: 0.2;
+  stroke: var(--me-color, #6366f1);
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
 
-/* Shift-drag selection box + the bounding box around selected nodes —
-   themed to the accent, a touch brighter than the default blue. */
+/* Shift-drag selection box + the bounding box around selected nodes — drawn in
+   the user's own highlight color (--me-color, set on the canvas). */
 .react-flow__selection,
 .react-flow__nodesselection-rect {
-  background: rgba(99, 102, 241, 0.14);
-  border: 1px solid rgba(99, 102, 241, 0.7);
+  background: color-mix(in srgb, var(--me-color, #6366f1) 14%, transparent);
+  border: 1px solid var(--me-color, #6366f1);
 }
 
 /* --- Story node card ----------------------------------------------------- */
