@@ -38,6 +38,52 @@ from .security import decode_token
 
 app = FastAPI(title="foolsboard API", version="0.4.0")
 
+# Content-Security-Policy. Shipped Report-Only first so we can confirm nothing is
+# wrongly blocked on a real deploy before switching it to enforcing. script-src
+# stays 'self' (the SPA loads only same-origin bundles -- no inline scripts);
+# style-src allows inline styles (React/React Flow set them); img-src allows
+# external link-preview thumbnails; connect-src 'self' covers the API + the
+# same-origin WebSocket.
+_CSP = (
+    "default-src 'self'; "
+    "img-src 'self' data: blob: https:; "
+    "media-src 'self' blob:; "
+    "script-src 'self'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "font-src 'self' data:; "
+    "connect-src 'self'; "
+    "object-src 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "frame-ancestors 'none'"
+)
+
+# Uploaded files whose content type a browser would execute as a top-level
+# document (stored XSS via an SVG/HTML upload). We force these to download; they
+# still render normally when loaded as an <img>/<video> subresource.
+_RISKY_MEDIA_TYPES = {
+    "image/svg+xml",
+    "text/html",
+    "application/xhtml+xml",
+    "text/xml",
+    "application/xml",
+}
+
+
+@app.middleware("http")
+async def _security_headers(request: Request, call_next):
+    response = await call_next(request)
+    h = response.headers
+    h.setdefault("X-Content-Type-Options", "nosniff")
+    h.setdefault("X-Frame-Options", "DENY")
+    h.setdefault("Referrer-Policy", "no-referrer")
+    h.setdefault("Content-Security-Policy-Report-Only", _CSP)
+    if request.url.path.startswith(settings.storage_public_url):
+        ct = h.get("content-type", "").split(";", 1)[0].strip().lower()
+        if ct in _RISKY_MEDIA_TYPES:
+            h["Content-Disposition"] = "attachment"
+    return response
+
 
 def _write_request_log(
     method: str,

@@ -13,6 +13,7 @@ import {
   mediaKind,
   nodePreview,
   OBJECT_COLOR,
+  safeHref,
   typeLabel,
   type Asset,
   type Board,
@@ -313,7 +314,7 @@ export default function NodeGallery({
                 <a
                   key={node.id + ':' + i}
                   className="gallery-link"
-                  href={ref.url}
+                  href={safeHref(ref.url)}
                   target="_blank"
                   rel="noreferrer noopener"
                   title={`Open ${ref.url}`}

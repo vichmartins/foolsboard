@@ -5,7 +5,7 @@ from __future__ import annotations
 import io
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,7 @@ from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
 from ..models import Board, InviteCode, User
+from ..ratelimit import login_limiter
 from ..schemas import (
     LoginIn,
     PasswordUpdate,
@@ -83,17 +84,25 @@ def register(payload: RegisterIn, db: Session = Depends(get_db)) -> Token:
 
 
 @router.post("/login", response_model=Token)
-def login(payload: LoginIn, db: Session = Depends(get_db)) -> Token:
+def login(payload: LoginIn, request: Request, db: Session = Depends(get_db)) -> Token:
+    ip = request.client.host if request.client else "unknown"
+    if login_limiter.is_blocked(ip):
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "Too many login attempts. Please wait a few minutes and try again.",
+        )
     ident = payload.identifier.strip()
     user = db.scalar(
         select(User).where(or_(User.email == ident.lower(), User.username == ident))
     )
     if user is None or not verify_password(payload.password, user.password_hash):
+        login_limiter.record(ip)  # only failures count toward the limit
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "Incorrect username/email or password"
         )
     if not user.is_active:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Your account has been suspended")
+    login_limiter.reset(ip)  # a successful sign-in clears the IP's failures
     log_event(db, user=user, action="auth.login", summary="signed in")
     return Token(access_token=create_access_token(user.id), user=_user_out(user))
 

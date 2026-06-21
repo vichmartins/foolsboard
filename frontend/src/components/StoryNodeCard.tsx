@@ -16,6 +16,7 @@ import {
   KIND_COLORS,
   mediaKind,
   OBJECT_COLOR,
+  safeHref,
   TYPE_FIELDS,
   typeLabel,
   type Asset,
@@ -207,7 +208,7 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
                 <a
                   className="story-node__ref nodrag"
                   key={r.url + i}
-                  href={r.url}
+                  href={safeHref(r.url)}
                   target="_blank"
                   rel="noreferrer noopener"
                   title={r.url}

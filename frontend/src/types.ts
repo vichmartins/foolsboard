@@ -164,6 +164,25 @@ export function fileExt(filename: string): string {
   return i > 0 ? filename.slice(i + 1).toUpperCase() : ''
 }
 
+const SAFE_LINK_SCHEMES = new Set(['http', 'https', 'mailto', 'tel'])
+
+// Returns a safe href for a user-supplied URL, or undefined if its scheme could
+// execute script (javascript:, data:, vbscript:, ...) so callers render no link
+// instead of an XSS vector. Control/whitespace chars are stripped first so a
+// scheme obfuscated with embedded control characters can't slip past the check.
+export function safeHref(url: string | null | undefined): string | undefined {
+  if (!url) return undefined
+  let cleaned = ''
+  for (const ch of url) {
+    const c = ch.codePointAt(0) ?? 0
+    if (c > 0x20 && !(c >= 0x7f && c <= 0x9f)) cleaned += ch
+  }
+  if (!cleaned) return undefined
+  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(cleaned)
+  if (scheme && !SAFE_LINK_SCHEMES.has(scheme[1].toLowerCase())) return undefined
+  return cleaned
+}
+
 // Per-type upload size limits (bytes). Mirrors the server's enforcement so the
 // user gets instant feedback instead of waiting for a rejected upload.
 const MB = 1024 * 1024

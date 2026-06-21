@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.38.0
+
+Security hardening pass:
+
+- **Uploaded SVG/HTML can no longer execute as a page.** `/media` now serves
+  documents-that-could-run-scripts (svg, html, xml) with `Content-Disposition:
+  attachment`, so opening such a URL downloads it instead of running it. They
+  still display normally as `<img>`/`<video>`. Also added `X-Content-Type-Options:
+  nosniff`, `X-Frame-Options: DENY`, and `Referrer-Policy: no-referrer` site-wide.
+- **Reference-link URLs are scheme-checked.** A user-supplied link with a
+  `javascript:`/`data:`/`vbscript:` scheme (incl. control-char-obfuscated ones)
+  no longer renders as a clickable link — only `http`/`https`/`mailto`/`tel` pass.
+- **Login is rate-limited** — 10 failed attempts per IP per 10 minutes returns
+  429; a successful sign-in clears the counter.
+- **Content-Security-Policy** added in **Report-Only** mode (so it can't break
+  anything yet); once verified clean on a deploy it'll switch to enforcing.
+
+Note: JWT verification was reviewed and is sound (always recomputes HS256, so
+`alg:none`/algorithm-confusion attacks fail). Put the app behind TLS before any
+untrusted-network exposure.
+
 ## v0.37.2
 
 - The toast (e.g. "A board can't merge into itself.") now fades and slides away

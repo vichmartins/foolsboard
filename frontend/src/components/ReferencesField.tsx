@@ -2,7 +2,7 @@
 // the backend fetches its Open Graph / meta tags; each link renders as a card.
 import { useState } from 'react'
 import { fetchLinkPreview } from '../api'
-import type { LinkRef } from '../types'
+import { safeHref, type LinkRef } from '../types'
 
 interface Props {
   value: unknown
@@ -88,7 +88,7 @@ export default function ReferencesField({ value, onChange }: Props) {
             <div className="ref-card" key={i}>
               <a
                 className="ref-card__link"
-                href={r.url}
+                href={safeHref(r.url)}
                 target="_blank"
                 rel="noreferrer noopener"
               >
