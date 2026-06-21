@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.48.1
+
+- The owner now sees a presence dot beside the two-person owner mark on their
+  shared-out boards (board picker pill + dropdown), matching the recipient view,
+  instead of the icon itself recoloring.
+
 ## v0.48.0
 
 - **Presence dots now reflect *any* collaborator, not just the owner.** A shared
