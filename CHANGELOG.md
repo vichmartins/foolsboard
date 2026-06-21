@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.41.0
+
+- **Shared-item badges in the top navbar.** Boards and folders now show, on the
+  left of their picker pill (and in the dropdown lists): a **dot** when the item
+  was shared *with* you, or a **👑 crown** when *you own it and have shared it
+  out*. Updates live as shares are created/accepted/rejected/removed.
+- Backend exposes `shared_out` on boards/folders (owner has ≥1 pending/accepted
+  share); creating a share now also pings the owner so their crown appears at once.
+
 ## v0.40.1
 
 - Edit-lock polish: a node someone else is editing is now also **non-selectable**,

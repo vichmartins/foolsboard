@@ -101,6 +101,7 @@ def create_share(
             db.refresh(existing)
         if existing.status == "pending":
             _notify(existing.shared_with_id, "incoming", existing, db)
+        _notify(existing.owner_id, "outgoing", existing, db)  # owner: refresh crown badge
         return _to_out(existing, db)
 
     share = Share(
@@ -113,6 +114,7 @@ def create_share(
     db.commit()
     db.refresh(share)
     _notify(share.shared_with_id, "incoming", share, db)
+    _notify(share.owner_id, "outgoing", share, db)  # owner: refresh crown badge
     kind = "board" if payload.board_id else "folder"
     log_event(db, user=user, action="share.create", entity_type="share", entity_id=share.id,
               summary=f"shared a {kind} with {recipient.username}")

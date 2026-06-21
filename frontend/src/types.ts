@@ -6,6 +6,7 @@ export interface Board {
   description: string | null
   folder_id: string | null
   shared: boolean // shared with me (not owned by me)
+  shared_out?: boolean // I own it and have shared it out (crown badge)
   owner_name: string | null
   created_at: string
   updated_at: string
@@ -15,6 +16,7 @@ export interface Folder {
   id: string
   name: string
   shared: boolean
+  shared_out?: boolean // I own it and have shared it out (crown badge)
   owner_name: string | null
   created_at: string
 }

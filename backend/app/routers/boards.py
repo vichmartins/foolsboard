@@ -79,7 +79,9 @@ def _accessible_boards(db: Session, user: User) -> list[Board]:
     return owned + shared
 
 
-def _board_out(board: Board, user: User, db: Session, owner_names: dict) -> BoardOut:
+def _board_out(
+    board: Board, user: User, db: Session, owner_names: dict, shared_out_ids: set
+) -> BoardOut:
     item = BoardOut.model_validate(board)
     if board.owner_id != user.id:
         item.shared = True
@@ -87,6 +89,8 @@ def _board_out(board: Board, user: User, db: Session, owner_names: dict) -> Boar
             owner = db.get(User, board.owner_id)
             owner_names[board.owner_id] = owner.username if owner else None
         item.owner_name = owner_names[board.owner_id]
+    elif board.id in shared_out_ids:
+        item.shared_out = True  # I own it and it's shared with someone
     return item
 
 
@@ -131,8 +135,18 @@ def list_boards(
             db.scalars(select(Board).where(Board.owner_id != user.id, or_(*conds)))
         )
     shared.sort(key=lambda b: b.name.lower())
+    # Boards I own that I've shared out (live invites) -> crown badge.
+    shared_out_ids = set(
+        db.scalars(
+            select(Share.board_id).where(
+                Share.owner_id == user.id,
+                Share.board_id.is_not(None),
+                Share.status.in_(["pending", "accepted"]),
+            )
+        )
+    )
     owner_names: dict = {}
-    return [_board_out(b, user, db, owner_names) for b in [*owned, *shared]]
+    return [_board_out(b, user, db, owner_names, shared_out_ids) for b in [*owned, *shared]]
 
 
 @router.get("/gallery", response_model=GalleryOut)

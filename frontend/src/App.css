@@ -2896,6 +2896,21 @@
   width: 7px;
   height: 7px;
 }
+/* Crown: owner of a board/folder that's shared out (instead of the dot/grip). */
+.pick-crown,
+.board-select__crown,
+.folder-row__crown {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  font-size: 11px;
+  line-height: 1;
+}
+.folder-row__crown {
+  cursor: grab;
+}
 
 /* Share dialog */
 .share-add {

@@ -155,7 +155,13 @@ export default function FolderSelect({
         title="Folders"
       >
         <span className="folder-select__icon">🗀</span>
-        {active?.shared && <span className="pick-dot" title={`Shared by ${active.owner_name ?? 'someone'}`} />}
+        {active?.shared_out ? (
+          <span className="pick-crown" title="You own this — shared with others" aria-hidden="true">
+            👑
+          </span>
+        ) : active?.shared ? (
+          <span className="pick-dot" title={`Shared by ${active.owner_name ?? 'someone'}`} />
+        ) : null}
         <span className="board-select__current">{active?.name ?? 'All Boards'}</span>
         <span className={'board-select__chevron' + (open ? ' board-select__chevron--open' : '')}>
           ▾
@@ -230,6 +236,17 @@ export default function FolderSelect({
                       title={`Shared by ${f.owner_name ?? 'someone'}`}
                       aria-hidden="true"
                     />
+                  ) : f.shared_out ? (
+                    <span
+                      className="folder-row__crown"
+                      draggable
+                      onDragStart={(e) => onFolderDragStart(e, i)}
+                      onDragEnd={onFolderDragEnd}
+                      title="Shared with others — drag to reorder"
+                      aria-hidden="true"
+                    >
+                      👑
+                    </span>
                   ) : (
                     <span
                       className="folder-row__grip"

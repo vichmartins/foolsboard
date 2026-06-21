@@ -130,6 +130,10 @@ function Workspace() {
     return () => realtime.stop()
   }, [])
 
+  // Keep the board/folder lists (and their shared/crown badges) in sync when a
+  // share is created, accepted, rejected, or removed anywhere.
+  useEffect(() => realtime.subscribeShare(() => refreshLists()), [])
+
   const activeBoard = boards.find((b) => b.id === activeId) ?? null
   // Other collaborators currently viewing this board (excluding myself).
   const presence = useBoardPresence(activeId)
@@ -265,6 +269,7 @@ function Workspace() {
           activeId={activeId}
           activeName={activeBoard?.name}
           activeShared={activeBoard?.shared}
+          activeSharedOut={activeBoard?.shared_out}
           onSelect={setActiveId}
           onReorder={(ids) => {
             setBoards((bs) =>

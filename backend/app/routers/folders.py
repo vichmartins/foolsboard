@@ -50,6 +50,16 @@ def list_folders(
         else []
     )
     shared.sort(key=lambda f: f.name.lower())
+    # Folders I own that I've shared out (live invites) -> crown badge.
+    shared_out_ids = set(
+        db.scalars(
+            select(Share.folder_id).where(
+                Share.owner_id == user.id,
+                Share.folder_id.is_not(None),
+                Share.status.in_(["pending", "accepted"]),
+            )
+        )
+    )
     owner_names: dict = {}
     out: list[FolderOut] = []
     for f in [*owned, *shared]:
@@ -60,6 +70,8 @@ def list_folders(
                 o = db.get(User, f.owner_id)
                 owner_names[f.owner_id] = o.username if o else None
             item.owner_name = owner_names[f.owner_id]
+        elif f.id in shared_out_ids:
+            item.shared_out = True
         out.append(item)
     return out
 

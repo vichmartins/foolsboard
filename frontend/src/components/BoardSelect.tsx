@@ -9,6 +9,7 @@ interface Props {
   activeId: string | null
   activeName?: string // active board's name (it may be filtered out of `boards`)
   activeShared?: boolean // active board is shared with me
+  activeSharedOut?: boolean // I own the active board and have shared it out
   onSelect: (id: string) => void
   onReorder: (orderedIds: string[]) => void
 }
@@ -20,6 +21,7 @@ export default function BoardSelect({
   activeId,
   activeName,
   activeShared,
+  activeSharedOut,
   onSelect,
   onReorder,
 }: Props) {
@@ -91,7 +93,13 @@ export default function BoardSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        {activeShared && <span className="pick-dot" title="Shared with you" />}
+        {activeSharedOut ? (
+          <span className="pick-crown" title="You own this — shared with others" aria-hidden="true">
+            👑
+          </span>
+        ) : activeShared ? (
+          <span className="pick-dot" title="Shared with you" />
+        ) : null}
         <span className="board-select__current">
           {active?.name ?? activeName ?? 'Select board'}
         </span>
@@ -128,6 +136,10 @@ export default function BoardSelect({
                   title={`Shared by ${b.owner_name ?? 'someone'}`}
                   aria-hidden="true"
                 />
+              ) : b.shared_out ? (
+                <span className="board-select__crown" title="Shared with others" aria-hidden="true">
+                  👑
+                </span>
               ) : (
                 <span className="board-select__grip" aria-hidden="true">
                   ⠿

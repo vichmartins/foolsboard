@@ -34,6 +34,8 @@ class FolderOut(ORMModel):
     owner_id: UUID | None = None
     # True when this folder was shared with the caller (not owned by them).
     shared: bool = False
+    # True when the caller owns this folder and has shared it out (crown badge).
+    shared_out: bool = False
     # Username of the owner, when shared.
     owner_name: str | None = None
     created_at: datetime
@@ -70,6 +72,8 @@ class BoardOut(ORMModel):
     folder_id: UUID | None = None
     # True when this board was shared with the caller (not owned by them).
     shared: bool = False
+    # True when the caller owns this board and has shared it out (crown badge).
+    shared_out: bool = False
     owner_name: str | None = None
     created_at: datetime
     updated_at: datetime
