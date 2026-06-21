@@ -3,7 +3,7 @@
 // dragged to reorder the board list, which is persisted per user.
 import { useEffect, useRef, useState } from 'react'
 import type { Board } from '../types'
-import CrownIcon from './CrownIcon'
+import OwnerIcon from './OwnerIcon'
 
 interface Props {
   boards: Board[]
@@ -100,7 +100,7 @@ export default function BoardSelect({
           {active?.name ?? activeName ?? 'Select board'}
         </span>
         {activeSharedOut ? (
-          <CrownIcon className="owner-crown" />
+          <OwnerIcon className="owner-crown" />
         ) : activeShared ? (
           <span className="pick-owner" title={`Shared by ${activeOwnerName ?? 'someone'}`}>
             <span className="pick-dot" />
@@ -141,7 +141,7 @@ export default function BoardSelect({
                   aria-hidden="true"
                 />
               ) : b.shared_out ? (
-                <CrownIcon className="owner-crown" />
+                <OwnerIcon className="owner-crown" />
               ) : (
                 <span className="board-select__grip" aria-hidden="true">
                   ⠿

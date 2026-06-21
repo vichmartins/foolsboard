@@ -4,7 +4,7 @@
 // board picker, moving the board into that folder (or unfiling it).
 import { useEffect, useRef, useState } from 'react'
 import type { Board, Folder } from '../types'
-import CrownIcon from './CrownIcon'
+import OwnerIcon from './OwnerIcon'
 
 const BOARD_DND = 'application/x-foolsboard-board'
 const FOLDER_DND = 'application/x-foolsboard-folder'
@@ -158,7 +158,7 @@ export default function FolderSelect({
         <span className="folder-select__icon">🗀</span>
         <span className="board-select__current">{active?.name ?? 'All Boards'}</span>
         {active?.shared_out ? (
-          <CrownIcon className="owner-crown" />
+          <OwnerIcon className="owner-crown" />
         ) : active?.shared ? (
           <span className="pick-owner" title={`Shared by ${active.owner_name ?? 'someone'}`}>
             <span className="pick-dot" />
@@ -246,7 +246,7 @@ export default function FolderSelect({
                       onDragEnd={onFolderDragEnd}
                       title="Shared with others — drag to reorder"
                     >
-                      <CrownIcon className="owner-crown" />
+                      <OwnerIcon className="owner-crown" />
                     </span>
                   ) : (
                     <span

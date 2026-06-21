@@ -2967,10 +2967,10 @@
   width: 7px;
   height: 7px;
 }
-/* Owner crown: a board/folder you own and have shared out (muted gold). */
+/* Owner mark: a board/folder you own and have shared out (two-person icon). */
 .owner-crown {
   flex: none;
-  color: #d8a93f;
+  color: var(--accent);
 }
 .folder-row__crown {
   flex: none;

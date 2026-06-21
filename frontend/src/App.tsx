@@ -360,7 +360,7 @@ function Workspace() {
               </button>
               <button
                 className="icon-btn icon-btn--danger"
-                title="Unshare (remove from my boards)"
+                title="Unshare"
                 aria-label="Unshare"
                 onClick={() => activeBoard && void unshareBoard(activeBoard)}
               >
