@@ -148,6 +148,20 @@ class Realtime {
         delete map[msg.user_id]
       }
       this.emitEdit()
+    } else if (msg.type === 'color') {
+      // A collaborator changed their color: recolor everything cached for them.
+      const uid = msg.user_id as string
+      const cur = this.cursors[board]?.[uid]
+      if (cur) cur.color = msg.color
+      const sel = this.selections[board]?.[uid]
+      if (sel) sel.color = msg.color
+      const ed = this.editing[board]?.[uid]
+      if (ed) ed.color = msg.color
+      const member = this.presence[board]?.find((m) => m.id === uid)
+      if (member) member.color = msg.color
+      this.emitPresence()
+      this.emitCollab()
+      this.emitEdit()
     } else if (msg.type === 'cursor') {
       ;(this.cursors[board] ??= {})[msg.user_id] = {
         userId: msg.user_id,

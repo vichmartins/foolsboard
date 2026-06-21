@@ -15,7 +15,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 from ..database import SessionLocal
 from ..deps import can_access_board
 from ..models import Board, User
-from ..realtime import color_for, hub
+from ..realtime import hub
 from ..security import decode_token
 
 router = APIRouter()
@@ -93,7 +93,7 @@ async def _handle(conn, user: User, raw: str) -> None:
                 "board_id": str(conn.board_id),
                 "user_id": str(conn.user_id),
                 "username": conn.username,
-                "color": color_for(conn.user_id),
+                "color": conn.color,
                 "x": x,
                 "y": y,
             })
@@ -105,7 +105,7 @@ async def _handle(conn, user: User, raw: str) -> None:
                 "type": "select",
                 "board_id": str(conn.board_id),
                 "user_id": str(conn.user_id),
-                "color": color_for(conn.user_id),
+                "color": conn.color,
                 "node_ids": ids,
             })
     elif kind == "edit":
@@ -118,7 +118,7 @@ async def _handle(conn, user: User, raw: str) -> None:
             "board_id": str(conn.board_id),
             "user_id": str(conn.user_id),
             "username": conn.username,
-            "color": color_for(conn.user_id),
+            "color": conn.color,
             "node_id": str(node_id) if node_id else None,
             "active": bool(msg.get("active")),
         })
@@ -148,7 +148,7 @@ async def _handle(conn, user: User, raw: str) -> None:
             "board_id": str(conn.board_id),
             "user_id": str(conn.user_id),
             "username": conn.username,
-            "color": color_for(conn.user_id),
+            "color": conn.color,
             "active": bool(msg.get("active")),
             "count": int(count) if isinstance(count, (int, float)) else 0,
         })

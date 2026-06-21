@@ -22,3 +22,7 @@ class User(UUIDMixin, TimestampMixin, Base):
 
     # Storage key of the profile image (avatar), if one was uploaded.
     avatar_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # Chosen highlight/cursor color (hex like "#6366f1"). Null falls back to a
+    # deterministic palette color (see realtime.color_for).
+    color: Mapped[str | None] = mapped_column(String(7), nullable=True)

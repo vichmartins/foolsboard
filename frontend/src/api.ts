@@ -104,6 +104,17 @@ export async function uploadAvatar(file: File): Promise<User> {
 export async function deleteAvatar(): Promise<User> {
   return (await http.delete('/auth/me/avatar')).data
 }
+export interface ColorsInfo {
+  palette: string[]
+  taken: string[] // colors held by other users
+  current: string | null
+}
+export async function getColors(): Promise<ColorsInfo> {
+  return (await http.get('/auth/colors')).data
+}
+export async function setMyColor(color: string): Promise<User> {
+  return (await http.patch('/auth/me/color', { color })).data
+}
 export async function logout(): Promise<void> {
   // Record the sign-out server-side (best effort), then drop the token.
   await http.post('/auth/logout').catch(() => {})

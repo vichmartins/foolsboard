@@ -66,7 +66,7 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
   // My own selection ring uses my stable collaborator color (the same one others
   // see for me), so a selected node looks consistent for everyone.
   const { user } = useAuth()
-  const selColor = user ? collabColor(user.id) : accent
+  const selColor = user ? user.color ?? collabColor(user.id) : accent
   const [expanded, setExpanded] = useState(false)
   const [closing, setClosing] = useState(false)
   const [assets, setAssets] = useState<Asset[] | null>(null)

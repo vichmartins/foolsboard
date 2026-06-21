@@ -19,7 +19,8 @@ from starlette.concurrency import run_in_threadpool
 
 from .config import settings
 from .database import SessionLocal
-from .models import Asset, ErrorLog, RequestLog
+from .models import Asset, ErrorLog, RequestLog, User
+from .realtime import PALETTE, color_for
 from .routers import (
     admin,
     assets,
@@ -179,6 +180,28 @@ def _backfill_content_hashes() -> None:
                 changed = True
             except OSError:
                 continue
+        if changed:
+            db.commit()
+    finally:
+        db.close()
+
+
+@app.on_event("startup")
+def _backfill_user_colors() -> None:
+    """Give users created before the color feature a distinct collaborator color
+    (so highlights/cursors differ), preferring palette colors not already taken."""
+    db = SessionLocal()
+    try:
+        users = db.scalars(select(User).order_by(User.created_at)).all()
+        taken = {u.color for u in users if u.color}
+        changed = False
+        for u in users:
+            if u.color:
+                continue
+            free = [c for c in PALETTE if c not in taken]
+            u.color = free[0] if free else color_for(u.id)
+            taken.add(u.color)
+            changed = True
         if changed:
             db.commit()
     finally:

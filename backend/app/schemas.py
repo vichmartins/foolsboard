@@ -241,6 +241,16 @@ class PasswordUpdate(BaseModel):
     new_password: str = Field(min_length=8, max_length=200)
 
 
+class ColorUpdate(BaseModel):
+    color: str = Field(min_length=4, max_length=7)
+
+
+class ColorsOut(BaseModel):
+    palette: list[str]
+    taken: list[str]  # colors held by OTHER users (disabled in the picker)
+    current: str | None = None
+
+
 class UserOut(ORMModel):
     id: UUID
     email: str
@@ -249,6 +259,7 @@ class UserOut(ORMModel):
     is_active: bool = True
     created_at: datetime
     avatar_url: str | None = None
+    color: str | None = None
 
 
 class AdminUserOut(ORMModel):

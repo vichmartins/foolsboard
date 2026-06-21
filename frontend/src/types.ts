@@ -47,6 +47,7 @@ export interface User {
   is_active: boolean
   created_at: string
   avatar_url: string | null
+  color: string | null
 }
 
 export interface AdminUser {

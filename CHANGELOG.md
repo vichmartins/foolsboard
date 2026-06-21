@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.44.0
+
+- **Pick your own collaborator color.** Account Settings now has a "Highlight
+  color" picker — the color others see for your cursor and selections. Each user
+  gets a random color on sign-up; you can change it any time, and colors already
+  in use by other users are disabled. Changing it recolors your cursor/highlights
+  on everyone's screen live (no refresh).
+  - Backend: `users.color` column (migration), assigned on register and
+    backfilled for existing users; `GET /api/auth/colors` and
+    `PATCH /api/auth/me/color` (validates the palette + uniqueness); the WS hub
+    now carries each connection's chosen color and broadcasts changes. Palette
+    expanded to 12 colors.
+
 ## v0.43.0
 
 - **Selection highlights now match at any zoom.** Remote selection/edit outlines

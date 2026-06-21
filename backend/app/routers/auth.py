@@ -3,6 +3,7 @@ current user's profile / password / avatar management."""
 from __future__ import annotations
 
 import io
+import random
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
@@ -14,7 +15,10 @@ from ..database import get_db
 from ..deps import get_current_user
 from ..models import Board, InviteCode, User
 from ..ratelimit import login_limiter
+from ..realtime import PALETTE, hub
 from ..schemas import (
+    ColorsOut,
+    ColorUpdate,
     LoginIn,
     PasswordUpdate,
     ProfileUpdate,
@@ -33,6 +37,14 @@ def _user_out(user: User) -> UserOut:
     if user.avatar_key:
         out.avatar_url = storage.url_for(user.avatar_key)
     return out
+
+
+def _assign_color(db: Session) -> str:
+    """Pick a random collaborator color not already used by another user (falls
+    back to any palette color once all are taken)."""
+    taken = {c for c in db.scalars(select(User.color).where(User.color.is_not(None)))}
+    available = [c for c in PALETTE if c not in taken]
+    return random.choice(available) if available else random.choice(PALETTE)
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
@@ -66,6 +78,7 @@ def register(payload: RegisterIn, db: Session = Depends(get_db)) -> Token:
         username=payload.username,
         password_hash=hash_password(payload.password),
         is_admin=is_first,
+        color=_assign_color(db),
     )
     db.add(user)
     db.flush()  # assign user.id
@@ -114,6 +127,36 @@ def logout(user: User = Depends(get_current_user), db: Session = Depends(get_db)
 
 @router.get("/me", response_model=UserOut)
 def get_me(user: User = Depends(get_current_user)) -> UserOut:
+    return _user_out(user)
+
+
+@router.get("/colors", response_model=ColorsOut)
+def list_colors(
+    user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> ColorsOut:
+    """The pickable palette, plus colors already taken by OTHER users."""
+    taken = db.scalars(
+        select(User.color).where(User.color.is_not(None), User.id != user.id)
+    )
+    return ColorsOut(palette=PALETTE, taken=[c for c in taken if c], current=user.color)
+
+
+@router.patch("/me/color", response_model=UserOut)
+def update_color(
+    payload: ColorUpdate,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> UserOut:
+    color = payload.color.strip().lower()
+    if color not in PALETTE:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That isn’t a selectable color")
+    clash = db.scalar(select(User).where(User.color == color, User.id != user.id))
+    if clash is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "That color is already in use")
+    user.color = color
+    db.commit()
+    db.refresh(user)
+    hub.set_user_color(user.id, color)  # recolor live cursors/highlights
     return _user_out(user)
 
 

@@ -3529,6 +3529,36 @@
   font-size: 12.5px;
   color: var(--text-dim);
 }
+.account-hint {
+  margin: -2px 0 2px;
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+.color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.color-swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.color-swatch:hover:not(:disabled) {
+  transform: scale(1.12);
+}
+.color-swatch--active {
+  border-color: var(--text);
+  box-shadow: 0 0 0 2px var(--bg-elev-2), 0 0 0 4px var(--text);
+}
+.color-swatch:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
 
 /* --- Invites dialog -------------------------------------------------------- */
 .invites {

@@ -17,16 +17,19 @@ from uuid import UUID
 
 from starlette.websockets import WebSocket
 
-# Stable per-user color for avatars/cursors. UUID.int is deterministic across
-# restarts (unlike hash()), so a user keeps the same color.
-_PALETTE = [
+# The pickable collaborator colors (cursors / selection highlights / avatars).
+# A user picks one (stored on User.color); until then a deterministic palette
+# color is used. UUID.int is deterministic across restarts (unlike hash()), so a
+# user keeps the same default color.
+PALETTE = [
     "#6366f1", "#ec4899", "#f59e0b", "#10b981",
     "#06b6d4", "#8b5cf6", "#ef4444", "#14b8a6",
+    "#f97316", "#84cc16", "#3b82f6", "#d946ef",
 ]
 
 
 def color_for(user_id: UUID) -> str:
-    return _PALETTE[user_id.int % len(_PALETTE)]
+    return PALETTE[user_id.int % len(PALETTE)]
 
 
 @dataclass(eq=False)  # identity equality so each socket is its own set member
@@ -34,6 +37,7 @@ class Conn:
     ws: WebSocket
     user_id: UUID
     username: str
+    color: str
     board_id: UUID | None = None
 
 
@@ -47,7 +51,12 @@ class Hub:
 
     async def register(self, ws: WebSocket, user) -> Conn:
         self._loop = asyncio.get_running_loop()
-        conn = Conn(ws=ws, user_id=user.id, username=user.username)
+        conn = Conn(
+            ws=ws,
+            user_id=user.id,
+            username=user.username,
+            color=user.color or color_for(user.id),
+        )
         async with self._lock:
             self._conns.add(conn)
         return conn
@@ -71,13 +80,13 @@ class Hub:
     def _members(self, board_id: UUID) -> list[dict]:
         """Distinct users currently viewing the board (a user may have several
         tabs open; we collapse those into one member)."""
-        seen: dict[UUID, str] = {}
+        seen: dict[UUID, tuple[str, str]] = {}
         for c in self._conns:
             if c.board_id == board_id:
-                seen[c.user_id] = c.username
+                seen[c.user_id] = (c.username, c.color)
         return [
-            {"id": str(uid), "username": name, "color": color_for(uid)}
-            for uid, name in seen.items()
+            {"id": str(uid), "username": name, "color": color}
+            for uid, (name, color) in seen.items()
         ]
 
     async def broadcast_presence(self, board_id: UUID) -> None:
@@ -117,6 +126,33 @@ class Hub:
             asyncio.run_coroutine_threadsafe(self.send_to_user(user_id, msg), loop)
         except RuntimeError:
             pass
+
+    def set_user_color(self, user_id: UUID, color: str) -> None:
+        """Apply a user's newly-chosen color to their live connections and tell
+        collaborators, so cursors/highlights recolor without a refresh. Called
+        from the sync REST handler; runs on the captured loop."""
+        loop = self._loop
+        if loop is None:
+            return
+        try:
+            asyncio.run_coroutine_threadsafe(self._apply_user_color(user_id, color), loop)
+        except RuntimeError:
+            pass
+
+    async def _apply_user_color(self, user_id: UUID, color: str) -> None:
+        boards: set[UUID] = set()
+        for c in self._conns:
+            if c.user_id == user_id:
+                c.color = color
+                if c.board_id is not None:
+                    boards.add(c.board_id)
+        for board_id in boards:
+            await self.broadcast_presence(board_id)
+            targets = [c for c in self._conns if c.board_id == board_id]
+            await self._send_many(
+                targets,
+                {"type": "color", "board_id": str(board_id), "user_id": str(user_id), "color": color},
+            )
 
     async def _send_many(self, targets: list[Conn], msg: dict) -> None:
         for c in targets:

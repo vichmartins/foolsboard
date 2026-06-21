@@ -1,5 +1,6 @@
-// Account settings modal: update username/email, profile photo, and password.
-import { useRef, useState } from 'react'
+// Account settings modal: update username/email, profile photo, password, and
+// the user's collaborator highlight color.
+import { useEffect, useRef, useState } from 'react'
 import { apiError } from '../api'
 import * as api from '../api'
 import { useAuth } from '../auth'
@@ -15,6 +16,12 @@ export default function AccountDialog({ onClose }: { onClose: () => void }) {
   const [newPw, setNewPw] = useState('')
   const [pwBusy, setPwBusy] = useState(false)
   const [pwMsg, setPwMsg] = useState<string | null>(null)
+
+  const [colors, setColors] = useState<api.ColorsInfo | null>(null)
+  const [colorMsg, setColorMsg] = useState<string | null>(null)
+  useEffect(() => {
+    api.getColors().then(setColors).catch(() => {})
+  }, [])
 
   const fileRef = useRef<HTMLInputElement>(null)
   if (!user) return null
@@ -69,6 +76,15 @@ export default function AccountDialog({ onClose }: { onClose: () => void }) {
     }
   }
 
+  async function pickColor(c: string) {
+    setColorMsg(null)
+    try {
+      setUser(await api.setMyColor(c))
+    } catch (err) {
+      setColorMsg(apiError(err, 'Could not set color'))
+    }
+  }
+
   return (
     <div className="overlay" onMouseDown={onClose}>
       <div className="dialog" onMouseDown={(e) => e.stopPropagation()}>
@@ -107,6 +123,33 @@ export default function AccountDialog({ onClose }: { onClose: () => void }) {
             Save profile
           </button>
         </form>
+
+        <div className="account-section">
+          <h3 className="account-h3">Highlight color</h3>
+          <p className="account-hint">
+            The color collaborators see for your cursor and selections. Colors in use
+            by others are disabled.
+          </p>
+          <div className="color-swatches">
+            {colors?.palette.map((c) => {
+              const isMine = (user.color ?? '').toLowerCase() === c
+              const taken = !isMine && colors.taken.includes(c)
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  className={'color-swatch' + (isMine ? ' color-swatch--active' : '')}
+                  style={{ background: c }}
+                  disabled={taken}
+                  title={taken ? 'In use by another user' : c}
+                  aria-label={`Use color ${c}${taken ? ' (in use)' : ''}`}
+                  onClick={() => pickColor(c)}
+                />
+              )
+            })}
+          </div>
+          {colorMsg && <p className="account-msg">{colorMsg}</p>}
+        </div>
 
         <form className="account-section" onSubmit={changePassword}>
           <h3 className="account-h3">Change password</h3>
