@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.37.0
+
+- Upload size limits, by type: images ≤ 5 MB, video ≤ 50 MB, audio ≤ 20 MB, and
+  anything else ≤ 50 MB. Enforced server-side (the authoritative check, returning
+  413 with a clear message), with a matching client-side pre-check so oversized
+  files are rejected instantly — with a red note under the Media header — instead
+  of uploading and then failing.
+
 ## v0.36.0
 
 - "New version available" prompt. When a newer build is deployed, open tabs now

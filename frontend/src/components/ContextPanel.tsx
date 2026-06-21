@@ -1,6 +1,7 @@
 // Side panel: view/edit the selected object and manage its media.
 import { useEffect, useRef, useState } from 'react'
 import {
+  apiError,
   deleteAsset,
   deleteNode,
   listAssets,
@@ -16,6 +17,7 @@ import {
   OBJECT_COLOR,
   TYPE_FIELDS,
   typeLabel,
+  uploadSizeError,
   type Asset,
   type LinkRef,
   type NearbyNode,
@@ -82,6 +84,8 @@ export default function ContextPanel({
   const [preview, setPreview] = useState<{ url: string; top: number } | null>(null)
   // In-flight uploads: progress 0-100 (100 = bytes sent, server still processing).
   const [uploads, setUploads] = useState<{ id: string; name: string; progress: number }[]>([])
+  // Last upload rejection (too large / failed); shown until the next upload.
+  const [uploadError, setUploadError] = useState<string | null>(null)
   // Busy while any upload is in flight (derived, so parallel uploads stay correct).
   const busy = uploads.length > 0
   const [mediaExpanded, setMediaExpanded] = useState(false)
@@ -167,6 +171,11 @@ export default function ContextPanel({
   }, [])
 
   async function uploadFile(file: File) {
+    const tooBig = uploadSizeError(file) // instant client-side check
+    if (tooBig) {
+      setUploadError(`${file.name}: ${tooBig}`)
+      return
+    }
     const uploadId = crypto.randomUUID()
     setUploads((u) => [...u, { id: uploadId, name: file.name, progress: 0 }])
     try {
@@ -174,6 +183,10 @@ export default function ContextPanel({
         setUploads((u) => u.map((x) => (x.id === uploadId ? { ...x, progress: pct } : x))),
       )
       setAssets((prev) => [...prev, asset])
+    } catch (e) {
+      // Backstop: the server also enforces limits (e.g. when the browser didn't
+      // report a type), so surface its message too.
+      setUploadError(`${file.name}: ${apiError(e, 'Upload failed.')}`)
     } finally {
       setUploads((u) => u.filter((x) => x.id !== uploadId))
     }
@@ -182,6 +195,7 @@ export default function ContextPanel({
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    setUploadError(null)
     await uploadFile(file)
     if (fileRef.current) fileRef.current.value = ''
   }
@@ -190,6 +204,7 @@ export default function ContextPanel({
   useEffect(() => {
     if (!droppedFiles || droppedFiles.length === 0) return
     let cancelled = false
+    setUploadError(null)
     ;(async () => {
       // Upload several at once for faster batches; the server handles concurrency.
       await runPooled(droppedFiles, 3, uploadFile, () => cancelled)
@@ -549,6 +564,12 @@ export default function ContextPanel({
           </button>
           <input ref={fileRef} type="file" hidden onChange={onUpload} />
         </div>
+
+        {uploadError && (
+          <p className="panel__upload-error" role="alert">
+            {uploadError}
+          </p>
+        )}
 
         {!drawerMounted && <div className="panel__media-body">{mediaBody}</div>}
         {drawerMounted && (

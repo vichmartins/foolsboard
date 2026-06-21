@@ -43,6 +43,25 @@ router = APIRouter(prefix="/api/nodes/{node_id}/assets", tags=["assets"])
 # thrash CPU/GPU (each ffmpeg/NVENC pass is heavy). Others wait their turn.
 _ENCODE_SEM = threading.Semaphore(2)
 
+# Per-type upload size limits (bytes), enforced on the original upload.
+_MB = 1024 * 1024
+MAX_UPLOAD_BYTES: dict[str, int] = {
+    "image": 5 * _MB,
+    "video": 50 * _MB,
+    "audio": 20 * _MB,
+}
+DEFAULT_MAX_UPLOAD_BYTES = 50 * _MB  # archive, file, anything else
+
+
+def _enforce_size(size: int, kind: str) -> None:
+    limit = MAX_UPLOAD_BYTES.get(kind, DEFAULT_MAX_UPLOAD_BYTES)
+    if size > limit:
+        noun = {"image": "Images", "video": "Videos", "audio": "Audio files"}.get(kind, "Files")
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            f"{noun} are limited to {limit // _MB} MB (this file is {size / _MB:.1f} MB).",
+        )
+
 
 class AssetReferenceIn(BaseModel):
     asset_ids: list[UUID]
@@ -152,12 +171,16 @@ def upload_asset(
     filename = file.filename or "upload.bin"
     content_type = _resolve_type(file.content_type or "", filename)
     kind = _kind_from_content_type(content_type)
+    if file.size is not None:  # reject oversized uploads before staging
+        _enforce_size(file.size, kind)
 
     # Stage the upload so ffmpeg/Pillow can read it by path.
     with tempfile.TemporaryDirectory() as td:
         src_path = Path(td) / ("src" + Path(filename).suffix)
         with src_path.open("wb") as f:
             shutil.copyfileobj(file.file, f)
+        if file.size is None:  # size unknown up front -> check the staged file
+            _enforce_size(src_path.stat().st_size, kind)
 
         # Deduplicate: if this exact content was already uploaded and processed,
         # point the new node's asset at the same stored file (instant, no

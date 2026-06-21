@@ -164,6 +164,34 @@ export function fileExt(filename: string): string {
   return i > 0 ? filename.slice(i + 1).toUpperCase() : ''
 }
 
+// Per-type upload size limits (bytes). Mirrors the server's enforcement so the
+// user gets instant feedback instead of waiting for a rejected upload.
+const MB = 1024 * 1024
+export const UPLOAD_LIMITS: Record<MediaKind, number> = {
+  image: 5 * MB,
+  video: 50 * MB,
+  audio: 20 * MB,
+  file: 50 * MB, // and anything else
+}
+
+function fileKind(type: string): MediaKind {
+  const main = (type || '').split('/', 1)[0]
+  if (main === 'image') return 'image'
+  if (main === 'video') return 'video'
+  if (main === 'audio') return 'audio'
+  return 'file'
+}
+
+// An error message if the file exceeds its type's limit, otherwise null.
+export function uploadSizeError(file: File): string | null {
+  const kind = fileKind(file.type)
+  const limit = UPLOAD_LIMITS[kind]
+  if (file.size <= limit) return null
+  const mb = (n: number) => `${(n / MB).toFixed(1).replace(/\.0$/, '')} MB`
+  const noun = { image: 'Images', video: 'Videos', audio: 'Audio files', file: 'Files' }[kind]
+  return `${noun} are limited to ${mb(limit)} (this file is ${mb(file.size)}).`
+}
+
 export interface BoardGraph {
   board: Board
   nodes: StoryNode[]

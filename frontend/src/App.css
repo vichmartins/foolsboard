@@ -1787,6 +1787,16 @@
   font-size: 14px;
   flex: 1;
 }
+.panel__upload-error {
+  margin: -2px 0 12px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 8px;
+}
 .media-expand {
   display: inline-block;
   font-size: 11px;
