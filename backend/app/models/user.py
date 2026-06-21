@@ -3,7 +3,7 @@ accounts require a valid invite code (see InviteCode). Each user owns their own
 boards (Board.owner_id)."""
 from __future__ import annotations
 
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -26,3 +26,7 @@ class User(UUIDMixin, TimestampMixin, Base):
     # Chosen highlight/cursor color (hex like "#6366f1"). Null falls back to a
     # deterministic palette color (see realtime.color_for).
     color: Mapped[str | None] = mapped_column(String(7), nullable=True)
+
+    # The user's explorer layout: a JSON list of categories (id, name, ordered
+    # member folder/board ids). Per-user, so shared boards can be filed too.
+    categories: Mapped[str | None] = mapped_column(Text, nullable=True)

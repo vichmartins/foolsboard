@@ -3,6 +3,7 @@ current user's profile / password / avatar management."""
 from __future__ import annotations
 
 import io
+import json
 import random
 from datetime import datetime, timezone
 
@@ -17,6 +18,7 @@ from ..models import Board, InviteCode, User
 from ..ratelimit import login_limiter
 from ..realtime import PALETTE, hub
 from ..schemas import (
+    CategoriesPayload,
     ColorsOut,
     ColorUpdate,
     LoginIn,
@@ -128,6 +130,28 @@ def logout(user: User = Depends(get_current_user), db: Session = Depends(get_db)
 @router.get("/me", response_model=UserOut)
 def get_me(user: User = Depends(get_current_user)) -> UserOut:
     return _user_out(user)
+
+
+@router.get("/me/categories", response_model=CategoriesPayload)
+def get_categories(user: User = Depends(get_current_user)) -> CategoriesPayload:
+    """The user's explorer layout (categories + their member folder/board ids)."""
+    if not user.categories:
+        return CategoriesPayload()
+    try:
+        return CategoriesPayload.model_validate(json.loads(user.categories))
+    except (ValueError, TypeError):
+        return CategoriesPayload()
+
+
+@router.put("/me/categories", response_model=CategoriesPayload)
+def set_categories(
+    payload: CategoriesPayload,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> CategoriesPayload:
+    user.categories = payload.model_dump_json()
+    db.commit()
+    return payload
 
 
 @router.get("/colors", response_model=ColorsOut)

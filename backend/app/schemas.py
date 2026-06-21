@@ -253,6 +253,16 @@ class ColorsOut(BaseModel):
     current: str | None = None
 
 
+class CategoryIn(BaseModel):
+    id: str = Field(max_length=64)
+    name: str = Field(min_length=1, max_length=120)
+    items: list[str] = Field(default_factory=list)  # ordered folder/board ids
+
+
+class CategoriesPayload(BaseModel):
+    categories: list[CategoryIn] = Field(default_factory=list, max_length=200)
+
+
 class UserOut(ORMModel):
     id: UUID
     email: str
