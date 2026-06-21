@@ -157,11 +157,29 @@
   color: var(--text-dim);
 }
 
+.tree-board-row {
+  display: flex;
+  align-items: center;
+  border-radius: 7px;
+}
+.tree-board-row:hover {
+  background: var(--bg-hover);
+}
+.tree-board-row--active {
+  background: var(--bg-elev-2);
+}
+.tree-board-row--active .tree-board {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.tree-board-row--active .tree-board__name {
+  font-weight: 600;
+}
 .tree-board {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
   padding: 6px 8px;
   border-radius: 7px;
   background: none;
@@ -171,15 +189,20 @@
   font-size: 13px;
   text-align: left;
 }
-.tree-board:hover {
-  background: var(--bg-hover);
+.tree-board__tools {
+  display: none;
+  flex: none;
+  padding-right: 3px;
 }
-.tree-board--active {
-  background: var(--bg-elev-2);
-  box-shadow: inset 2px 0 0 var(--accent);
+.tree-board-row:hover .tree-board__tools {
+  display: inline-flex;
 }
-.tree-board--active .tree-board__name {
-  font-weight: 600;
+.tree-board__tools .icon-btn {
+  padding: 4px;
+}
+.tree-board__tools .icon-btn svg {
+  width: 13px;
+  height: 13px;
 }
 .tree-board__dot {
   flex: none;

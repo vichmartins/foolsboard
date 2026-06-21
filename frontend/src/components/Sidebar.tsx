@@ -4,7 +4,17 @@
 // folders inline. Reuses the workspace's existing folder/board handlers.
 import { useState } from 'react'
 import type { Board, Folder } from '../types'
-import { ChevronIcon, FolderIcon, FolderPlusIcon, PencilIcon, PlusIcon, TrashIcon } from './icons'
+import ContextMenu from './ContextMenu'
+import {
+  ChevronIcon,
+  FolderIcon,
+  FolderPlusIcon,
+  MergeIcon,
+  PencilIcon,
+  PlusIcon,
+  ShareIcon,
+  TrashIcon,
+} from './icons'
 
 const BOARD_DND = 'application/x-foolsboard-board'
 const EXPANDED_KEY = 'foolsboard:sidebar-expanded'
@@ -20,6 +30,10 @@ interface Props {
   onDeleteFolder: (id: string) => void
   onMoveBoardToFolder: (boardId: string, folderId: string | null) => void
   onNewBoard: () => void
+  onShareBoard: (board: Board) => void
+  onRenameBoard: (id: string, name: string) => void
+  onDeleteBoard: (board: Board) => void
+  onMergeBoard: (board: Board) => void
 }
 
 export default function Sidebar({
@@ -33,6 +47,10 @@ export default function Sidebar({
   onDeleteFolder,
   onMoveBoardToFolder,
   onNewBoard,
+  onShareBoard,
+  onRenameBoard,
+  onDeleteBoard,
+  onMergeBoard,
 }: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     try {
@@ -45,7 +63,16 @@ export default function Sidebar({
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [editingBoardId, setEditingBoardId] = useState<string | null>(null)
+  const [editBoardName, setEditBoardName] = useState('')
   const [dropTarget, setDropTarget] = useState<string | null>(null) // folder id or 'root'
+  // Right-click menu for a board row.
+  const [menu, setMenu] = useState<{ x: number; y: number; board: Board } | null>(null)
+
+  function startRenameBoard(b: Board) {
+    setEditingBoardId(b.id)
+    setEditBoardName(b.name)
+  }
 
   const toggleExpand = (id: string) =>
     setExpanded((s) => {
@@ -70,6 +97,11 @@ export default function Sidebar({
     if (name) onRenameFolder(id, name)
     setEditingId(null)
   }
+  function submitRenameBoard(id: string) {
+    const name = editBoardName.trim()
+    if (name) onRenameBoard(id, name)
+    setEditingBoardId(null)
+  }
 
   // --- Drag-and-drop: a board chip can be dropped on a folder (or Ungrouped) --
   const onBoardDragStart = (e: React.DragEvent, id: string) => {
@@ -92,24 +124,91 @@ export default function Sidebar({
     }
   }
 
-  const boardRow = (b: Board) => (
-    <button
-      key={b.id}
-      className={'tree-board' + (b.id === activeId ? ' tree-board--active' : '')}
-      draggable
-      onDragStart={(e) => onBoardDragStart(e, b.id)}
-      onClick={() => onSelectBoard(b.id)}
-      title={b.name}
-    >
-      <span
-        className={'tree-board__dot' + (b.shared ? ' tree-board__dot--shared' : '')}
-        aria-hidden="true"
-      />
-      <span className="tree-board__name">{b.name}</span>
-    </button>
-  )
+  const boardRow = (b: Board) => {
+    if (editingBoardId === b.id) {
+      return (
+        <input
+          key={b.id}
+          className="tree-input"
+          autoFocus
+          value={editBoardName}
+          onChange={(e) => setEditBoardName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') submitRenameBoard(b.id)
+            if (e.key === 'Escape') setEditingBoardId(null)
+          }}
+          onBlur={() => submitRenameBoard(b.id)}
+        />
+      )
+    }
+    return (
+      <div
+        key={b.id}
+        className={'tree-board-row' + (b.id === activeId ? ' tree-board-row--active' : '')}
+        onContextMenu={
+          b.shared
+            ? undefined
+            : (e) => {
+                e.preventDefault()
+                setMenu({ x: e.clientX, y: e.clientY, board: b })
+              }
+        }
+      >
+        <button
+          className="tree-board"
+          draggable
+          onDragStart={(e) => onBoardDragStart(e, b.id)}
+          onClick={() => onSelectBoard(b.id)}
+          title={b.name}
+        >
+          <span
+            className={'tree-board__dot' + (b.shared ? ' tree-board__dot--shared' : '')}
+            aria-hidden="true"
+          />
+          <span className="tree-board__name">{b.name}</span>
+        </button>
+        {!b.shared && (
+          <span className="tree-board__tools">
+            <button
+              className="icon-btn"
+              title="Rename"
+              aria-label="Rename board"
+              onClick={() => startRenameBoard(b)}
+            >
+              <PencilIcon />
+            </button>
+            <button
+              className="icon-btn"
+              title="Share"
+              aria-label="Share board"
+              onClick={() => onShareBoard(b)}
+            >
+              <ShareIcon />
+            </button>
+            <button
+              className="icon-btn"
+              title="Merge"
+              aria-label="Merge into board"
+              onClick={() => onMergeBoard(b)}
+            >
+              <MergeIcon />
+            </button>
+            <button
+              className="icon-btn icon-btn--danger"
+              title="Delete"
+              aria-label="Delete board"
+              onClick={() => onDeleteBoard(b)}
+            >
+              <TrashIcon />
+            </button>
+          </span>
+        )}
+      </div>
+    )
+  }
 
   return (
+    <>
     <aside className={'sidebar' + (open ? '' : ' sidebar--collapsed')} aria-hidden={!open}>
       <div className="sidebar__inner">
         <div className="sidebar__head">
@@ -240,5 +339,20 @@ export default function Sidebar({
         </div>
       </div>
     </aside>
+
+    {menu && (
+      <ContextMenu
+        x={menu.x}
+        y={menu.y}
+        items={[
+          { label: 'Rename', mnemonic: 'r', onClick: () => startRenameBoard(menu.board) },
+          { label: 'Share', mnemonic: 's', onClick: () => onShareBoard(menu.board) },
+          { label: 'Merge', mnemonic: 'm', onClick: () => onMergeBoard(menu.board) },
+          { label: 'Delete', mnemonic: 'd', danger: true, onClick: () => onDeleteBoard(menu.board) },
+        ]}
+        onClose={() => setMenu(null)}
+      />
+    )}
+    </>
   )
 }

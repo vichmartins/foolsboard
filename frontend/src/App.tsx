@@ -50,6 +50,8 @@ function Workspace() {
   const [moveFolderBoard, setMoveFolderBoard] = useState<Board | null>(null)
   // Resource being shared (opens the Share dialog).
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
+  // Board awaiting delete confirmation (type-to-confirm dialog).
+  const [deleteTarget, setDeleteTarget] = useState<Board | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'new' | 'rename' | 'delete' | 'merge' | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -178,11 +180,17 @@ function Workspace() {
     setBoards((b) => b.map((x) => (x.id === updated.id ? updated : x)))
     setDialog(null)
   }
+  // Rename a specific board (from the explorer's inline editor).
+  function renameBoardById(id: string, name: string) {
+    setBoards((bs) => bs.map((b) => (b.id === id ? { ...b, name } : b)))
+    void api.updateBoard(id, { name }).catch(() => {})
+  }
 
-  async function deleteBoard() {
-    if (!activeId) return
-    await api.deleteBoard(activeId)
-    const remaining = boards.filter((b) => b.id !== activeId)
+  // Delete any board (the active one, or one picked in the explorer); gated by
+  // the type-to-confirm dialog via `deleteTarget`.
+  async function deleteBoardById(id: string) {
+    await api.deleteBoard(id)
+    const remaining = boards.filter((b) => b.id !== id)
     if (remaining.length === 0) {
       // Never leave the workspace empty — bootstrap a fresh board.
       const fresh = await api.createBoard('My first storyboard')
@@ -190,9 +198,9 @@ function Workspace() {
       setActiveId(fresh.id)
     } else {
       setBoards(remaining)
-      setActiveId(remaining[0].id)
+      if (activeId === id) setActiveId(remaining[0].id)
     }
-    setDialog(null)
+    setDeleteTarget(null)
   }
 
   return (
@@ -303,7 +311,7 @@ function Workspace() {
             className="icon-btn icon-btn--danger"
             title="Delete"
             aria-label="Delete"
-            onClick={() => setDialog('delete')}
+            onClick={() => activeBoard && setDeleteTarget(activeBoard)}
             disabled={!activeBoard}
           >
             <TrashIcon />
@@ -349,6 +357,14 @@ function Workspace() {
           onDeleteFolder={deleteFolder}
           onMoveBoardToFolder={moveBoardToFolder}
           onNewBoard={() => setDialog('new')}
+          onShareBoard={(b) => setShareTarget({ type: 'board', id: b.id, name: b.name })}
+          onRenameBoard={renameBoardById}
+          onDeleteBoard={(b) => setDeleteTarget(b)}
+          onMergeBoard={(b) => {
+            // Merge targets the active board, so switch to it first.
+            setActiveId(b.id)
+            setDialog('merge')
+          }}
         />
         <main className="stage">
           {activeId ? (
@@ -406,15 +422,15 @@ function Workspace() {
         />
       )}
 
-      {dialog === 'delete' && activeBoard && (
+      {deleteTarget && (
         <TypeToConfirmDialog
           title="Delete Storyboard?"
-          message={`"${activeBoard.name}" and all of its objects, links, and media will be permanently deleted. This can't be undone.`}
-          requiredText={activeBoard.name}
+          message={`"${deleteTarget.name}" and all of its objects, links, and media will be permanently deleted. This can't be undone.`}
+          requiredText={deleteTarget.name}
           confirmLabel="Delete board"
           danger
-          onConfirm={deleteBoard}
-          onCancel={() => setDialog(null)}
+          onConfirm={() => deleteBoardById(deleteTarget.id)}
+          onCancel={() => setDeleteTarget(null)}
         />
       )}
 

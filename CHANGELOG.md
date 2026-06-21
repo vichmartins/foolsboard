@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.35.0
+
+- The Explorer sidebar can now manage boards, not just open them. Each board row
+  has hover actions — Rename (inline), Share, Merge, Delete — and a right-click
+  context menu with the same four. Delete still goes through the type-to-confirm
+  warning. Owner-only: boards shared with you show no management actions. The
+  top-bar Delete now uses the same shared confirm flow.
+
 ## v0.34.1
 
 - Picking a Gallery result that lives on another board now pans straight to that
