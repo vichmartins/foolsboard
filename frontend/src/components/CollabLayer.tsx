@@ -69,7 +69,7 @@ export default function CollabLayer({
                 width: b.w * zoom,
                 height: b.h * zoom,
                 borderColor: sel.color,
-                boxShadow: `0 0 0 1px ${sel.color}`,
+                boxShadow: `0 0 0 2px ${sel.color}55`,
               }}
             />
           )

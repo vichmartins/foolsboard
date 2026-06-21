@@ -222,6 +222,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.tree-board__owner {
+  flex: none;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-dim);
+}
 
 .tree-section {
   margin-top: 8px;
@@ -963,7 +972,7 @@
   top: 0;
   left: 0;
   border: 2px solid;
-  border-radius: 8px;
+  border-radius: 12px; /* match the node card so remote selections look like local */
   pointer-events: none;
   will-change: transform;
 }
@@ -973,7 +982,7 @@
   top: 0;
   left: 0;
   border: 2px solid;
-  border-radius: 8px;
+  border-radius: 12px;
   pointer-events: none;
   will-change: transform;
 }

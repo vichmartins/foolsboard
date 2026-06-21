@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.42.0
+
+- **Explorer: "Shared with me" category.** Boards shared with you now appear in
+  their own section in the left explorer (like "Ungrouped"), each showing the
+  owner's name; shared folders are flattened into it rather than shown as folders.
+- **Consistent selection highlights.** Your own selected node now rings in your
+  stable collaborator color (the same one others see for you) instead of the
+  node's type color, and remote selection outlines were restyled to match — so a
+  selected node looks the same for everyone, just in each user's color.
+
 ## v0.41.1
 
 - Refined the shared indicators in the navbar pickers:

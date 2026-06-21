@@ -83,8 +83,13 @@ export default function Sidebar({
       return n
     })
 
-  const boardsIn = (fid: string) => boards.filter((b) => b.folder_id === fid)
-  const ungrouped = boards.filter((b) => !b.folder_id)
+  // Owned content vs content shared with me. Shared boards get their own section
+  // (like Ungrouped), and shared folders aren't shown as folders -- their boards
+  // are flattened into "Shared with me".
+  const ownedFolders = folders.filter((f) => !f.shared)
+  const boardsIn = (fid: string) => boards.filter((b) => b.folder_id === fid && !b.shared)
+  const ungrouped = boards.filter((b) => !b.folder_id && !b.shared)
+  const sharedBoards = boards.filter((b) => b.shared)
 
   function submitCreate() {
     const name = newName.trim()
@@ -166,6 +171,9 @@ export default function Sidebar({
             aria-hidden="true"
           />
           <span className="tree-board__name">{b.name}</span>
+          {b.shared && b.owner_name && (
+            <span className="tree-board__owner">{b.owner_name}</span>
+          )}
         </button>
         {!b.shared && (
           <span className="tree-board__tools">
@@ -247,7 +255,7 @@ export default function Sidebar({
             />
           )}
 
-          {folders.map((f) => {
+          {ownedFolders.map((f) => {
             const isOpen = expanded.has(f.id)
             const inside = boardsIn(f.id)
             return (
@@ -336,6 +344,15 @@ export default function Sidebar({
               ungrouped.map(boardRow)
             )}
           </div>
+
+          {sharedBoards.length > 0 && (
+            <>
+              <div className="tree-section tree-section--shared">Shared with me</div>
+              <div className="tree-children tree-children--root">
+                {sharedBoards.map(boardRow)}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </aside>

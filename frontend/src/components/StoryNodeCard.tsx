@@ -23,6 +23,8 @@ import {
   type LinkRef,
   type StoryNode,
 } from '../types'
+import { useAuth } from '../auth'
+import { collabColor } from '../collab'
 import Gallery from './Gallery'
 
 export interface StoryNodeData extends Record<string, unknown> {
@@ -61,6 +63,10 @@ function fieldRows(kind: string, content: Record<string, unknown>): PreviewRow[]
 export default function StoryNodeCard({ data, selected }: NodeProps) {
   const d = data as StoryNodeData
   const accent = KIND_COLORS[d.kind] ?? OBJECT_COLOR
+  // My own selection ring uses my stable collaborator color (the same one others
+  // see for me), so a selected node looks consistent for everyone.
+  const { user } = useAuth()
+  const selColor = user ? collabColor(user.id) : accent
   const [expanded, setExpanded] = useState(false)
   const [closing, setClosing] = useState(false)
   const [assets, setAssets] = useState<Asset[] | null>(null)
@@ -114,8 +120,8 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
     <div
       className="story-node"
       style={{
-        borderColor: selected ? accent : 'transparent',
-        boxShadow: selected ? `0 0 0 2px ${accent}55` : undefined,
+        borderColor: selected ? selColor : 'transparent',
+        boxShadow: selected ? `0 0 0 2px ${selColor}55` : undefined,
       }}
     >
       {/* Ghost handles — invisible by default, appear on hover for new connections */}
