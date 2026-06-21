@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.33.1
+
+- Keep the logo pinned to the far left of the top bar; the Explorer toggle now
+  sits to its right.
+
 ## v0.33.0
 
 - Added a collapsible left "Explorer" sidebar for organizing folders and boards.

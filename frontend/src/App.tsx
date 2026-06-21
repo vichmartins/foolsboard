@@ -194,6 +194,7 @@ function Workspace() {
   return (
     <div className="app">
       <header className="topbar">
+        <BrandMenu />
         <button
           className={'icon-btn sidebar-toggle' + (sidebarOpen ? ' icon-btn--active' : '')}
           title={sidebarOpen ? 'Hide Explorer' : 'Show Explorer'}
@@ -203,7 +204,6 @@ function Workspace() {
         >
           <SidebarIcon />
         </button>
-        <BrandMenu />
 
         <FolderSelect
           folders={folders}
