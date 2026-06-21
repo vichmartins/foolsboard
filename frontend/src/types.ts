@@ -17,6 +17,7 @@ export interface Board {
 export interface Folder {
   id: string
   name: string
+  parent_folder_id?: string | null // nesting (null = top-level)
   shared: boolean
   shared_out?: boolean // I own it and have shared it out (crown badge)
   owner_name: string | null

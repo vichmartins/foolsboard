@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.51.0
+
+- **Nested folders**: drag a folder onto another folder to nest it inside.
+  Folders render recursively in the explorer; dragging a nested folder back onto
+  a category or the top un-nests it. Cycles are rejected server-side
+  (`PATCH /api/folders/{id}/parent`, new `folders.parent_folder_id` column).
+
 ## v0.50.1
 
 - Explorer header now has **three** create buttons: New Board, New Folder, New

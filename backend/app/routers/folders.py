@@ -12,7 +12,7 @@ from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
 from ..models import Folder, Share, User
-from ..schemas import FolderCreate, FolderOut, FolderReorder, FolderUpdate
+from ..schemas import FolderCreate, FolderMove, FolderOut, FolderReorder, FolderUpdate
 
 router = APIRouter(prefix="/api/folders", tags=["folders"])
 
@@ -89,6 +89,36 @@ def create_folder(
     log_event(db, user=user, action="folder.create", entity_type="folder",
               entity_id=folder.id, summary=f"created folder “{folder.name}”")
     return folder
+
+
+@router.patch("/{folder_id}/parent", status_code=status.HTTP_204_NO_CONTENT)
+def move_folder(
+    folder_id: UUID,
+    payload: FolderMove,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> None:
+    """Nest a folder under another (or null to make it top-level). Rejects cycles."""
+    folder = _get_folder(folder_id, db, user)
+    parent_id = payload.parent_folder_id
+    if parent_id == folder_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "A folder can't contain itself")
+    if parent_id is not None:
+        parent = db.get(Folder, parent_id)
+        if parent is None or parent.owner_id != user.id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Folder not found")
+        # Walk up from the new parent; if we reach `folder`, it's a cycle.
+        cur: Folder | None = parent
+        seen: set = set()
+        while cur is not None and cur.id not in seen:
+            if cur.id == folder_id:
+                raise HTTPException(
+                    status.HTTP_400_BAD_REQUEST, "Can't nest a folder inside itself"
+                )
+            seen.add(cur.id)
+            cur = db.get(Folder, cur.parent_folder_id) if cur.parent_folder_id else None
+    folder.parent_folder_id = parent_id
+    db.commit()
 
 
 @router.patch("/reorder", status_code=status.HTTP_204_NO_CONTENT)

@@ -28,10 +28,15 @@ class FolderReorder(BaseModel):
     folder_ids: list[UUID]
 
 
+class FolderMove(BaseModel):
+    parent_folder_id: UUID | None = None
+
+
 class FolderOut(ORMModel):
     id: UUID
     name: str
     owner_id: UUID | None = None
+    parent_folder_id: UUID | None = None
     # True when this folder was shared with the caller (not owned by them).
     shared: bool = False
     # True when the caller owns this folder and has shared it out (crown badge).

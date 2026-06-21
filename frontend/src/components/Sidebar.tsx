@@ -36,6 +36,7 @@ interface Props {
   onShareFolder: (folder: Folder) => void
   onCreateBoardInFolder: (folderId: string, name: string) => void
   onMoveBoardToFolder: (boardId: string, folderId: string | null) => void
+  onMoveFolderToFolder: (folderId: string, parentFolderId: string | null) => void
   onShareBoard: (board: Board) => void
   onRenameBoard: (id: string, name: string) => void
   onDeleteBoard: (board: Board) => void
@@ -75,6 +76,7 @@ export default function Sidebar(props: Props) {
     onShareFolder,
     onCreateBoardInFolder,
     onMoveBoardToFolder,
+    onMoveFolderToFolder,
     onShareBoard,
     onRenameBoard,
     onDeleteBoard,
@@ -123,7 +125,9 @@ export default function Sidebar(props: Props) {
   // A board grouped under a folder I can see (so it renders inside that folder).
   const isFiled = (b: Board) => !!b.folder_id && myFolderIds.has(b.folder_id)
   const boardsIn = (fid: string) => boards.filter((b) => b.folder_id === fid)
-  const topFolders = folders.filter((f) => !categorizedIds.has(f.id))
+  const subFoldersOf = (fid: string) => folders.filter((f) => f.parent_folder_id === fid)
+  // Top folders: no parent and not filed into a category.
+  const topFolders = folders.filter((f) => !f.parent_folder_id && !categorizedIds.has(f.id))
   const topBoards = boards.filter((b) => !isFiled(b) && !categorizedIds.has(b.id))
 
   function startRenameBoard(b: Board) {
@@ -189,23 +193,31 @@ export default function Sidebar(props: Props) {
     }
   }
   const getId = (e: React.DragEvent, type: string) => e.dataTransfer.getData(type)
-  // Drop on a folder: move a board inside it (and out of any category).
+  // Drop on a folder: nest a folder inside it, or move a board inside it (both
+  // pulled out of any category).
   const dropOnFolder = (e: React.DragEvent, fid: string) => {
     setDropTarget(null)
+    const dfid = getId(e, FOLDER_DND)
     const bid = getId(e, BOARD_DND)
-    if (bid) {
+    if (dfid && dfid !== fid) {
+      e.preventDefault()
+      onMoveFolderToFolder(dfid, fid)
+      onFileItem(dfid, null)
+    } else if (bid) {
       e.preventDefault()
       onMoveBoardToFolder(bid, fid)
       onFileItem(bid, null)
     }
   }
-  // Drop on a category: file a folder, or a board (pulled out of its folder).
+  // Drop on a category (or the top, catId=null): file the item there, un-nesting
+  // folders / un-filing boards from their folder first.
   const dropOnCat = (e: React.DragEvent, catId: string | null) => {
     setDropTarget(null)
     const fid = getId(e, FOLDER_DND)
     const bid = getId(e, BOARD_DND)
     if (fid) {
       e.preventDefault()
+      if (folderById.get(fid)?.parent_folder_id) onMoveFolderToFolder(fid, null)
       onFileItem(fid, catId)
     } else if (bid) {
       e.preventDefault()
@@ -304,7 +316,7 @@ export default function Sidebar(props: Props) {
           className={'tree-folder__row' + (dropTarget === f.id ? ' tree-folder__row--drop' : '')}
           draggable={!f.shared}
           onDragStart={(e) => startDrag(e, FOLDER_DND, f.id)}
-          onDragOver={(e) => overIf(e, [BOARD_DND], f.id)}
+          onDragOver={(e) => overIf(e, [BOARD_DND, FOLDER_DND], f.id)}
           onDragLeave={() => setDropTarget((d) => (d === f.id ? null : d))}
           onDrop={(e) => dropOnFolder(e, f.id)}
           onContextMenu={
@@ -326,7 +338,7 @@ export default function Sidebar(props: Props) {
           <button className="tree-folder__main" onClick={() => toggleFolder(f.id)}>
             <FolderIcon />
             <span className="tree-folder__name">{f.name}</span>
-            <span className="tree-folder__count">{inside.length}</span>
+            <span className="tree-folder__count">{inside.length + subFoldersOf(f.id).length}</span>
           </button>
           {!f.shared && (
             <span className="tree-folder__tools">
@@ -361,11 +373,11 @@ export default function Sidebar(props: Props) {
         {isOpen && (
           <div className="tree-children">
             {createInput('folder:' + f.id)}
-            {inside.length === 0 && creating?.target !== 'folder:' + f.id ? (
-              <div className="tree-empty">Empty</div>
-            ) : (
-              inside.map(boardRow)
-            )}
+            {subFoldersOf(f.id).map(folderNode)}
+            {inside.map(boardRow)}
+            {subFoldersOf(f.id).length === 0 &&
+              inside.length === 0 &&
+              creating?.target !== 'folder:' + f.id && <div className="tree-empty">Empty</div>}
           </div>
         )}
       </div>

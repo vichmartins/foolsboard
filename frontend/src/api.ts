@@ -211,6 +211,10 @@ export async function renameFolder(id: string, name: string): Promise<Folder> {
 export async function deleteFolder(id: string): Promise<void> {
   await http.delete(`/folders/${id}`)
 }
+// Nest a folder under another (parentFolderId=null makes it top-level).
+export async function moveFolder(id: string, parentFolderId: string | null): Promise<void> {
+  await http.patch(`/folders/${id}/parent`, { parent_folder_id: parentFolderId })
+}
 export async function reorderFolders(folderIds: string[]): Promise<void> {
   await http.patch('/folders/reorder', { folder_ids: folderIds })
 }

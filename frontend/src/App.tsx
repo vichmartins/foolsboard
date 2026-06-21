@@ -171,6 +171,12 @@ function Workspace() {
     setBoards((bs) => bs.map((b) => (b.id === boardId ? { ...b, folder_id: folderId } : b)))
     void api.moveBoardToFolder(boardId, folderId).catch(() => {})
   }
+  function moveFolderToFolder(folderId: string, parentFolderId: string | null) {
+    setFolders((fs) =>
+      fs.map((f) => (f.id === folderId ? { ...f, parent_folder_id: parentFolderId } : f)),
+    )
+    void api.moveFolder(folderId, parentFolderId).catch(() => {})
+  }
 
   // Re-fetch boards + folders (e.g. after accepting a share, so shared items appear).
   function refreshLists() {
@@ -480,6 +486,7 @@ function Workspace() {
           onShareFolder={(f) => setShareTarget({ type: 'folder', id: f.id, name: f.name })}
           onCreateBoardInFolder={createBoardInFolder}
           onMoveBoardToFolder={moveBoardToFolder}
+          onMoveFolderToFolder={moveFolderToFolder}
           onShareBoard={(b) => setShareTarget({ type: 'board', id: b.id, name: b.name })}
           onRenameBoard={renameBoardById}
           onDeleteBoard={(b) => setDeleteTarget(b)}
