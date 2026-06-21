@@ -22,6 +22,7 @@ import {
   type LinkRef,
   type StoryNode,
 } from '../types'
+import { makeMatcher } from '../search'
 
 interface Props {
   boardId: string
@@ -162,9 +163,10 @@ export default function NodeGallery({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scopedBoards, nodeById])
 
-  const q = query.trim().toLowerCase()
+  const trimmed = query.trim()
+  const match = makeMatcher(trimmed)
   const filt = <T extends { search: string }>(rows: T[]) =>
-    q ? rows.filter((r) => r.search.includes(q)) : rows
+    trimmed ? rows.filter((r) => match(r.search)) : rows
 
   const tabs: { id: Cat; label: string; count: number }[] = [
     { id: 'objects', label: 'Objects', count: objectRows.length },
@@ -246,6 +248,7 @@ export default function NodeGallery({
               type="search"
               autoFocus
               placeholder="Search by any attribute…"
+              title="Supports regular expressions"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { listAssets } from '../api'
 import { fileExt, KIND_COLORS, mediaKind } from '../types'
 import type { Asset, LinkRef, NearbyNode } from '../types'
+import { makeMatcher } from '../search'
 
 interface Props {
   nodes: NearbyNode[]
@@ -22,10 +23,11 @@ export default function NearbyNodes({ nodes, onAddMedia, onAddLinks }: Props) {
   const [query, setQuery] = useState('')
   const [limit, setLimit] = useState(() => Math.min(10, nodes.length))
 
-  // Search filters across all nodes by their text; otherwise show the closest
-  // `limit` (slider) of the ranked list.
-  const q = query.trim().toLowerCase()
-  const shown = q ? nodes.filter((n) => n.search.includes(q)) : nodes.slice(0, limit)
+  // Search (regex-capable) filters across all nodes by their text; otherwise show
+  // the closest `limit` (slider) of the ranked list.
+  const trimmed = query.trim()
+  const match = makeMatcher(trimmed)
+  const shown = trimmed ? nodes.filter((n) => match(n.search)) : nodes.slice(0, limit)
   const sliderMax = Math.max(1, nodes.length)
   const sliderVal = Math.min(limit, sliderMax)
 
@@ -92,6 +94,7 @@ export default function NearbyNodes({ nodes, onAddMedia, onAddLinks }: Props) {
           className="nearby__search"
           type="search"
           placeholder="Search nodes…"
+          title="Supports regular expressions"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -101,11 +104,11 @@ export default function NearbyNodes({ nodes, onAddMedia, onAddLinks }: Props) {
             min={1}
             max={sliderMax}
             value={sliderVal}
-            disabled={!!q}
+            disabled={!!trimmed}
             aria-label="Number of nearby nodes to show"
             onChange={(e) => setLimit(Number(e.target.value))}
           />
-          <span className="nearby__slider-val">{q ? `${shown.length}` : sliderVal}</span>
+          <span className="nearby__slider-val">{trimmed ? `${shown.length}` : sliderVal}</span>
         </div>
       </div>
       <div className="nearby__list">

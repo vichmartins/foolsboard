@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react'
 import * as api from '../api'
 import type { ActivityLog, ErrorLog, RequestLog } from '../types'
+import { makeMatcher } from '../search'
 
 type Tab = 'events' | 'requests' | 'errors'
 const PAGE = 50
@@ -56,15 +57,16 @@ export default function AdminLogs() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab])
 
-  const q = query.trim().toLowerCase()
-  const shownEvents = q
-    ? events.filter((e) => `${e.username ?? ''} ${e.action} ${e.summary}`.toLowerCase().includes(q))
+  const trimmed = query.trim()
+  const match = makeMatcher(trimmed)
+  const shownEvents = trimmed
+    ? events.filter((e) => match(`${e.username ?? ''} ${e.action} ${e.summary}`))
     : events
-  const shownRequests = q
-    ? requests.filter((r) => `${r.method} ${r.path} ${r.status_code}`.toLowerCase().includes(q))
+  const shownRequests = trimmed
+    ? requests.filter((r) => match(`${r.method} ${r.path} ${r.status_code}`))
     : requests
-  const shownErrors = q
-    ? errors.filter((e) => `${e.method} ${e.path} ${e.message}`.toLowerCase().includes(q))
+  const shownErrors = trimmed
+    ? errors.filter((e) => match(`${e.method} ${e.path} ${e.message}`))
     : errors
 
   const count =
@@ -88,6 +90,7 @@ export default function AdminLogs() {
           className="admin-logs__search"
           type="search"
           placeholder="Filter loaded rows…"
+          title="Supports regular expressions"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />

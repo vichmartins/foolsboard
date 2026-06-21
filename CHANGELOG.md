@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.47.0
+
+- **Search boxes now support regular expressions.** The node drawer search, the
+  board gallery search, and the admin log filters treat your query as a
+  case-insensitive regex (e.g. `scene|act`, `ch.*2`, `^intro`). Plain words still
+  work as before (they match as a substring), and a half-typed/invalid pattern
+  falls back to a plain substring match. Inputs note "Supports regular
+  expressions" on hover.
+
 ## v0.46.1
 
 - Presence dots now ease smoothly between here/away/offline, and the lit ("here")
