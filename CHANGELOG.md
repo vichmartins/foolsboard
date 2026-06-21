@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.42.1
+
+- Redrew the owner crown as a thin **outline icon** in the same Feather/line style
+  as the app's other icons (it was a filled shape that clashed with the theme).
+
 ## v0.42.0
 
 - **Explorer: "Shared with me" category.** Boards shared with you now appear in

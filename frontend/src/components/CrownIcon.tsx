@@ -1,14 +1,21 @@
-// Flat crown marking a board/folder the current user owns (and has shared out).
-// Inherits its color from CSS (`.owner-crown`), so it matches the theme rather
-// than the cartoonish 👑 emoji.
+// Outline crown marking a board/folder the current user owns (and has shared
+// out). Drawn in the same Feather/line style as the app's other icons (see
+// icons.tsx) so it fits the theme; color comes from CSS (`.owner-crown`).
 export default function CrownIcon({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" width="13" height="13" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M3 7l4.5 4.5L12 5l4.5 6.5L21 7l-1.5 9.5h-15L3 7z"
-      />
-      <rect fill="currentColor" x="4.5" y="18" width="15" height="2" rx="1" />
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      width="15"
+      height="15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 8l3.8 3.2L12 5l5.2 6.2L21 8l-1.4 9.3H4.4L3 8z" />
     </svg>
   )
 }
