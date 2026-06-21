@@ -120,6 +120,7 @@ async def _handle(conn, user: User, raw: str) -> None:
             "username": conn.username,
             "color": conn.color,
             "node_id": str(node_id) if node_id else None,
+            "node_title": str(msg.get("node_title") or "")[:120],
             "active": bool(msg.get("active")),
         })
     elif kind == "node_move":
@@ -151,4 +152,5 @@ async def _handle(conn, user: User, raw: str) -> None:
             "color": conn.color,
             "active": bool(msg.get("active")),
             "count": int(count) if isinstance(count, (int, float)) else 0,
+            "node_title": str(msg.get("node_title") or "")[:120],
         })

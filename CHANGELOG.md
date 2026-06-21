@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.45.0
+
+- **Presence avatars now show what each collaborator is doing.** An avatar gains
+  a small badge and a pulsing ring when that person is **editing** (✎) or
+  **uploading** (↑) a node, and its tooltip says which node — e.g. "Steven —
+  editing 'Scene 2'" or "uploading to 'Cover'". Idle viewers show no badge.
+- Avatars **pop in when someone joins and pop out when they leave** (smooth
+  scale/fade), instead of appearing/vanishing instantly.
+- The separate upload-activity chips were folded into the avatars (one place for
+  "who's here and what they're up to"). Edit/upload signals now carry the node
+  title.
+
 ## v0.44.3
 
 - The minimap now paints selected nodes in your highlight color too (was a fixed

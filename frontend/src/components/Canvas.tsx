@@ -926,10 +926,14 @@ function CanvasInner({
     [showLockNotice],
   )
 
-  // Broadcast which node I'm editing so collaborators can lock it; clear on close,
-  // board change, or unmount.
+  // Broadcast which node I'm editing (and its title) so collaborators can lock it
+  // and show "editing X"; clear on close, board change, or unmount.
   useEffect(() => {
-    realtime.sendEdit(selectedId)
+    const title = selectedId
+      ? ((nodes.find((n) => n.id === selectedId)?.data?.story as StoryNode | undefined)?.title ?? '')
+      : ''
+    realtime.sendEdit(selectedId, title)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId])
   useEffect(
     () => () => {

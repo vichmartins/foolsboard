@@ -851,6 +851,7 @@
   padding-right: 4px;
 }
 .presence__avatar {
+  position: relative;
   width: 26px;
   height: 26px;
   margin-left: -7px;
@@ -864,13 +865,73 @@
   color: #fff;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18);
   cursor: default;
+  animation: presence-in 0.26s cubic-bezier(0.2, 1.3, 0.4, 1);
 }
 .presence__avatar:first-child {
   margin-left: 0;
 }
+/* Actively editing/uploading: a gentle pulsing ring in their color. */
+.presence__avatar--active {
+  animation:
+    presence-in 0.26s cubic-bezier(0.2, 1.3, 0.4, 1),
+    presence-pulse 1.9s ease-in-out infinite;
+}
+/* Departing: pop out, then it's unmounted. (Last so it wins over --active.) */
+.presence__avatar--leaving {
+  animation: presence-out 0.28s ease forwards;
+  pointer-events: none;
+}
 .presence__avatar--more {
   background: var(--bg-elev-2);
   color: var(--text-dim);
+  animation: none;
+}
+.presence__badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-elev);
+  border: 1.5px solid var(--bg-elev);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.presence__badge svg {
+  width: 9px;
+  height: 9px;
+}
+@keyframes presence-in {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes presence-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+}
+@keyframes presence-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18), 0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18),
+      0 0 0 4px color-mix(in srgb, var(--c, #6366f1) 35%, transparent);
+  }
 }
 
 /* Collaborator upload activity (top bar): a chip per uploader with an

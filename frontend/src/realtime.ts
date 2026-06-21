@@ -34,6 +34,16 @@ export interface BoardUpload {
   username: string
   color: string
   count: number
+  title?: string // node the upload targets
+}
+
+// A collaborator on the board plus what they're currently doing.
+export interface MemberActivity {
+  id: string
+  username: string
+  color: string
+  status: 'idle' | 'editing' | 'uploading'
+  detail?: string // node title for editing/uploading
 }
 
 class Realtime {
@@ -52,7 +62,7 @@ class Realtime {
   private uploads: Record<string, Record<string, BoardUpload>> = {}
   // Per board, the node each user currently has open for editing (one each), so
   // others can show "X is editing" and block concurrent edits.
-  private editing: Record<string, Record<string, { nodeId: string; username: string; color: string }>> = {}
+  private editing: Record<string, Record<string, { nodeId: string; username: string; color: string; title: string }>> = {}
 
   private presenceListeners = new Set<() => void>()
   private collabListeners = new Set<() => void>()
@@ -148,7 +158,12 @@ class Realtime {
     } else if (msg.type === 'edit') {
       const map = (this.editing[board] ??= {})
       if (msg.active && msg.node_id) {
-        map[msg.user_id] = { nodeId: msg.node_id, username: msg.username, color: msg.color }
+        map[msg.user_id] = {
+          nodeId: msg.node_id,
+          username: msg.username,
+          color: msg.color,
+          title: msg.node_title ?? '',
+        }
       } else {
         delete map[msg.user_id]
       }
@@ -162,6 +177,8 @@ class Realtime {
       if (sel) sel.color = msg.color
       const ed = this.editing[board]?.[uid]
       if (ed) ed.color = msg.color
+      const up = this.uploads[board]?.[uid]
+      if (up) up.color = msg.color
       const member = this.presence[board]?.find((m) => m.id === uid)
       if (member) member.color = msg.color
       this.emitPresence()
@@ -192,6 +209,7 @@ class Realtime {
           username: msg.username,
           color: msg.color,
           count: msg.count,
+          title: msg.node_title ?? '',
         }
       } else {
         delete map[msg.user_id]
@@ -240,15 +258,16 @@ class Realtime {
     this.send({ type: 'board_dirty' })
   }
 
-  // Announce my in-flight upload count so collaborators see an activity indicator.
-  sendUpload(active: boolean, count: number) {
-    this.send({ type: 'upload', active, count })
+  // Announce my in-flight upload count (and which node) so collaborators see an
+  // activity indicator.
+  sendUpload(active: boolean, count: number, nodeTitle?: string) {
+    this.send({ type: 'upload', active, count, node_title: nodeTitle ?? '' })
   }
 
   // Announce the node I'm now editing (or null when I close the editor) so others
-  // can show a lock and block concurrent edits.
-  sendEdit(nodeId: string | null) {
-    this.send({ type: 'edit', node_id: nodeId, active: nodeId != null })
+  // can show a lock + "editing X" and block concurrent edits.
+  sendEdit(nodeId: string | null, nodeTitle?: string) {
+    this.send({ type: 'edit', node_id: nodeId, node_title: nodeTitle ?? '', active: nodeId != null })
   }
 
   // Set who I am so my own color is held fixed and clashing collaborators get a
@@ -324,6 +343,28 @@ class Realtime {
     return Object.values(this.uploads[boardId] ?? {})
   }
 
+  // Other collaborators on the board + what each is doing (uploading > editing >
+  // idle), with display colors resolved. Excludes me.
+  activityFor(boardId: string | null): MemberActivity[] {
+    if (!boardId) return []
+    const colors = this.resolveColors(boardId)
+    const editing = this.editing[boardId] ?? {}
+    const uploads = this.uploads[boardId] ?? {}
+    const selfId = this.self?.id
+    return (this.presence[boardId] ?? [])
+      .filter((m) => m.id !== selfId)
+      .map((m) => {
+        const color = colors[m.id] ?? m.color
+        const up = uploads[m.id]
+        if (up && up.count > 0)
+          return { id: m.id, username: m.username, color, status: 'uploading' as const, detail: up.title }
+        const ed = editing[m.id]
+        if (ed)
+          return { id: m.id, username: m.username, color, status: 'editing' as const, detail: ed.title }
+        return { id: m.id, username: m.username, color, status: 'idle' as const }
+      })
+  }
+
   subscribePresence(fn: () => void) {
     this.presenceListeners.add(fn)
     return () => {
@@ -389,6 +430,15 @@ export function useBoardUploads(boardId: string | null): BoardUpload[] {
   const [, force] = useState(0)
   useEffect(() => realtime.subscribePresence(() => force((n) => n + 1)), [])
   return realtime.uploadsFor(boardId)
+}
+
+// Other collaborators on the board + what each is currently doing. Updates on
+// presence (join/leave/upload) and edit-lock changes -- not on cursor traffic.
+export function useBoardActivity(boardId: string | null): MemberActivity[] {
+  const [, force] = useState(0)
+  useEffect(() => realtime.subscribePresence(() => force((n) => n + 1)), [])
+  useEffect(() => realtime.subscribeEdit(() => force((n) => n + 1)), [])
+  return realtime.activityFor(boardId)
 }
 
 // nodeId -> the remote collaborator editing it (lock + "X is editing" label).

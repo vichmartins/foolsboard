@@ -222,9 +222,10 @@ export default function ContextPanel({
   const uploadCount = uploads.length
   const prevUploadCount = useRef(0)
   useEffect(() => {
-    realtime.sendUpload(uploadCount > 0, uploadCount)
+    realtime.sendUpload(uploadCount > 0, uploadCount, node.title)
     if (prevUploadCount.current > 0 && uploadCount === 0) realtime.sendDirty()
     prevUploadCount.current = uploadCount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadCount])
   // Clear my indicator if the panel closes mid-upload.
   useEffect(() => () => realtime.sendUpload(false, 0), [])

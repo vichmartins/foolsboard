@@ -15,7 +15,6 @@ import PresenceBar from './components/PresenceBar'
 import ProfileMenu from './components/ProfileMenu'
 import Sidebar from './components/Sidebar'
 import UpdateBanner from './components/UpdateBanner'
-import UploadActivity from './components/UploadActivity'
 import PromptDialog from './components/PromptDialog'
 import MergeDialog from './components/MergeDialog'
 import MoveDialog, { type MoveTarget } from './components/MoveDialog'
@@ -38,7 +37,7 @@ import {
   TrashIcon,
   UnshareIcon,
 } from './components/icons'
-import { realtime, useBoardPresence, useBoardUploads } from './realtime'
+import { realtime, useBoardActivity, useBoardPresence } from './realtime'
 import { useUpdateAvailable } from './useUpdateAvailable'
 import type { Board, Folder } from './types'
 import './App.css'
@@ -144,11 +143,10 @@ function Workspace() {
   }, [user?.id, user?.color])
 
   const activeBoard = boards.find((b) => b.id === activeId) ?? null
-  // Other collaborators currently viewing this board (excluding myself).
-  const presence = useBoardPresence(activeId)
-  const others = presence.filter((m) => m.id !== user?.id)
-  // Collaborators uploading media to this board right now.
-  const uploads = useBoardUploads(activeId).filter((u) => u.userId !== user?.id)
+  // Announce the active board (join) and get other collaborators + what each is
+  // doing (editing / uploading / viewing). useBoardPresence drives the board join.
+  useBoardPresence(activeId)
+  const activity = useBoardActivity(activeId)
   // Boards shown in the picker: filtered to the active folder ("All" = every board).
   const visibleBoards =
     activeFolderId === null ? boards : boards.filter((b) => b.folder_id === activeFolderId)
@@ -401,8 +399,7 @@ function Workspace() {
           </button>
         </div>
 
-        <PresenceBar members={others} />
-        <UploadActivity uploads={uploads} />
+        <PresenceBar members={activity} />
         <ThemeToggle />
         <ProfileMenu
           onOpenAccount={() => setAccountOpen(true)}
