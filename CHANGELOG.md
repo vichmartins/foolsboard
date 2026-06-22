@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.59.0
+
+- Fixed dragging in the explorer **jittering** while hovering — the reorder hint
+  no longer forces a re-render on every drag-over event.
+- A category that still listed a **deleted board/folder** showed a phantom count
+  and an empty body; the count and contents now only reflect items that exist.
+- The **New Category** name box now matches the board/folder inputs (no more
+  oversized uppercase text while typing).
+
 ## v0.58.0
 
 - **Import/Export now includes categories.** In Export, pick categories

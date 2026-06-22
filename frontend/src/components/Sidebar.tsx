@@ -339,7 +339,10 @@ export default function Sidebar(props: Props) {
             ? (e) => {
                 if (!types(e).some((t) => t === BOARD_DND || t === FOLDER_DND)) return
                 e.preventDefault()
-                setReorderHint({ id: b.id, after: rowZone(e, false) === 'after' })
+                const after = rowZone(e, false) === 'after'
+                // Keep the same object when nothing changed so React skips the
+                // re-render (otherwise dragover fires a render storm -> jitter).
+                setReorderHint((h) => (h && h.id === b.id && h.after === after ? h : { id: b.id, after }))
               }
             : undefined
         }
@@ -437,7 +440,8 @@ export default function Sidebar(props: Props) {
               setDropTarget(f.id)
             } else {
               setDropTarget(null)
-              setReorderHint({ id: f.id, after: zone === 'after' })
+              const after = zone === 'after'
+              setReorderHint((h) => (h && h.id === f.id && h.after === after ? h : { id: f.id, after }))
             }
           }}
           onDragLeave={() => {
@@ -611,6 +615,9 @@ export default function Sidebar(props: Props) {
 
             {categories.map((c) => {
               const isOpen = !collapsedCats.has(c.id)
+              // Only items that still exist (a deleted board/folder leaves a dead
+              // id behind); count and render those so they always agree.
+              const items = c.items.filter((id) => folderById.has(id) || boardById.has(id))
               return (
                 <div className="tree-cat" key={c.id} data-flip-id={c.id}>
                   {editingId === c.id ? (
@@ -671,7 +678,7 @@ export default function Sidebar(props: Props) {
                       <button className="tree-cat__name" onClick={() => toggleCat(c.id)}>
                         {c.name}
                       </button>
-                      <span className="tree-cat__count">{c.items.length}</span>
+                      <span className="tree-cat__count">{items.length}</span>
                       <span className="tree-cat__tools">
                         <button
                           className="icon-btn"
@@ -718,8 +725,8 @@ export default function Sidebar(props: Props) {
                       }}
                     >
                       {createInput('cat:' + c.id)}
-                      {c.items.map((id) => renderItem(id, 'cat:' + c.id))}
-                      {c.items.length === 0 && creating?.target !== 'cat:' + c.id && (
+                      {items.map((id) => renderItem(id, 'cat:' + c.id))}
+                      {items.length === 0 && creating?.target !== 'cat:' + c.id && (
                         <div className="tree-empty">Empty — use + or drag items here</div>
                       )}
                     </div>
