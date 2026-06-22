@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.63.1
+
+- The **Create** dialog's "Place in" picker uses themed folder/category line icons
+  instead of emoji glyphs (the Select control now supports real icons).
+- The **category icon** now shows in the Merge and Move pickers, matching boards
+  and folders.
+
 ## v0.63.0
 
 - The top-bar **Categories** picker gains an **A→Z / Z→A** sort toggle, matching

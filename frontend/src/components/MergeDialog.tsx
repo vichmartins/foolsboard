@@ -5,7 +5,7 @@
 // be deleted), so they're shown faded and disabled.
 import { useState } from 'react'
 import type { Board, Category, Folder } from '../types'
-import { BoardIcon, ChevronIcon, FolderIcon } from './icons'
+import { BoardIcon, CategoryIcon, ChevronIcon, FolderIcon } from './icons'
 
 interface Props {
   boards: Board[] // candidates (the current board is excluded by the caller)
@@ -147,6 +147,9 @@ export default function MergeDialog({
                       <button className="merge-tree__row merge-tree__cat" onClick={() => toggleOpen(c.id)}>
                         <span className={'merge-tree__chev' + (open ? ' merge-tree__chev--open' : '')}>
                           <ChevronIcon />
+                        </span>
+                        <span className="merge-tree__icon">
+                          <CategoryIcon />
                         </span>
                         <span className="merge-tree__name">{c.name}</span>
                       </button>

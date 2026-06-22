@@ -2,6 +2,7 @@
 // in a folder (boards only) or a category.
 import { useState } from 'react'
 import Select from './Select'
+import { CategoryIcon, FolderIcon } from './icons'
 import type { Category, Folder } from '../types'
 
 const NONE = '__none__'
@@ -39,8 +40,10 @@ export default function NewBoardDialog({
   const ownFolders = folders.filter((f) => !f.shared)
   const destOptions = [
     { value: NONE, label: kind === 'board' ? 'No folder / category' : 'No category' },
-    ...(kind === 'board' ? ownFolders.map((f) => ({ value: 'f:' + f.id, label: '🗀 ' + f.name })) : []),
-    ...categories.map((c) => ({ value: 'c:' + c.id, label: '▤ ' + c.name })),
+    ...(kind === 'board'
+      ? ownFolders.map((f) => ({ value: 'f:' + f.id, label: f.name, icon: <FolderIcon /> }))
+      : []),
+    ...categories.map((c) => ({ value: 'c:' + c.id, label: c.name, icon: <CategoryIcon /> })),
   ]
 
   function submit() {

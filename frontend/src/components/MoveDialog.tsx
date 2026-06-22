@@ -2,7 +2,7 @@
 // existing one found by navigating the same folders/categories as the explorer.
 import { useState } from 'react'
 import type { Board, Category, Folder } from '../types'
-import { BoardIcon, ChevronIcon, FolderIcon } from './icons'
+import { BoardIcon, CategoryIcon, ChevronIcon, FolderIcon } from './icons'
 
 export type MoveTarget = { boardId: string } | { newName: string }
 
@@ -136,6 +136,9 @@ export default function MoveDialog({
                 <button className="merge-tree__row merge-tree__cat" onClick={() => toggleOpen(c.id)}>
                   <span className={'merge-tree__chev' + (open ? ' merge-tree__chev--open' : '')}>
                     <ChevronIcon />
+                  </span>
+                  <span className="merge-tree__icon">
+                    <CategoryIcon />
                   </span>
                   <span className="merge-tree__name">{c.name}</span>
                 </button>

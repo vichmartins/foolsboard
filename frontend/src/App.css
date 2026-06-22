@@ -1928,6 +1928,16 @@
   border-radius: 50%;
   flex-shrink: 0;
 }
+.select__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-dim);
+}
+.select__icon svg {
+  width: 14px;
+  height: 14px;
+}
 .select__chevron {
   font-size: 10px;
   color: var(--text-dim);

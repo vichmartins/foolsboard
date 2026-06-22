@@ -2,13 +2,14 @@
 // which can't be styled or animated to match the app). Options may carry a
 // color shown as a leading dot. The menu renders in a portal positioned over
 // the trigger, so it's never clipped by a scrolling/overflow container.
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 export interface SelectOption {
   value: string
   label: string
   color?: string
+  icon?: ReactNode
 }
 
 interface Props {
@@ -76,6 +77,7 @@ export default function Select({ value, options, onChange, ariaLabel, placeholde
         {current?.color && (
           <span className="select__dot" style={{ background: current.color }} />
         )}
+        {current?.icon && <span className="select__icon">{current.icon}</span>}
         <span className={'select__current' + (current ? '' : ' select__current--placeholder')}>
           {current?.label ?? placeholder ?? ''}
         </span>
@@ -103,6 +105,7 @@ export default function Select({ value, options, onChange, ariaLabel, placeholde
                 }}
               >
                 {o.color && <span className="select__dot" style={{ background: o.color }} />}
+                {o.icon && <span className="select__icon">{o.icon}</span>}
                 {o.label}
               </button>
             </li>
