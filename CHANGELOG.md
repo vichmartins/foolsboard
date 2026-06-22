@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.64.3
+
+- Fixed the faint dark ring around presence avatars in **light mode** — the
+  outline now uses the theme border color, so it's an equally subtle, intentional
+  edge in both light and dark.
+
 ## v0.64.2
 
 - Fixed explorer rows jittering when you **select** an item (most visible with
