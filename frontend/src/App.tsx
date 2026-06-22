@@ -817,6 +817,7 @@ function Workspace() {
           boards={boards}
           folders={folders}
           categories={categories}
+          orderedTop={computeOrderedTop()}
           onClose={() => setImpexOpen(false)}
           onImported={(created) => {
             setBoards((b) => [...created, ...b])

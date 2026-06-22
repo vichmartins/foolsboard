@@ -1,14 +1,16 @@
 // Import / Export storyboards as a .zip bundle (board graph + attached media).
 // Export the selected boards to a file; import boards from such a bundle via the
 // file picker or by dropping it anywhere on the dialog (full-screen drop target).
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import * as api from '../api'
 import type { Board, Category, Folder } from '../types'
+import { BoardIcon, CategoryIcon, ChevronIcon, FolderIcon } from './icons'
 
 interface Props {
   boards: Board[]
   folders: Folder[]
   categories: Category[]
+  orderedTop: string[]
   onClose: () => void
   onImported: (created: Board[]) => void
 }
@@ -44,6 +46,7 @@ export default function ImportExportDialog({
   boards,
   folders,
   categories,
+  orderedTop,
   onClose,
   onImported,
 }: Props) {
@@ -51,6 +54,7 @@ export default function ImportExportDialog({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set())
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set())
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
@@ -58,7 +62,6 @@ export default function ImportExportDialog({
   const [fileDragging, setFileDragging] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const allSelected = boards.length > 0 && selected.size === boards.length
   const totalSelected = selected.size + selectedFolders.size + selectedCategories.size
   const toggleIn = (setter: typeof setSelected) => (id: string) =>
     setter((s) => {
@@ -87,8 +90,75 @@ export default function ImportExportDialog({
       setSelectedCategories(new Set(categories.map((c) => c.id)))
     }
   }
-  const toggleAll = () =>
-    setSelected(allSelected ? new Set() : new Set(boards.map((b) => b.id)))
+  // --- navigable export tree (mirrors the Merge picker) ---------------------
+  const boardById = new Map(boards.map((b) => [b.id, b]))
+  const folderById = new Map(folders.map((f) => [f.id, f]))
+  const boardsIn = (fid: string) => boards.filter((b) => b.folder_id === fid)
+  const toggleOpen = (id: string) =>
+    setCollapsed((s) => {
+      const n = new Set(s)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+
+  function treeRow(
+    key: string,
+    depth: number,
+    icon: ReactNode,
+    name: string,
+    checked: boolean,
+    onToggle: () => void,
+    count: number | null,
+    expand: { open: boolean; onToggle: () => void } | null,
+  ) {
+    return (
+      <div className="impex-tree__row" key={key} style={{ paddingLeft: depth * 14 }}>
+        {expand ? (
+          <button
+            type="button"
+            className={'merge-tree__chev' + (expand.open ? ' merge-tree__chev--open' : '')}
+            onClick={expand.onToggle}
+            aria-label={expand.open ? 'Collapse' : 'Expand'}
+          >
+            <ChevronIcon />
+          </button>
+        ) : (
+          <span className="impex-tree__spacer" />
+        )}
+        <label className="impex-tree__pick">
+          <input type="checkbox" checked={checked} onChange={onToggle} />
+          <span className="merge-tree__icon">{icon}</span>
+          <span className="merge-tree__name">{name}</span>
+        </label>
+        {count != null && <span className="merge-tree__count">{count}</span>}
+      </div>
+    )
+  }
+
+  const boardRow = (b: Board, depth: number) =>
+    treeRow(b.id, depth, <BoardIcon />, b.name, selected.has(b.id), () => toggle(b.id), null, null)
+
+  const folderNode = (f: Folder, depth: number) => {
+    const open = !collapsed.has(f.id)
+    const inside = boardsIn(f.id)
+    return (
+      <div key={f.id}>
+        {treeRow(f.id, depth, <FolderIcon />, f.name, selectedFolders.has(f.id), () => toggleFolder(f.id), inside.length, { open, onToggle: () => toggleOpen(f.id) })}
+        {open && inside.map((b) => boardRow(b, depth + 1))}
+      </div>
+    )
+  }
+
+  const renderItem = (id: string, depth: number) => {
+    const f = folderById.get(id)
+    if (f) return folderNode(f, depth)
+    const b = boardById.get(id)
+    if (b) return boardRow(b, depth)
+    return null
+  }
+
+  const topItems = orderedTop.filter((id) => boardById.has(id) || folderById.has(id))
 
   function exportFilename(ids: string[], fids: string[]): string {
     if (fids.length === 1 && ids.length === 0) {
@@ -227,74 +297,30 @@ export default function ImportExportDialog({
                 <input type="checkbox" checked={everythingOn} onChange={toggleEverything} />
                 <span>Everything</span>
               </label>
-              {categories.length > 0 && (
-                <>
-                  <div className="impex-group">Categories</div>
-                  <ul className="impex-list">
-                    {categories.map((c) => (
-                      <li key={c.id}>
-                        <label className="impex-item">
-                          <input
-                            type="checkbox"
-                            checked={selectedCategories.has(c.id)}
-                            onChange={() => toggleCategory(c.id)}
-                          />
-                          <span className="impex-item__name">{c.name}</span>
-                          <span className="impex-item__count">
-                            {c.items.length} item{c.items.length === 1 ? '' : 's'}
-                          </span>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-              {folders.length > 0 && (
-                <>
-                  <div className="impex-group">Folders</div>
-                  <ul className="impex-list">
-                    {folders.map((f) => {
-                      const count = boards.filter((b) => b.folder_id === f.id).length
-                      return (
-                        <li key={f.id}>
-                          <label className="impex-item">
-                            <input
-                              type="checkbox"
-                              checked={selectedFolders.has(f.id)}
-                              onChange={() => toggleFolder(f.id)}
-                            />
-                            <span className="impex-item__name">🗀 {f.name}</span>
-                            <span className="impex-item__count">
-                              {count} board{count === 1 ? '' : 's'}
-                            </span>
-                          </label>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                  <div className="impex-group">Boards</div>
-                </>
-              )}
-              {boards.length > 0 && (
-                <label className="impex-all">
-                  <input type="checkbox" checked={allSelected} onChange={toggleAll} />
-                  <span>Select all boards</span>
-                </label>
-              )}
-              <ul className="impex-list">
-                {boards.map((b) => (
-                  <li key={b.id}>
-                    <label className="impex-item">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(b.id)}
-                        onChange={() => toggle(b.id)}
-                      />
-                      <span className="impex-item__name">{b.name}</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
+              <div className="merge-tree impex-tree">
+                {topItems.map((id) => renderItem(id, 0))}
+                {categories.map((c) => {
+                  const open = !collapsed.has(c.id)
+                  return (
+                    <div key={c.id}>
+                      {treeRow(
+                        c.id,
+                        0,
+                        <CategoryIcon />,
+                        c.name,
+                        selectedCategories.has(c.id),
+                        () => toggleCategory(c.id),
+                        c.items.length,
+                        { open, onToggle: () => toggleOpen(c.id) },
+                      )}
+                      {open && c.items.map((id) => renderItem(id, 1))}
+                    </div>
+                  )
+                })}
+                {topItems.length === 0 && categories.length === 0 && (
+                  <p className="impex-tree__empty">Nothing to export yet.</p>
+                )}
+              </div>
               {busy && <ProgressBar />}
               <div className="dialog__actions">
                 <button className="btn" onClick={onClose} disabled={busy}>

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.62.0
+
+- The **Export** tab is now a navigable tree (like the Merge picker): expand
+  categories and folders with a chevron and tick a checkbox at any level —
+  category, folder, or individual board. Replaces the old flat grouped lists.
+
 ## v0.61.0
 
 - Categories in the explorer now show the **category icon** next to their name,
