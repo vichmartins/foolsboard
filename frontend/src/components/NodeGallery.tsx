@@ -17,6 +17,7 @@ import {
   typeLabel,
   type Asset,
   type Board,
+  type Category,
   type Folder,
   type GalleryBoard,
   type LinkRef,
@@ -28,6 +29,7 @@ interface Props {
   boardId: string
   boards: Board[]
   folders: Folder[]
+  categories: Category[]
   onPickNode: (id: string) => void
   onPickEdge: (source: string, target: string) => void
   onOpenBoard: (boardId: string, nodeId?: string) => void
@@ -61,6 +63,7 @@ export default function NodeGallery({
   boardId,
   boards,
   folders,
+  categories,
   onPickNode,
   onPickEdge,
   onOpenBoard,
@@ -69,6 +72,8 @@ export default function NodeGallery({
   const [data, setData] = useState<GalleryBoard[]>([])
   const [loading, setLoading] = useState(true)
   const [scope, setScope] = useState<string>(boardId) // 'all' | boardId
+  const [catScope, setCatScope] = useState<string>('all') // 'all' | categoryId
+  const [folderScope, setFolderScope] = useState<string>('all') // 'all' | folderId
   const [cat, setCat] = useState<Cat>('objects')
   const [query, setQuery] = useState('')
   const [lightbox, setLightbox] = useState<number | null>(null)
@@ -94,9 +99,31 @@ export default function NodeGallery({
   }, [data])
   const ownerName = (id: string) => nodeById.get(id)?.title || 'Untitled'
 
+  // Board ids that match the category + folder narrowing (the pool the board
+  // picker chooses from). 'all' scope browses this whole pool.
+  const filterBoardIds = useMemo(() => {
+    let bs = boards
+    if (catScope !== 'all') {
+      const cat = categories.find((c) => c.id === catScope)
+      const catFolderIds = new Set(
+        (cat?.items ?? []).filter((id) => folders.some((f) => f.id === id)),
+      )
+      const ids = new Set<string>([
+        ...(cat?.items ?? []).filter((id) => boards.some((b) => b.id === id)),
+        ...boards.filter((b) => b.folder_id && catFolderIds.has(b.folder_id)).map((b) => b.id),
+      ])
+      bs = bs.filter((b) => ids.has(b.id))
+    }
+    if (folderScope !== 'all') bs = bs.filter((b) => b.folder_id === folderScope)
+    return new Set(bs.map((b) => b.id))
+  }, [boards, folders, categories, catScope, folderScope])
+
   const scopedBoards = useMemo(
-    () => (scope === 'all' ? data : data.filter((b) => b.id === scope)),
-    [data, scope],
+    () =>
+      scope === 'all'
+        ? data.filter((b) => filterBoardIds.has(b.id))
+        : data.filter((b) => b.id === scope),
+    [data, scope, filterBoardIds],
   )
   const showBoardTag = scope === 'all'
 
@@ -196,14 +223,29 @@ export default function NodeGallery({
   const pickEdge = (bid: string, s: string, t: string) =>
     bid === boardId ? onPickEdge(s, t) : onOpenBoard(bid, s)
 
+  const catOptions = useMemo(
+    () => [{ value: 'all', label: 'All categories' }, ...categories.map((c) => ({ value: c.id, label: c.name }))],
+    [categories],
+  )
+  // Folder options narrow to the chosen category (its folders) when one is set.
+  const folderOptions = useMemo(() => {
+    let fs = folders
+    if (catScope !== 'all') {
+      const cat = categories.find((c) => c.id === catScope)
+      const ids = new Set((cat?.items ?? []).filter((id) => folders.some((f) => f.id === id)))
+      fs = fs.filter((f) => ids.has(f.id))
+    }
+    return [{ value: 'all', label: 'All folders' }, ...fs.map((f) => ({ value: f.id, label: f.name }))]
+  }, [folders, categories, catScope])
   const scopeOptions = useMemo(() => {
     const opts = [{ value: 'all', label: 'All boards' }]
     for (const b of boards) {
+      if (!filterBoardIds.has(b.id)) continue
       const fn = b.folder_id ? folderName.get(b.folder_id) : null
       opts.push({ value: b.id, label: fn ? `${fn} / ${b.name}` : b.name })
     }
     return opts
-  }, [boards, folderName])
+  }, [boards, folderName, filterBoardIds])
 
   const tag = (bid: string) =>
     showBoardTag ? (
@@ -224,6 +266,33 @@ export default function NodeGallery({
           </div>
 
           <div className="gallery-bar">
+            {categories.length > 0 && (
+              <div className="gallery-scope">
+                <Select
+                  value={catScope}
+                  options={catOptions}
+                  onChange={(v) => {
+                    setCatScope(v)
+                    setFolderScope('all')
+                    setScope('all')
+                  }}
+                  ariaLabel="Filter by category"
+                />
+              </div>
+            )}
+            {folderOptions.length > 1 && (
+              <div className="gallery-scope">
+                <Select
+                  value={folderScope}
+                  options={folderOptions}
+                  onChange={(v) => {
+                    setFolderScope(v)
+                    setScope('all')
+                  }}
+                  ariaLabel="Filter by folder"
+                />
+              </div>
+            )}
             <div className="gallery-scope">
               <Select
                 value={scope}

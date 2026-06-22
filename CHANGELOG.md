@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.57.0
+
+- **Gallery** now lets you narrow by **category** and **folder** before picking a
+  board, instead of one long flat board list.
+
 ## v0.56.0
 
 - **Create Private Copy** now opens a destination picker — choose a folder or

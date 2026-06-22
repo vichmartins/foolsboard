@@ -612,6 +612,7 @@ function Workspace() {
             onMoveSelection={(ids) => setMoveIds(ids)}
             boards={boards}
             folders={folders}
+            categories={categories}
             onOpenBoard={(bid, nid) => {
               setActiveId(bid)
               setPendingFocus(nid ? { boardId: bid, nodeId: nid } : null)

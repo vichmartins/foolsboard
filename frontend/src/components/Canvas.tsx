@@ -38,6 +38,7 @@ import {
   nodePreview,
   OBJECT_COLOR,
   type Board,
+  type Category,
   type Folder,
   type LinkRef,
   type NearbyNode,
@@ -73,6 +74,7 @@ interface CanvasProps {
   // Workspace context for the (workspace-wide) Gallery.
   boards?: Board[]
   folders?: Folder[]
+  categories?: Category[]
   onOpenBoard?: (boardId: string, nodeId?: string) => void
   // When this board is opened targeting a specific node (e.g. from the Gallery
   // on another board), pan to it once loaded, then call onFocusHandled.
@@ -141,6 +143,7 @@ function CanvasInner({
   onMoveSelection,
   boards = [],
   folders = [],
+  categories = [],
   onOpenBoard,
   focusNodeId,
   onFocusHandled,
@@ -1214,6 +1217,7 @@ function CanvasInner({
           boardId={boardId}
           boards={boards}
           folders={folders}
+          categories={categories}
           onPickNode={(id) => {
             focusNode(id)
             onCloseGallery?.()
