@@ -3007,11 +3007,21 @@
   max-height: 280px;
   overflow-y: auto;
 }
-/* Navigable folder/category tree inside the Merge picker. */
+/* Navigable folder/category tree inside the Merge / Move pickers. */
 .merge-tree {
-  max-height: 320px;
+  max-height: 340px;
   overflow-y: auto;
-  margin: 4px 0 2px;
+  margin: 8px 0 4px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elev-2);
+}
+.merge-tree input[type='checkbox'],
+.merge-tree input[type='radio'],
+.move-new input {
+  accent-color: var(--accent);
+  flex: none;
 }
 .merge-tree__row,
 .merge-tree__board {
@@ -4443,10 +4453,16 @@
 /* --- Import / Export dialog ------------------------------------------------ */
 .impex {
   width: min(520px, 94vw);
+  max-height: 88vh;
   padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 .impex__body {
   padding: 16px 20px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 .impex-all {
   display: flex;
@@ -4457,6 +4473,14 @@
   color: var(--text-dim);
   cursor: pointer;
 }
+.impex-everything {
+  font-weight: 600;
+  color: var(--text);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elev-2);
+}
 .impex-list {
   list-style: none;
   margin: 0 0 16px;
@@ -4464,8 +4488,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 320px;
-  overflow-y: auto;
 }
 .impex-item {
   display: flex;
@@ -4569,8 +4591,15 @@
   padding: 2px 20px 14px;
   border-bottom: 1px solid var(--border);
 }
+.gallery-scopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .gallery-scope {
-  max-width: 320px;
+  flex: 1 1 180px;
+  min-width: 0;
+  max-width: 280px;
 }
 /* Small pill showing which board a result lives on (in "All boards" scope). */
 .gallery-board-tag {

@@ -705,6 +705,9 @@ function Workspace() {
       {moveIds && (
         <MoveDialog
           boards={boards.filter((b) => b.id !== activeId)}
+          folders={folders}
+          categories={categories}
+          orderedTop={computeOrderedTop()}
           count={moveIds.length}
           onCancel={() => setMoveIds(null)}
           onConfirm={async (target: MoveTarget) => {

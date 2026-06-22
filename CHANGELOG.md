@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.60.0
+
+- The node **Move** dialog (top bar + right-click) now navigates folders and
+  categories to find the destination board, instead of a flat list.
+- **Gallery**: the three scope fields sit on one row; Category/Folder start
+  empty and the board picker no longer dumps every board — it stays on the
+  active board until you pick a category or folder to browse.
+- **Import/Export**: the dialog is bounded and scrolls (no more cut-off at the
+  bottom), and a new **Everything** toggle exports all categories/folders/boards
+  in one click.
+- **Merge** picker restyled into a bordered panel with accent checkboxes.
+
 ## v0.59.0
 
 - Fixed dragging in the explorer **jittering** while hovering — the reorder hint

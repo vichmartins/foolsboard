@@ -70,6 +70,23 @@ export default function ImportExportDialog({
   const toggle = toggleIn(setSelected)
   const toggleFolder = toggleIn(setSelectedFolders)
   const toggleCategory = toggleIn(setSelectedCategories)
+  // "Everything" = every category + folder + board selected at once.
+  const everythingOn =
+    boards.length + folders.length + categories.length > 0 &&
+    selected.size === boards.length &&
+    selectedFolders.size === folders.length &&
+    selectedCategories.size === categories.length
+  const toggleEverything = () => {
+    if (everythingOn) {
+      setSelected(new Set())
+      setSelectedFolders(new Set())
+      setSelectedCategories(new Set())
+    } else {
+      setSelected(new Set(boards.map((b) => b.id)))
+      setSelectedFolders(new Set(folders.map((f) => f.id)))
+      setSelectedCategories(new Set(categories.map((c) => c.id)))
+    }
+  }
   const toggleAll = () =>
     setSelected(allSelected ? new Set() : new Set(boards.map((b) => b.id)))
 
@@ -206,6 +223,10 @@ export default function ImportExportDialog({
                 content, links, and media. Exporting a category or folder includes everything
                 inside it.
               </p>
+              <label className="impex-all impex-everything">
+                <input type="checkbox" checked={everythingOn} onChange={toggleEverything} />
+                <span>Everything</span>
+              </label>
               {categories.length > 0 && (
                 <>
                   <div className="impex-group">Categories</div>
