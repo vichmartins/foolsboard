@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.65.0
+
+- **Smoother live collaboration.** Other people's cursors, selection/edit
+  outlines, and dragged nodes now interpolate between network samples instead of
+  snapping, so movement glides instead of looking sluggish. The node you're
+  actively dragging stays exactly 1:1 with your pointer. Cursor/position updates
+  also stream a bit faster (~30 fps).
+
 ## v0.64.4
 
 - A collaborator's selection highlight no longer covers the "✎ editing" badge on

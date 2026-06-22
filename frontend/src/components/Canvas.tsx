@@ -156,7 +156,7 @@ function CanvasInner({
   const broadcastCursor = useCallback(
     (e: React.PointerEvent) => {
       const now = performance.now()
-      if (now - lastCursorSent.current < 45) return // ~22 fps cap on the wire
+      if (now - lastCursorSent.current < 30) return // ~33 fps cap on the wire
       lastCursorSent.current = now
       const p = screenToFlowPosition({ x: e.clientX, y: e.clientY })
       realtime.sendCursor(p.x, p.y)
@@ -178,7 +178,7 @@ function CanvasInner({
   const broadcastMove = useCallback(
     (throttle: boolean) => {
       const now = performance.now()
-      if (throttle && now - lastMoveSent.current < 45) return
+      if (throttle && now - lastMoveSent.current < 33) return // ~30 fps on the wire
       lastMoveSent.current = now
       const moving = getNodes().filter((n) => n.selected || n.dragging)
       if (moving.length) {
