@@ -3006,6 +3006,47 @@
   max-height: 280px;
   overflow-y: auto;
 }
+/* Section labels inside the Move picker. */
+.move-list__head {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  padding: 6px 2px 2px;
+}
+.move-list__head:first-child {
+  padding-top: 0;
+}
+/* Segmented control (Create dialog: Board / Folder / Category). */
+.seg {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  margin-bottom: 14px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+.seg__btn {
+  flex: 1;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.seg__btn:hover {
+  color: var(--text);
+}
+.seg__btn--active {
+  background: var(--accent);
+  color: #fff;
+}
 .merge-item {
   display: flex;
   align-items: center;

@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.54.0
+
+- **Categories picker in the top bar**, left of the folder picker. Selecting a
+  category scopes the folder and board pickers to what's filed in it (its
+  folders/boards + boards inside those folders); "All Categories" clears it. You
+  can also create/rename/delete categories from here.
+- **Move** (top bar) now sends the open board into a folder **or** a category
+  (or to the top level).
+- **Create** (top bar "+") is now a chooser: make a Board, Folder, or Category,
+  and optionally place a new board/folder into a folder or category.
+
 ## v0.53.1
 
 - Fixed: users on a plain-HTTP LAN address (not localhost/HTTPS) couldn't create

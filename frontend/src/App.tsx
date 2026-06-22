@@ -5,6 +5,7 @@ import AccountDialog from './components/AccountDialog'
 import PreferencesDialog from './components/PreferencesDialog'
 import AdminPanel from './components/AdminPanel'
 import BoardSelect from './components/BoardSelect'
+import CategorySelect from './components/CategorySelect'
 import BrandMenu from './components/BrandMenu'
 import Canvas from './components/Canvas'
 import ConfirmDialog from './components/ConfirmDialog'
@@ -18,7 +19,7 @@ import UpdateBanner from './components/UpdateBanner'
 import PromptDialog from './components/PromptDialog'
 import MergeDialog from './components/MergeDialog'
 import MoveDialog, { type MoveTarget } from './components/MoveDialog'
-import NewBoardDialog, { type NewBoardTarget } from './components/NewBoardDialog'
+import NewBoardDialog, { type CreateSpec } from './components/NewBoardDialog'
 import MoveToFolderDialog from './components/MoveToFolderDialog'
 import ShareBanner from './components/ShareBanner'
 import ShareDialog from './components/ShareDialog'
@@ -51,6 +52,8 @@ function Workspace() {
   const [folders, setFolders] = useState<Folder[]>([])
   // Active folder filter for the board list (null = All Boards).
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null)
+  // Active category scope (null = All Categories). Scopes the folder+board pickers.
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
   // Board awaiting a folder via the Move-to-Folder dialog.
   const [moveFolderBoard, setMoveFolderBoard] = useState<Board | null>(null)
   // Resource being shared (opens the Share dialog).
@@ -148,24 +151,26 @@ function Workspace() {
   // doing (editing / uploading / viewing). useBoardPresence drives the board join.
   useBoardPresence(activeId)
   const activity = useBoardActivity(activeId)
-  // Boards shown in the picker: filtered to the active folder ("All" = every board).
-  const visibleBoards =
-    activeFolderId === null ? boards : boards.filter((b) => b.folder_id === activeFolderId)
 
-  async function handleNewBoard(name: string, target: NewBoardTarget) {
-    let folderId: string | null
-    if ('newFolder' in target) {
-      const folder = await api.createFolder(target.newFolder)
-      setFolders((fs) => [...fs, folder])
-      folderId = folder.id
-    } else {
-      folderId = target.folderId
+  async function handleCreate(spec: CreateSpec) {
+    setDialog(null)
+    if (spec.kind === 'category') {
+      createCategory(spec.name)
+      return
     }
-    const board = await api.createBoard(name, undefined, folderId)
+    if (spec.kind === 'folder') {
+      const folder = await api.createFolder(spec.name)
+      setFolders((fs) => [...fs, folder])
+      if (spec.categoryId) fileItem(folder.id, spec.categoryId)
+      return
+    }
+    // board: a category destination implies top-level (no folder)
+    const folderId = spec.categoryId ? null : spec.folderId
+    const board = await api.createBoard(spec.name, undefined, folderId)
     setBoards((b) => [board, ...b])
     setActiveId(board.id)
-    setActiveFolderId(folderId) // surface the new board in the (now-filtered) list
-    setDialog(null)
+    if (spec.categoryId) fileItem(board.id, spec.categoryId)
+    else setActiveFolderId(folderId) // surface the new board in the (now-filtered) list
   }
 
   function moveBoardToFolder(boardId: string, folderId: string | null) {
@@ -302,6 +307,25 @@ function Workspace() {
     setBoards((b) => [board, ...b])
     setActiveId(board.id)
   }
+
+  // Category scope (top-bar Categories picker): when a category is selected, the
+  // folder + board pickers only show what's filed in it (its folders/boards, plus
+  // boards inside those folders).
+  const activeCategory = categories.find((c) => c.id === activeCategoryId) ?? null
+  const catFolderIds = activeCategory
+    ? new Set(activeCategory.items.filter((id) => folders.some((f) => f.id === id)))
+    : null
+  const catBoardIds = activeCategory
+    ? new Set([
+        ...activeCategory.items.filter((id) => boards.some((b) => b.id === id)),
+        ...boards.filter((b) => b.folder_id && catFolderIds!.has(b.folder_id)).map((b) => b.id),
+      ])
+    : null
+  const scopedFolders = catFolderIds ? folders.filter((f) => catFolderIds.has(f.id)) : folders
+  const scopedBoards = catBoardIds ? boards.filter((b) => catBoardIds.has(b.id)) : boards
+  // Boards shown in the picker: scoped to the category, then the active folder.
+  const visibleBoards =
+    activeFolderId === null ? scopedBoards : scopedBoards.filter((b) => b.folder_id === activeFolderId)
   function renameFolder(id: string, name: string) {
     setFolders((fs) => fs.map((f) => (f.id === id ? { ...f, name } : f)))
     void api.renameFolder(id, name).catch(() => {})
@@ -367,9 +391,21 @@ function Workspace() {
           <SidebarIcon />
         </button>
 
+        <CategorySelect
+          categories={categories}
+          activeCategoryId={activeCategoryId}
+          onSelect={(id) => {
+            setActiveCategoryId(id)
+            setActiveFolderId(null)
+          }}
+          onCreate={createCategory}
+          onRename={renameCategory}
+          onDelete={deleteCategory}
+        />
+
         <FolderSelect
-          folders={folders}
-          boards={boards}
+          folders={scopedFolders}
+          boards={scopedBoards}
           activeFolderId={activeFolderId}
           onSelect={setActiveFolderId}
           onCreate={createFolder}
@@ -581,8 +617,10 @@ function Workspace() {
       {dialog === 'new' && (
         <NewBoardDialog
           folders={folders}
+          categories={categories}
           defaultFolderId={activeFolderId}
-          onCreate={handleNewBoard}
+          defaultCategoryId={activeCategoryId}
+          onCreate={handleCreate}
           onCancel={() => setDialog(null)}
         />
       )}
@@ -684,11 +722,23 @@ function Workspace() {
       {moveFolderBoard && (
         <MoveToFolderDialog
           folders={folders}
+          categories={categories}
           boardName={moveFolderBoard.name}
           currentFolderId={moveFolderBoard.folder_id}
+          currentCategoryId={categories.find((c) => c.items.includes(moveFolderBoard.id))?.id ?? null}
           onCancel={() => setMoveFolderBoard(null)}
-          onMove={(folderId) => {
-            moveBoardToFolder(moveFolderBoard.id, folderId)
+          onMove={(dest) => {
+            const id = moveFolderBoard.id
+            if (dest === 'none') {
+              moveBoardToFolder(id, null)
+              fileItem(id, null)
+            } else if (dest.startsWith('cat:')) {
+              moveBoardToFolder(id, null)
+              fileItem(id, dest.slice(4))
+            } else {
+              moveBoardToFolder(id, dest)
+              fileItem(id, null)
+            }
             setMoveFolderBoard(null)
           }}
         />
