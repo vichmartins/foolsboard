@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.56.0
+
+- **Create Private Copy** now opens a destination picker — choose a folder or
+  category for the copy (defaults to the top level / All Boards).
+- **Merge** redesigned: navigate your folders and categories to find boards to
+  merge in, instead of a flat list. Shared boards are shown faded and can't be
+  selected (merging deletes the source).
+
+## v0.55.0
+
+- Top-left Folder and Category pickers now use themed line icons instead of emoji
+  glyphs.
+- Added **Move to…** to the right-click menu for both boards and folders (folders
+  move into a category or to the top level).
+
 ## v0.54.0
 
 - **Categories picker in the top bar**, left of the folder picker. Selecting a

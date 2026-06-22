@@ -3012,6 +3012,78 @@
   max-height: 280px;
   overflow-y: auto;
 }
+/* Navigable folder/category tree inside the Merge picker. */
+.merge-tree {
+  max-height: 320px;
+  overflow-y: auto;
+  margin: 4px 0 2px;
+}
+.merge-tree__row,
+.merge-tree__board {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 6px 6px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.merge-tree__row:hover,
+.merge-tree__board:hover {
+  background: var(--bg-hover);
+}
+.merge-tree__cat .merge-tree__name {
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.merge-tree__chev {
+  flex: none;
+  display: inline-flex;
+  color: var(--text-dim);
+  transition: transform 0.15s;
+}
+.merge-tree__chev--open {
+  transform: rotate(90deg);
+}
+.merge-tree__chev svg,
+.merge-tree__row svg,
+.merge-tree__icon svg {
+  width: 14px;
+  height: 14px;
+}
+.merge-tree__row svg,
+.merge-tree__icon {
+  color: var(--text-dim);
+}
+.merge-tree__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.merge-tree__count {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.merge-tree__board--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.merge-tree__tag {
+  flex: none;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
 /* Section labels inside the Move picker. */
 .move-list__head {
   font-size: 11px;

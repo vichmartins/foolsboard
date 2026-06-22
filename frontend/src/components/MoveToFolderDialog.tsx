@@ -13,6 +13,8 @@ interface Props {
   currentCategoryId: string | null
   onMove: (dest: string) => void
   onCancel: () => void
+  title?: string
+  confirmLabel?: string
 }
 
 export default function MoveToFolderDialog({
@@ -23,6 +25,8 @@ export default function MoveToFolderDialog({
   currentCategoryId,
   onMove,
   onCancel,
+  title = 'Move',
+  confirmLabel = 'Move',
 }: Props) {
   const [choice, setChoice] = useState<string>(
     currentCategoryId ? 'cat:' + currentCategoryId : currentFolderId ?? NONE,
@@ -32,9 +36,9 @@ export default function MoveToFolderDialog({
   return (
     <div className="overlay" onClick={onCancel}>
       <div className="dialog" onClick={(e) => e.stopPropagation()}>
-        <h2 className="dialog__title">Move</h2>
+        <h2 className="dialog__title">{title}</h2>
         <p className="dialog__message">
-          Move <strong>{boardName}</strong> to:
+          Destination for <strong>{boardName}</strong>:
         </p>
 
         <ul className="merge-list move-list">
@@ -86,7 +90,7 @@ export default function MoveToFolderDialog({
             Cancel
           </button>
           <button className="btn btn--primary" onClick={() => onMove(choice === NONE ? 'none' : choice)}>
-            Move
+            {confirmLabel}
           </button>
         </div>
       </div>

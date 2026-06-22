@@ -58,6 +58,8 @@ function Workspace() {
   const [moveFolderBoard, setMoveFolderBoard] = useState<Board | null>(null)
   // Folder being moved into a category via the Move dialog.
   const [moveFolderTarget, setMoveFolderTarget] = useState<Folder | null>(null)
+  // Board being privately copied; the dialog picks where the copy lands.
+  const [copyTarget, setCopyTarget] = useState<Board | null>(null)
   // Resource being shared (opens the Share dialog).
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
   // Board awaiting delete confirmation (type-to-confirm dialog).
@@ -192,11 +194,18 @@ function Workspace() {
     api.listFolders().then(setFolders).catch(() => {})
   }
 
-  async function makePrivateCopy(board: Board) {
+  async function makePrivateCopy(board: Board, dest: string) {
     const copy = await api.copyBoard(board.id)
     setBoards((b) => [copy, ...b])
     setActiveId(copy.id)
-    setActiveFolderId(null)
+    if (dest.startsWith('cat:')) {
+      fileItem(copy.id, dest.slice(4))
+    } else if (dest !== 'none') {
+      moveBoardToFolder(copy.id, dest)
+      setActiveFolderId(dest)
+    } else {
+      setActiveFolderId(null)
+    }
   }
 
   // Stop sharing a board: owner unshares it for everyone, a recipient leaves it.
@@ -494,7 +503,7 @@ function Workspace() {
                 className="icon-btn"
                 title="Create Private Copy"
                 aria-label="Create Private Copy"
-                onClick={() => activeBoard && void makePrivateCopy(activeBoard)}
+                onClick={() => activeBoard && setCopyTarget(activeBoard)}
               >
                 <CopyIcon />
               </button>
@@ -573,7 +582,7 @@ function Workspace() {
             else setMergeConfirm(b)
           }}
           onUnshareBoard={unshareBoard}
-          onCreatePrivateCopy={makePrivateCopy}
+          onCreatePrivateCopy={(b) => setCopyTarget(b)}
           onCreateCategory={createCategory}
           onRenameCategory={renameCategory}
           onDeleteCategory={deleteCategory}
@@ -660,6 +669,9 @@ function Workspace() {
       {dialog === 'merge' && (
         <MergeDialog
           boards={boards.filter((b) => b.id !== activeId)}
+          folders={folders}
+          categories={categories}
+          orderedTop={computeOrderedTop()}
           targetName={activeBoard?.name ?? 'this board'}
           onConfirm={(ids) => {
             setMergeSourceIds(ids)
@@ -761,6 +773,23 @@ function Workspace() {
           onMove={(dest) => {
             fileItem(moveFolderTarget.id, dest.startsWith('cat:') ? dest.slice(4) : null)
             setMoveFolderTarget(null)
+          }}
+        />
+      )}
+
+      {copyTarget && (
+        <MoveToFolderDialog
+          title="Create Private Copy"
+          confirmLabel="Create copy"
+          folders={folders}
+          categories={categories}
+          boardName={`Copy of ${copyTarget.name}`}
+          currentFolderId={null}
+          currentCategoryId={null}
+          onCancel={() => setCopyTarget(null)}
+          onMove={(dest) => {
+            void makePrivateCopy(copyTarget, dest)
+            setCopyTarget(null)
           }}
         />
       )}
