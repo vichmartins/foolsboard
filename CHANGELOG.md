@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.60.3
+
+- Fixed the remaining drag **stutter** (worse with more items / near the bottom):
+  the reorder FLIP animation no longer measures every row on each drag-over —
+  it's paused during a drag and only animates the real reorder once you drop.
+- Softened the drop highlights: the **top list**, **categories**, and **folders**
+  now show a faint tint instead of a hard bordered box while dragging onto them.
+
 ## v0.60.2
 
 - Dragging items around an **open folder** no longer flashes a stray highlight

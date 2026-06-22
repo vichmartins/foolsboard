@@ -71,8 +71,7 @@
   background: var(--bg-hover);
 }
 .tree-folder--drop {
-  background: rgba(99, 102, 241, 0.1);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  background: rgba(99, 102, 241, 0.08);
   border-radius: 7px;
 }
 /* Insertion line shown while dragging an item to reorder it between rows. */
@@ -278,8 +277,8 @@
   border-radius: 7px;
 }
 .tree-top--drop {
-  background: rgba(99, 102, 241, 0.12);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  background: rgba(99, 102, 241, 0.06);
+  border-radius: 8px;
 }
 .tree-cat {
   margin-top: 4px;
@@ -295,8 +294,7 @@
   background: var(--bg-hover);
 }
 .tree-cat__row--drop {
-  background: rgba(99, 102, 241, 0.16);
-  box-shadow: inset 0 0 0 1px var(--accent);
+  background: rgba(99, 102, 241, 0.1);
 }
 .tree-cat__name {
   flex: 1;

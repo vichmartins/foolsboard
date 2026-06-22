@@ -70,11 +70,16 @@ function loadSet(key: string): Set<string> {
 
 // FLIP: after each render, glide any [data-flip-id] row that changed position to
 // its new spot, so reordering/filing animates smoothly instead of snapping.
-function useFlipReorder(ref: React.RefObject<HTMLElement | null>) {
+function useFlipReorder(ref: React.RefObject<HTMLElement | null>, paused: React.RefObject<boolean>) {
   const prev = useRef<Map<string, DOMRect>>(new Map())
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
+    // Skip the per-row measurement while a drag is in progress -- the rows don't
+    // actually move (only the insertion line changes), so measuring every row on
+    // each drag-over re-render just forces reflow and stutters. We still animate
+    // the real reorder once the drag ends and the list updates.
+    if (paused.current) return
     const next = new Map<string, DOMRect>()
     el.querySelectorAll<HTMLElement>('[data-flip-id]').forEach((n) => {
       const id = n.dataset.flipId
@@ -145,6 +150,7 @@ export default function Sidebar(props: Props) {
   // so we don't rely on per-row dragleave (which flickers over child elements).
   useEffect(() => {
     const clear = () => {
+      dragging.current = false
       setReorderHint(null)
       setDropTarget(null)
     }
@@ -159,7 +165,8 @@ export default function Sidebar(props: Props) {
   const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; folder: Folder } | null>(null)
   const [addMenu, setAddMenu] = useState<{ x: number; y: number; catId: string } | null>(null)
   const treeRef = useRef<HTMLDivElement>(null)
-  useFlipReorder(treeRef)
+  const dragging = useRef(false)
+  useFlipReorder(treeRef, dragging)
 
   const toggle = (set: Set<string>, key: string, id: string, save: (s: Set<string>) => void) => {
     const n = new Set(set)
@@ -229,6 +236,7 @@ export default function Sidebar(props: Props) {
 
   // --- drag and drop --------------------------------------------------------
   const startDrag = (e: React.DragEvent, type: string, id: string) => {
+    dragging.current = true
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData(type, id)
     e.dataTransfer.setData('text/plain', id)
