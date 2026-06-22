@@ -386,12 +386,22 @@ function Workspace() {
     setFolders((fs) => ids.map((id) => fs.find((f) => f.id === id)).filter((f): f is Folder => !!f))
     void api.reorderFolders(ids).catch(() => {})
   }
+  // Natural, case-insensitive name compare: numbers sort numerically (2 before
+  // 10) and number/symbol-led names sort ahead of letters.
+  const byName = (a: string, b: string) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
   function sortFolders(dir: 'asc' | 'desc') {
     const sorted = [...folders].sort((a, b) =>
-      dir === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+      dir === 'asc' ? byName(a.name, b.name) : byName(b.name, a.name),
     )
     setFolders(sorted)
     void api.reorderFolders(sorted.map((f) => f.id)).catch(() => {})
+  }
+  function sortCategories(dir: 'asc' | 'desc') {
+    const sorted = [...catsRef.current].sort((a, b) =>
+      dir === 'asc' ? byName(a.name, b.name) : byName(b.name, a.name),
+    )
+    persistCategories(sorted)
   }
 
   async function renameBoard(name: string) {
@@ -447,6 +457,7 @@ function Workspace() {
           onCreate={createCategory}
           onRename={renameCategory}
           onDelete={deleteCategory}
+          onSort={sortCategories}
         />
 
         <FolderSelect

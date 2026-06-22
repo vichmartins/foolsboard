@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.63.0
+
+- The top-bar **Categories** picker gains an **A→Z / Z→A** sort toggle, matching
+  the Folders picker; the order applies to the explorer too. Sorting is now
+  natural and case-insensitive (numbers sort 2 before 10) for both folders and
+  categories.
+
 ## v0.62.2
 
 - Fixed a category showing a non-zero count in **Import/Export** while the

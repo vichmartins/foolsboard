@@ -12,6 +12,7 @@ interface Props {
   onCreate: (name: string) => void
   onRename: (id: string, name: string) => void
   onDelete: (id: string) => void
+  onSort: (dir: 'asc' | 'desc') => void
 }
 
 export default function CategorySelect({
@@ -21,12 +22,14 @@ export default function CategorySelect({
   onCreate,
   onRename,
   onDelete,
+  onSort,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
+  const [sortAsc, setSortAsc] = useState(true)
   const ref = useRef<HTMLDivElement>(null)
 
   const active = categories.find((c) => c.id === activeCategoryId)
@@ -53,6 +56,11 @@ export default function CategorySelect({
       window.removeEventListener('keydown', onKey)
     }
   }, [open])
+
+  function startSort() {
+    onSort(sortAsc ? 'asc' : 'desc')
+    setSortAsc((s) => !s)
+  }
 
   function submitNew() {
     const n = newName.trim()
@@ -87,6 +95,11 @@ export default function CategorySelect({
       <div className={'board-select__menu folder-menu' + (open ? ' board-select__menu--open' : '')}>
         <div className="folder-menu__head">
           <span className="folder-menu__title">Categories</span>
+          {categories.length > 1 && (
+            <button className="folder-sort" onClick={startSort} title="Sort A–Z / Z–A">
+              {sortAsc ? 'A→Z' : 'Z→A'}
+            </button>
+          )}
         </div>
 
         <ul className="folder-list">
