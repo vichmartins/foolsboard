@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.53.1
+
+- Fixed: users on a plain-HTTP LAN address (not localhost/HTTPS) couldn't create
+  Categories, and uploads could fail, because `crypto.randomUUID` is undefined in
+  insecure browser contexts. Added a `genId()` fallback.
+
 ## v0.53.0
 
 - **Reorderable categories**: drag a category section onto another to move it
