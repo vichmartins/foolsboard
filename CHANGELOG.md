@@ -2,9 +2,8 @@
 
 ## v0.64.3
 
-- Fixed the faint dark ring around presence avatars in **light mode** — the
-  outline now uses the theme border color, so it's an equally subtle, intentional
-  edge in both light and dark.
+- Removed the faint outline ring around presence avatars entirely (it showed in
+  both themes). Active avatars still pulse in the collaborator's color.
 
 ## v0.64.2
 
