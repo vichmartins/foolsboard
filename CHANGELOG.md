@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.64.4
+
+- A collaborator's selection highlight no longer covers the "✎ editing" badge on
+  a node they're editing — the edit-lock outline + badge now paint above the
+  selection outline.
+
 ## v0.64.3
 
 - Removed the faint outline ring around presence avatars entirely (it showed in

@@ -34,6 +34,30 @@ export default function CollabLayer({
 
   return (
     <div className="collab-layer">
+      {selections.flatMap((sel) =>
+        sel.nodeIds.map((id) => {
+          const b = boxes.get(id)
+          if (!b) return null
+          return (
+            <div
+              key={sel.userId + ':' + id}
+              className="collab-select"
+              style={{
+                transform: `translate(${b.x * zoom + tx}px, ${b.y * zoom + ty}px)`,
+                width: b.w * zoom,
+                height: b.h * zoom,
+                borderColor: sel.color,
+                borderWidth: 2 * zoom,
+                borderRadius: 12 * zoom,
+                boxShadow: `0 0 0 ${2 * zoom}px ${sel.color}55`,
+              }}
+            />
+          )
+        }),
+      )}
+
+      {/* Edit-lock outline + "✎ name" badge -- drawn after selections so the
+          badge is never covered by a selection highlight on the same node. */}
       {lockEntries.map(([id, lock]) => {
         const b = boxes.get(id)
         if (!b) return null
@@ -57,28 +81,6 @@ export default function CollabLayer({
           </div>
         )
       })}
-
-      {selections.flatMap((sel) =>
-        sel.nodeIds.map((id) => {
-          const b = boxes.get(id)
-          if (!b) return null
-          return (
-            <div
-              key={sel.userId + ':' + id}
-              className="collab-select"
-              style={{
-                transform: `translate(${b.x * zoom + tx}px, ${b.y * zoom + ty}px)`,
-                width: b.w * zoom,
-                height: b.h * zoom,
-                borderColor: sel.color,
-                borderWidth: 2 * zoom,
-                borderRadius: 12 * zoom,
-                boxShadow: `0 0 0 ${2 * zoom}px ${sel.color}55`,
-              }}
-            />
-          )
-        }),
-      )}
 
       {cursors.map((c) => (
         <div
