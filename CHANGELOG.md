@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.62.2
+
+- Fixed a category showing a non-zero count in **Import/Export** while the
+  explorer showed it empty: both now ignore items pointing at a deleted
+  board/folder. On load, such dead references are also pruned from the saved
+  layout once — so they stop reappearing anywhere.
+
 ## v0.62.1
 
 - Made the **Export** tree visually match the **Merge** picker — same panel, rows,

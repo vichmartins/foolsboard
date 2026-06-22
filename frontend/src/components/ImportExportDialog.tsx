@@ -306,10 +306,12 @@ export default function ImportExportDialog({
                 {topItems.map((id) => renderItem(id, 0))}
                 {categories.map((c) => {
                   const open = !collapsed.has(c.id)
+                  // Only items that still exist (a deleted board leaves a dead id).
+                  const items = c.items.filter((id) => boardById.has(id) || folderById.has(id))
                   return (
                     <div key={c.id}>
-                      {branchRow(open, () => toggleOpen(c.id), selectedCategories.has(c.id), () => toggleCategory(c.id), <CategoryIcon />, c.name, c.items.length, 0, true)}
-                      {open && c.items.map((id) => renderItem(id, 1))}
+                      {branchRow(open, () => toggleOpen(c.id), selectedCategories.has(c.id), () => toggleCategory(c.id), <CategoryIcon />, c.name, items.length, 0, true)}
+                      {open && items.map((id) => renderItem(id, 1))}
                     </div>
                   )
                 })}
