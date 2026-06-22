@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.58.0
+
+- **Import/Export now includes categories.** In Export, pick categories
+  (alongside folders/boards) — the bundle carries each category's structure.
+  Importing recreates those categories, re-linking the freshly imported
+  folders/boards. (Bundle format v4; older bundles still import.)
+
 ## v0.57.0
 
 - **Gallery** now lets you narrow by **category** and **folder** before picking a

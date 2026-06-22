@@ -813,12 +813,20 @@ function Workspace() {
         <ImportExportDialog
           boards={boards}
           folders={folders}
+          categories={categories}
           onClose={() => setImpexOpen(false)}
           onImported={(created) => {
             setBoards((b) => [...created, ...b])
             if (created.length) setActiveId(created[0].id)
-            // Import may have created folders; refresh the folder list.
+            // Import may have created folders and categories; refresh both.
             api.listFolders().then(setFolders).catch(() => {})
+            api
+              .getLayout()
+              .then(({ categories, top }) => {
+                setCategories(categories)
+                setTopOrder(top)
+              })
+              .catch(() => {})
           }}
         />
       )}

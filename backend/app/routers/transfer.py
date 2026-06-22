@@ -11,7 +11,7 @@ import io
 import json
 import re
 import zipfile
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
@@ -28,7 +28,7 @@ from ..storage import storage
 
 router = APIRouter(prefix="/api/boards", tags=["transfer"])
 
-EXPORT_VERSION = 3  # v3 adds folders; v2 bundles (boards only) still import fine
+EXPORT_VERSION = 4  # v4 adds categories; v2/v3 bundles still import fine
 MANIFEST_NAME = "manifest.json"
 MAX_IMPORT_BYTES = 1024 * 1024 * 1024  # 1 GiB ceiling on an uploaded bundle
 
@@ -36,6 +36,7 @@ MAX_IMPORT_BYTES = 1024 * 1024 * 1024  # 1 GiB ceiling on an uploaded bundle
 class ExportRequest(BaseModel):
     board_ids: list[UUID] = []
     folder_ids: list[UUID] = []  # exporting a folder includes every board inside it
+    category_ids: list[str] = []  # exporting a category includes its folders + boards
 
 
 def _slug(name: str) -> str:
@@ -73,8 +74,39 @@ def export_boards(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> StreamingResponse:
-    if not payload.board_ids and not payload.folder_ids:
+    if not payload.board_ids and not payload.folder_ids and not payload.category_ids:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nothing selected to export")
+
+    # Selected categories contribute their folders/boards to the export, and a
+    # structural entry to the manifest. Category items are folder/board ids in the
+    # user's per-user layout JSON; resolve each to a folder name or board id.
+    folder_ids: list[UUID] = list(payload.folder_ids)
+    board_ids: list[UUID] = list(payload.board_ids)
+    category_specs: list[dict] = []  # {name, items:[{folder:name}|{board:<uuid str>}]}
+    if payload.category_ids:
+        try:
+            layout = json.loads(user.categories) if user.categories else {}
+        except (ValueError, TypeError):
+            layout = {}
+        for cat in layout.get("categories") or []:
+            if not isinstance(cat, dict) or cat.get("id") not in payload.category_ids:
+                continue
+            spec_items: list[dict] = []
+            for item_id in cat.get("items") or []:
+                try:
+                    uid = UUID(str(item_id))
+                except ValueError:
+                    continue
+                fld = db.get(Folder, uid)
+                if fld is not None and fld.owner_id == user.id:
+                    folder_ids.append(uid)
+                    spec_items.append({"folder": fld.name})
+                    continue
+                brd = db.get(Board, uid)
+                if brd is not None and brd.owner_id == user.id:
+                    board_ids.append(uid)
+                    spec_items.append({"board": str(uid)})
+            category_specs.append({"name": str(cat.get("name") or "Category"), "items": spec_items})
 
     # Resolve the selected folders into their boards (preserving which board
     # belongs to which folder), then append any individually-selected boards.
@@ -84,7 +116,7 @@ def export_boards(
     ordered_ids: list[UUID] = []
     chosen: set[UUID] = set()
 
-    for fid in payload.folder_ids:
+    for fid in dict.fromkeys(folder_ids):
         folder = db.get(Folder, fid)
         if folder is None or folder.owner_id != user.id:
             raise HTTPException(status.HTTP_404_NOT_FOUND, f"Folder {fid} not found")
@@ -100,7 +132,7 @@ def export_boards(
                 ordered_ids.append(board.id)
                 board_folder[board.id] = folder.name
 
-    for bid in payload.board_ids:
+    for bid in board_ids:
         if bid not in chosen:
             chosen.add(bid)
             ordered_ids.append(bid)
@@ -179,12 +211,30 @@ def export_boards(
     if not manifest_boards:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nothing to export")
 
+    # Finalize category specs: a direct-board item references its board by index
+    # into manifest_boards (folders stay by name). Drop items not in the export.
+    board_index = {bid: i for i, bid in enumerate(ordered_ids)}
+    manifest_categories: list[dict] = []
+    for spec in category_specs:
+        items: list[dict] = []
+        for it in spec["items"]:
+            if "folder" in it:
+                items.append(it)
+            elif "board" in it:
+                try:
+                    idx = board_index[UUID(it["board"])]
+                except (KeyError, ValueError):
+                    continue
+                items.append({"board": idx})
+        manifest_categories.append({"name": spec["name"], "items": items})
+
     manifest_json = json.dumps(
         {
             "foolsboard": "export",
             "version": EXPORT_VERSION,
             "folders": manifest_folders,
             "boards": manifest_boards,
+            "categories": manifest_categories,
         },
         default=str,
         indent=2,
@@ -371,6 +421,38 @@ def import_boards(
 
     if not created:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "No importable boards in the bundle")
+
+    # Recreate categories (v4+), mapping folder names / board indices to the newly
+    # created ids and appending them to the importer's per-user layout.
+    cats_in = manifest.get("categories")
+    if isinstance(cats_in, list) and cats_in:
+        try:
+            layout = json.loads(user.categories) if user.categories else {}
+        except (ValueError, TypeError):
+            layout = {}
+        if not isinstance(layout, dict):
+            layout = {}
+        existing = layout.get("categories")
+        if not isinstance(existing, list):
+            existing = []
+        for c in cats_in:
+            if not isinstance(c, dict):
+                continue
+            items: list[str] = []
+            for it in c.get("items") or []:
+                if not isinstance(it, dict):
+                    continue
+                if "folder" in it and str(it["folder"]) in folder_map:
+                    items.append(str(folder_map[str(it["folder"])]))
+                elif "board" in it and isinstance(it["board"], int) and 0 <= it["board"] < len(created):
+                    items.append(str(created[it["board"]].id))
+            existing.append(
+                {"id": str(uuid4()), "name": (str(c.get("name") or "Imported"))[:120], "items": items}
+            )
+        layout["categories"] = existing
+        if not isinstance(layout.get("top"), list):
+            layout["top"] = []
+        user.categories = json.dumps(layout)
 
     db.commit()
     for board in created:

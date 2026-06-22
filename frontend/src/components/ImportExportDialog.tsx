@@ -3,11 +3,12 @@
 // file picker or by dropping it anywhere on the dialog (full-screen drop target).
 import { useEffect, useRef, useState } from 'react'
 import * as api from '../api'
-import type { Board, Folder } from '../types'
+import type { Board, Category, Folder } from '../types'
 
 interface Props {
   boards: Board[]
   folders: Folder[]
+  categories: Category[]
   onClose: () => void
   onImported: (created: Board[]) => void
 }
@@ -39,10 +40,17 @@ function ProgressBar() {
   )
 }
 
-export default function ImportExportDialog({ boards, folders, onClose, onImported }: Props) {
+export default function ImportExportDialog({
+  boards,
+  folders,
+  categories,
+  onClose,
+  onImported,
+}: Props) {
   const [tab, setTab] = useState<Tab>('export')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set())
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
@@ -51,7 +59,7 @@ export default function ImportExportDialog({ boards, folders, onClose, onImporte
   const fileRef = useRef<HTMLInputElement>(null)
 
   const allSelected = boards.length > 0 && selected.size === boards.length
-  const totalSelected = selected.size + selectedFolders.size
+  const totalSelected = selected.size + selectedFolders.size + selectedCategories.size
   const toggleIn = (setter: typeof setSelected) => (id: string) =>
     setter((s) => {
       const n = new Set(s)
@@ -61,6 +69,7 @@ export default function ImportExportDialog({ boards, folders, onClose, onImporte
     })
   const toggle = toggleIn(setSelected)
   const toggleFolder = toggleIn(setSelectedFolders)
+  const toggleCategory = toggleIn(setSelectedCategories)
   const toggleAll = () =>
     setSelected(allSelected ? new Set() : new Set(boards.map((b) => b.id)))
 
@@ -81,7 +90,8 @@ export default function ImportExportDialog({ boards, folders, onClose, onImporte
     try {
       const ids = [...selected]
       const fids = [...selectedFolders]
-      const blob = await api.exportBoards(ids, fids)
+      const cids = [...selectedCategories]
+      const blob = await api.exportBoards(ids, fids, cids)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -192,9 +202,32 @@ export default function ImportExportDialog({ boards, folders, onClose, onImporte
           {tab === 'export' ? (
             <>
               <p className="dialog__text">
-                Choose folders or boards to export to a .zip bundle — graph, content, links,
-                and media. Exporting a folder includes every board inside it.
+                Choose categories, folders, or boards to export to a .zip bundle — graph,
+                content, links, and media. Exporting a category or folder includes everything
+                inside it.
               </p>
+              {categories.length > 0 && (
+                <>
+                  <div className="impex-group">Categories</div>
+                  <ul className="impex-list">
+                    {categories.map((c) => (
+                      <li key={c.id}>
+                        <label className="impex-item">
+                          <input
+                            type="checkbox"
+                            checked={selectedCategories.has(c.id)}
+                            onChange={() => toggleCategory(c.id)}
+                          />
+                          <span className="impex-item__name">{c.name}</span>
+                          <span className="impex-item__count">
+                            {c.items.length} item{c.items.length === 1 ? '' : 's'}
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
               {folders.length > 0 && (
                 <>
                   <div className="impex-group">Folders</div>
@@ -258,8 +291,8 @@ export default function ImportExportDialog({ boards, folders, onClose, onImporte
           ) : (
             <>
               <p className="dialog__text">
-                Import a .zip bundle — boards (and any folders they were in) are added as new,
-                with their media.
+                Import a .zip bundle — boards (and any folders or categories they were in) are
+                added as new, with their media.
               </p>
               <div
                 className={'impex-drop' + (fileDragging ? ' impex-drop--over' : '')}

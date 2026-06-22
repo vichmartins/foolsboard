@@ -299,12 +299,13 @@ export async function unshareBoard(boardId: string): Promise<void> {
 export async function exportBoards(
   boardIds: string[],
   folderIds: string[] = [],
+  categoryIds: string[] = [],
   onProgress?: (loadedBytes: number) => void,
 ): Promise<Blob> {
   return (
     await http.post(
       '/boards/export',
-      { board_ids: boardIds, folder_ids: folderIds },
+      { board_ids: boardIds, folder_ids: folderIds, category_ids: categoryIds },
       {
         responseType: 'blob',
         onDownloadProgress: (e) => onProgress?.(e.loaded),
