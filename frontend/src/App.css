@@ -74,12 +74,30 @@
   background: rgba(99, 102, 241, 0.08);
   border-radius: 7px;
 }
-/* Insertion line shown while dragging an item to reorder it between rows. */
-.tree-insert-before {
-  box-shadow: inset 0 2px 0 var(--accent);
-}
+/* Insertion line shown while dragging an item to reorder it between rows. A
+   straight pseudo-element bar (not an inset shadow) so it doesn't curl around
+   the rows' rounded corners. */
+.tree-insert-before,
 .tree-insert-after {
-  box-shadow: inset 0 -2px 0 var(--accent);
+  position: relative;
+}
+.tree-insert-before::after,
+.tree-insert-after::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  pointer-events: none;
+  z-index: 3;
+}
+.tree-insert-before::after {
+  top: -1px;
+}
+.tree-insert-after::after {
+  bottom: -1px;
 }
 .tree-chevron {
   flex: none;

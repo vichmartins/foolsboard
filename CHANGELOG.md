@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.60.4
+
+- The drag **insertion line** is now a clean straight bar between rows. It was an
+  inset shadow that followed each row's rounded corners, so it curled around the
+  corners (especially at the very top/bottom of a list).
+
 ## v0.60.3
 
 - Fixed the remaining drag **stutter** (worse with more items / near the bottom):
