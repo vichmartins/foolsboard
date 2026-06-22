@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.60.5
+
+- Dragging a board over an **open folder** now shows only the soft "drop inside"
+  highlight — no stray insertion line near its contents. (The line came from the
+  folder header's "after" edge sitting just above the folder's first board.)
+  Collapsed folders still reorder by their edges; folders still reorder freely.
+
 ## v0.60.4
 
 - The drag **insertion line** is now a clean straight bar between rows. It was an

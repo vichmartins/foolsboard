@@ -456,8 +456,12 @@ export default function Sidebar(props: Props) {
             if (!t.some((x) => x === BOARD_DND || x === FOLDER_DND)) return
             e.preventDefault()
             e.stopPropagation() // don't let the container also flag a drop
-            // Only a board can drop *into* a folder; a folder always reorders.
-            const zone = rowZone(e, t.includes(BOARD_DND))
+            // A board over an *open* folder is always "drop inside" -- show only
+            // the soft highlight, never a reorder line near its contents. A board
+            // over a collapsed folder can still drop in (middle) or reorder
+            // (edges); a folder always reorders (no nesting).
+            const draggingBoard = t.includes(BOARD_DND)
+            const zone = draggingBoard && isOpen ? 'into' : rowZone(e, draggingBoard)
             if (zone === 'into') {
               setReorderHint(null)
               setDropTarget(f.id)
@@ -469,7 +473,8 @@ export default function Sidebar(props: Props) {
           }}
           onDrop={(e) => {
             e.stopPropagation()
-            const zone = rowZone(e, types(e).includes(BOARD_DND))
+            const draggingBoard = !!getId(e, BOARD_DND)
+            const zone = draggingBoard && isOpen ? 'into' : rowZone(e, draggingBoard)
             if (zone === 'into') dropOnFolder(e, f.id)
             else {
               e.preventDefault()
