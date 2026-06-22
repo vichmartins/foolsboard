@@ -102,49 +102,54 @@ export default function ImportExportDialog({
       return n
     })
 
-  function treeRow(
-    key: string,
-    depth: number,
-    icon: ReactNode,
-    name: string,
+  // A selectable folder/category row: chevron + checkbox + icon + name + count.
+  function branchRow(
+    open: boolean,
+    onExpand: () => void,
     checked: boolean,
     onToggle: () => void,
-    count: number | null,
-    expand: { open: boolean; onToggle: () => void } | null,
+    icon: ReactNode,
+    name: string,
+    count: number,
+    depth: number,
+    cat = false,
   ) {
     return (
-      <div className="impex-tree__row" key={key} style={{ paddingLeft: depth * 14 }}>
-        {expand ? (
-          <button
-            type="button"
-            className={'merge-tree__chev' + (expand.open ? ' merge-tree__chev--open' : '')}
-            onClick={expand.onToggle}
-            aria-label={expand.open ? 'Collapse' : 'Expand'}
-          >
-            <ChevronIcon />
-          </button>
-        ) : (
-          <span className="impex-tree__spacer" />
-        )}
-        <label className="impex-tree__pick">
+      <div className={'merge-tree__row' + (cat ? ' merge-tree__cat' : '')} style={{ paddingLeft: depth * 16 }}>
+        <button
+          type="button"
+          className={'merge-tree__chev' + (open ? ' merge-tree__chev--open' : '')}
+          onClick={onExpand}
+          aria-label={open ? 'Collapse' : 'Expand'}
+        >
+          <ChevronIcon />
+        </button>
+        <label className="merge-tree__pick">
           <input type="checkbox" checked={checked} onChange={onToggle} />
           <span className="merge-tree__icon">{icon}</span>
           <span className="merge-tree__name">{name}</span>
         </label>
-        {count != null && <span className="merge-tree__count">{count}</span>}
+        <span className="merge-tree__count">{count}</span>
       </div>
     )
   }
 
-  const boardRow = (b: Board, depth: number) =>
-    treeRow(b.id, depth, <BoardIcon />, b.name, selected.has(b.id), () => toggle(b.id), null, null)
+  const boardRow = (b: Board, depth: number) => (
+    <label className="merge-tree__board" key={b.id} style={{ paddingLeft: depth * 16 + 6 }}>
+      <input type="checkbox" checked={selected.has(b.id)} onChange={() => toggle(b.id)} />
+      <span className="merge-tree__icon">
+        <BoardIcon />
+      </span>
+      <span className="merge-tree__name">{b.name}</span>
+    </label>
+  )
 
   const folderNode = (f: Folder, depth: number) => {
     const open = !collapsed.has(f.id)
     const inside = boardsIn(f.id)
     return (
       <div key={f.id}>
-        {treeRow(f.id, depth, <FolderIcon />, f.name, selectedFolders.has(f.id), () => toggleFolder(f.id), inside.length, { open, onToggle: () => toggleOpen(f.id) })}
+        {branchRow(open, () => toggleOpen(f.id), selectedFolders.has(f.id), () => toggleFolder(f.id), <FolderIcon />, f.name, inside.length, depth)}
         {open && inside.map((b) => boardRow(b, depth + 1))}
       </div>
     )
@@ -297,28 +302,19 @@ export default function ImportExportDialog({
                 <input type="checkbox" checked={everythingOn} onChange={toggleEverything} />
                 <span>Everything</span>
               </label>
-              <div className="merge-tree impex-tree">
+              <div className="merge-tree">
                 {topItems.map((id) => renderItem(id, 0))}
                 {categories.map((c) => {
                   const open = !collapsed.has(c.id)
                   return (
                     <div key={c.id}>
-                      {treeRow(
-                        c.id,
-                        0,
-                        <CategoryIcon />,
-                        c.name,
-                        selectedCategories.has(c.id),
-                        () => toggleCategory(c.id),
-                        c.items.length,
-                        { open, onToggle: () => toggleOpen(c.id) },
-                      )}
+                      {branchRow(open, () => toggleOpen(c.id), selectedCategories.has(c.id), () => toggleCategory(c.id), <CategoryIcon />, c.name, c.items.length, 0, true)}
                       {open && c.items.map((id) => renderItem(id, 1))}
                     </div>
                   )
                 })}
                 {topItems.length === 0 && categories.length === 0 && (
-                  <p className="impex-tree__empty">Nothing to export yet.</p>
+                  <p className="merge-tree__empty">Nothing to export yet.</p>
                 )}
               </div>
               {busy && <ProgressBar />}

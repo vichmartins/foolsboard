@@ -3120,47 +3120,23 @@
   color: var(--text-dim);
 }
 
-/* Export tab: navigable tree (reuses .merge-tree panel + chevron/icon/name). */
-.impex-tree {
-  max-height: 360px;
-}
-.impex-tree__row {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-.impex-tree button.merge-tree__chev {
-  flex: none;
-  width: 20px;
-  height: 22px;
-  justify-content: center;
+/* A selectable folder/category row in the Export tree: the chevron is a button,
+   and an inline label carries the checkbox + icon + name. */
+button.merge-tree__chev {
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
 }
-.impex-tree__spacer {
-  flex: none;
-  width: 20px;
-}
-.impex-tree__pick {
+.merge-tree__pick {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 5px 6px;
-  border-radius: 7px;
   cursor: pointer;
 }
-.impex-tree__pick:hover {
-  background: var(--bg-hover);
-}
-.impex-tree__pick input {
-  flex: none;
-  accent-color: var(--accent);
-}
-.impex-tree__empty {
+.merge-tree__empty {
   color: var(--text-dim);
   font-size: 13px;
   padding: 8px 6px;

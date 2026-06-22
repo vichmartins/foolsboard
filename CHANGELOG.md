@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.62.1
+
+- Made the **Export** tree visually match the **Merge** picker — same panel, rows,
+  chevrons, icons, and board rows — so the two dialogs feel uniform with the rest
+  of the app.
+
 ## v0.62.0
 
 - The **Export** tab is now a navigable tree (like the Merge picker): expand
