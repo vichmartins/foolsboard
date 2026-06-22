@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.64.0
+
+- **Status badges for what collaborators are doing.** Beyond editing/uploading, a
+  collaborator's avatar now shows a badge for: viewing (eye), browsing the
+  gallery, merging, importing/exporting, creating, renaming, downloading, and
+  away-from-keyboard (after 3 min idle). Active states pulse; viewing/away are
+  calm. Admin/settings actions aren't broadcast. New `activity` realtime channel.
+
 ## v0.63.1
 
 - The **Create** dialog's "Place in" picker uses themed folder/category line icons

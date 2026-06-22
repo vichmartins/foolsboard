@@ -13,6 +13,7 @@ interface Props {
   orderedTop: string[]
   onClose: () => void
   onImported: (created: Board[]) => void
+  onDownload?: () => void
 }
 
 type Tab = 'export' | 'import'
@@ -49,6 +50,7 @@ export default function ImportExportDialog({
   orderedTop,
   onClose,
   onImported,
+  onDownload,
 }: Props) {
   const [tab, setTab] = useState<Tab>('export')
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -192,6 +194,7 @@ export default function ImportExportDialog({
       a.click()
       a.remove()
       URL.revokeObjectURL(url)
+      onDownload?.()
     } catch {
       setError('Export failed. Please try again.')
     } finally {

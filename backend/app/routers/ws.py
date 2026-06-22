@@ -140,6 +140,17 @@ async def _handle(conn, user: User, raw: str) -> None:
                     "board_id": str(conn.board_id),
                     "positions": clean,
                 })
+    elif kind == "activity":
+        # What this user is currently doing (viewing, gallery, merging, away, ...)
+        # so collaborators can show a status badge. Free-form, length-capped.
+        await hub.relay(conn, {
+            "type": "activity",
+            "board_id": str(conn.board_id),
+            "user_id": str(conn.user_id),
+            "username": conn.username,
+            "color": conn.color,
+            "activity": str(msg.get("activity") or "")[:30],
+        })
     elif kind == "board_dirty":
         await hub.relay(conn, {"type": "board_dirty", "board_id": str(conn.board_id)})
     elif kind == "upload":

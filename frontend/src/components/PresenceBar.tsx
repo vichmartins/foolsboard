@@ -2,9 +2,18 @@
 // with the viewer-resolved highlight color and showing what that person is doing
 // (editing / uploading a node, or just viewing). Avatars pop in when someone
 // joins and pop out when they leave.
-import { useEffect, useRef, useState } from 'react'
-import type { MemberActivity } from '../realtime'
-import { PencilIcon } from './icons'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { ActivityKind, MemberActivity } from '../realtime'
+import {
+  AwayIcon,
+  DownloadIcon,
+  EyeIcon,
+  MergeIcon,
+  PencilIcon,
+  PlusIcon,
+  SearchIcon,
+  TransferIcon,
+} from './icons'
 
 const MAX = 5
 const LEAVE_MS = 280
@@ -27,12 +36,25 @@ function UploadGlyph() {
   )
 }
 
+// Badge glyph + tooltip verb per activity. `active` drives the pulsing ring
+// (reserved for "doing something"; viewing/away are calm).
+const META: Record<ActivityKind, { icon: ReactNode; verb: string; active: boolean }> = {
+  viewing: { icon: <EyeIcon />, verb: 'viewing', active: false },
+  editing: { icon: <PencilIcon />, verb: 'editing', active: true },
+  uploading: { icon: <UploadGlyph />, verb: 'uploading', active: true },
+  gallery: { icon: <SearchIcon />, verb: 'browsing the gallery', active: true },
+  merging: { icon: <MergeIcon />, verb: 'merging boards', active: true },
+  transferring: { icon: <TransferIcon />, verb: 'importing / exporting', active: true },
+  creating: { icon: <PlusIcon />, verb: 'creating', active: true },
+  renaming: { icon: <PencilIcon />, verb: 'renaming', active: true },
+  downloading: { icon: <DownloadIcon />, verb: 'downloading', active: true },
+  away: { icon: <AwayIcon />, verb: 'away', active: false },
+}
+
 function label(r: MemberActivity): string {
-  if (r.status === 'editing')
-    return `${r.username} — editing${r.detail ? ` “${r.detail}”` : ''}`
-  if (r.status === 'uploading')
-    return `${r.username} — uploading${r.detail ? ` to “${r.detail}”` : ''}`
-  return `${r.username} — viewing`
+  const m = META[r.status] ?? META.viewing
+  const detail = r.detail && (r.status === 'editing' || r.status === 'uploading') ? ` “${r.detail}”` : ''
+  return `${r.username} — ${m.verb}${detail}`
 }
 
 export default function PresenceBar({ members }: { members: MemberActivity[] }) {
@@ -75,26 +97,27 @@ export default function PresenceBar({ members }: { members: MemberActivity[] }) 
 
   return (
     <div className="presence">
-      {shown.map((r) => (
-        <span
-          key={r.id}
-          className={
-            'presence__avatar' +
-            (r.leaving ? ' presence__avatar--leaving' : '') +
-            (r.status !== 'idle' ? ' presence__avatar--active' : '')
-          }
-          style={{ background: r.color, ['--c' as string]: r.color } as React.CSSProperties}
-          title={label(r)}
-          aria-label={label(r)}
-        >
-          {r.username.slice(0, 1).toUpperCase()}
-          {r.status !== 'idle' && (
+      {shown.map((r) => {
+        const meta = META[r.status] ?? META.viewing
+        return (
+          <span
+            key={r.id}
+            className={
+              'presence__avatar' +
+              (r.leaving ? ' presence__avatar--leaving' : '') +
+              (meta.active ? ' presence__avatar--active' : '')
+            }
+            style={{ background: r.color, ['--c' as string]: r.color } as React.CSSProperties}
+            title={label(r)}
+            aria-label={label(r)}
+          >
+            {r.username.slice(0, 1).toUpperCase()}
             <span className="presence__badge" style={{ color: r.color }}>
-              {r.status === 'editing' ? <PencilIcon /> : <UploadGlyph />}
+              {meta.icon}
             </span>
-          )}
-        </span>
-      ))}
+          </span>
+        )
+      })}
       {extra > 0 && <span className="presence__avatar presence__avatar--more">+{extra}</span>}
     </div>
   )

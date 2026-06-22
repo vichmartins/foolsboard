@@ -38,7 +38,7 @@ import {
   TrashIcon,
   UnshareIcon,
 } from './components/icons'
-import { realtime, useBoardActivity, useBoardPresence } from './realtime'
+import { realtime, useBoardActivity, useBoardPresence, type ActivityKind } from './realtime'
 import { useUpdateAvailable } from './useUpdateAvailable'
 import type { Board, Category, Folder } from './types'
 import { genId } from './types'
@@ -163,6 +163,47 @@ function Workspace() {
   useEffect(() => {
     if (user) realtime.setSelf(user.id, user.color)
   }, [user?.id, user?.color])
+
+  // Away-from-keyboard: no input for AWAY_MS flips me to "away".
+  const AWAY_MS = 3 * 60 * 1000
+  const [idle, setIdle] = useState(false)
+  useEffect(() => {
+    let timer = 0
+    const reset = () => {
+      setIdle((cur) => (cur ? false : cur)) // re-render only when leaving idle
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => setIdle(true), AWAY_MS)
+    }
+    reset()
+    const evs = ['pointerdown', 'pointermove', 'keydown', 'wheel']
+    evs.forEach((e) => window.addEventListener(e, reset, { passive: true }))
+    return () => {
+      window.clearTimeout(timer)
+      evs.forEach((e) => window.removeEventListener(e, reset))
+    }
+  }, [])
+
+  // A short-lived activity (rename, download) that overrides the derived one.
+  const [flashAct, setFlashAct] = useState<ActivityKind | null>(null)
+  const flashTimer = useRef(0)
+  function flashActivity(kind: ActivityKind) {
+    setFlashAct(kind)
+    window.clearTimeout(flashTimer.current)
+    flashTimer.current = window.setTimeout(() => setFlashAct(null), 2500)
+  }
+
+  // Broadcast my current activity to board collaborators (editing/uploading are
+  // sent separately by their own channels and take priority on the receiver).
+  useEffect(() => {
+    let act: ActivityKind = 'viewing'
+    if (idle) act = 'away'
+    else if (flashAct) act = flashAct
+    else if (galleryOpen) act = 'gallery'
+    else if (impexOpen) act = 'transferring'
+    else if (dialog === 'merge' || mergeConfirm) act = 'merging'
+    else if (dialog === 'new') act = 'creating'
+    realtime.sendActivity(act)
+  }, [idle, flashAct, galleryOpen, impexOpen, dialog, mergeConfirm])
 
   const activeBoard = boards.find((b) => b.id === activeId) ?? null
   // Announce the active board (join) and get other collaborators + what each is
@@ -289,6 +330,7 @@ function Workspace() {
     persistCategories([...catsRef.current, { id: genId(), name, items: [] }])
   }
   function renameCategory(id: string, name: string) {
+    flashActivity('renaming')
     persistCategories(catsRef.current.map((c) => (c.id === id ? { ...c, name } : c)))
   }
   function deleteCategory(id: string) {
@@ -373,6 +415,7 @@ function Workspace() {
   const visibleBoards =
     activeFolderId === null ? scopedBoards : scopedBoards.filter((b) => b.folder_id === activeFolderId)
   function renameFolder(id: string, name: string) {
+    flashActivity('renaming')
     setFolders((fs) => fs.map((f) => (f.id === id ? { ...f, name } : f)))
     void api.renameFolder(id, name).catch(() => {})
   }
@@ -412,6 +455,7 @@ function Workspace() {
   }
   // Rename a specific board (from the explorer's inline editor).
   function renameBoardById(id: string, name: string) {
+    flashActivity('renaming')
     setBoards((bs) => bs.map((b) => (b.id === id ? { ...b, name } : b)))
     void api.updateBoard(id, { name }).catch(() => {})
   }
@@ -864,6 +908,7 @@ function Workspace() {
           folders={folders}
           categories={categories}
           orderedTop={computeOrderedTop()}
+          onDownload={() => flashActivity('downloading')}
           onClose={() => setImpexOpen(false)}
           onImported={(created) => {
             setBoards((b) => [...created, ...b])

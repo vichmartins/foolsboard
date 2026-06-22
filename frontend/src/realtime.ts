@@ -37,12 +37,31 @@ export interface BoardUpload {
   title?: string // node the upload targets
 }
 
+// What a collaborator is currently doing. 'editing'/'uploading' come from the
+// node-level channels; the rest are broadcast app-wide via sendActivity().
+export type ActivityKind =
+  | 'viewing'
+  | 'editing'
+  | 'uploading'
+  | 'gallery'
+  | 'merging'
+  | 'transferring'
+  | 'creating'
+  | 'renaming'
+  | 'downloading'
+  | 'away'
+
+const ACTIVITY_KINDS = new Set<ActivityKind>([
+  'viewing', 'editing', 'uploading', 'gallery', 'merging',
+  'transferring', 'creating', 'renaming', 'downloading', 'away',
+])
+
 // A collaborator on the board plus what they're currently doing.
 export interface MemberActivity {
   id: string
   username: string
   color: string
-  status: 'idle' | 'editing' | 'uploading'
+  status: ActivityKind
   detail?: string // node title for editing/uploading
 }
 
@@ -63,6 +82,9 @@ class Realtime {
   // Per board, the node each user currently has open for editing (one each), so
   // others can show "X is editing" and block concurrent edits.
   private editing: Record<string, Record<string, { nodeId: string; username: string; color: string; title: string }>> = {}
+  // Per board, each user's broadcast app activity (gallery, merging, away, ...).
+  private activities: Record<string, Record<string, ActivityKind>> = {}
+  private myActivity: ActivityKind = 'viewing'
 
   private presenceListeners = new Set<() => void>()
   private collabListeners = new Set<() => void>()
@@ -104,6 +126,7 @@ class Realtime {
     this.selections = {}
     this.uploads = {}
     this.editing = {}
+    this.activities = {}
     this.globalPresence = {}
     this.emitPresence()
     this.emitCollab()
@@ -162,8 +185,9 @@ class Realtime {
       for (const map of [this.cursors[board], this.selections[board], this.uploads[board]]) {
         if (map) for (const uid of Object.keys(map)) if (!ids.has(uid)) delete map[uid]
       }
-      const editMap = this.editing[board]
-      if (editMap) for (const uid of Object.keys(editMap)) if (!ids.has(uid)) delete editMap[uid]
+      for (const map of [this.editing[board], this.activities[board]]) {
+        if (map) for (const uid of Object.keys(map)) if (!ids.has(uid)) delete map[uid]
+      }
       this.emitPresence()
       this.emitCollab()
       this.emitEdit()
@@ -227,6 +251,12 @@ class Realtime {
         delete map[msg.user_id]
       }
       this.emitPresence()
+    } else if (msg.type === 'activity') {
+      const map = (this.activities[board] ??= {})
+      const a = msg.activity as ActivityKind
+      if (a && a !== 'viewing' && ACTIVITY_KINDS.has(a)) map[msg.user_id] = a
+      else delete map[msg.user_id]
+      this.emitPresence()
     } else if (msg.type === 'node_move' || msg.type === 'board_dirty') {
       this.opListeners.forEach((l) => l(msg))
     }
@@ -250,6 +280,10 @@ class Realtime {
     if (this.boardId === boardId) return
     this.boardId = boardId
     this.send({ type: 'join', board_id: boardId })
+    // Let the new board's members see what I'm currently doing.
+    if (boardId && this.myActivity !== 'viewing') {
+      this.send({ type: 'activity', activity: this.myActivity })
+    }
   }
 
   sendCursor(x: number, y: number) {
@@ -280,6 +314,14 @@ class Realtime {
   // can show a lock + "editing X" and block concurrent edits.
   sendEdit(nodeId: string | null, nodeTitle?: string) {
     this.send({ type: 'edit', node_id: nodeId, node_title: nodeTitle ?? '', active: nodeId != null })
+  }
+
+  // Announce my current app activity (viewing, gallery, merging, away, ...) so
+  // collaborators show a status badge. Only sends on change.
+  sendActivity(kind: ActivityKind) {
+    if (kind === this.myActivity) return
+    this.myActivity = kind
+    this.send({ type: 'activity', activity: kind })
   }
 
   // Set who I am so my own color is held fixed and clashing collaborators get a
@@ -372,18 +414,21 @@ class Realtime {
     const colors = this.resolveColors(boardId)
     const editing = this.editing[boardId] ?? {}
     const uploads = this.uploads[boardId] ?? {}
+    const acts = this.activities[boardId] ?? {}
     const selfId = this.self?.id
     return (this.presence[boardId] ?? [])
       .filter((m) => m.id !== selfId)
       .map((m) => {
         const color = colors[m.id] ?? m.color
+        // Node-level work wins (it carries a title); then the broadcast activity;
+        // otherwise the person is just viewing.
         const up = uploads[m.id]
         if (up && up.count > 0)
           return { id: m.id, username: m.username, color, status: 'uploading' as const, detail: up.title }
         const ed = editing[m.id]
         if (ed)
           return { id: m.id, username: m.username, color, status: 'editing' as const, detail: ed.title }
-        return { id: m.id, username: m.username, color, status: 'idle' as const }
+        return { id: m.id, username: m.username, color, status: acts[m.id] ?? ('viewing' as const) }
       })
   }
 
