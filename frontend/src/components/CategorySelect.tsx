@@ -3,6 +3,7 @@
 // can be created, renamed, and deleted here too (parity with the folder picker).
 import { useEffect, useRef, useState } from 'react'
 import type { Category } from '../types'
+import { CategoryIcon } from './icons'
 
 interface Props {
   categories: Category[]
@@ -74,7 +75,9 @@ export default function CategorySelect({
         aria-expanded={open}
         title="Categories"
       >
-        <span className="folder-select__icon">▤</span>
+        <span className="folder-select__icon">
+          <CategoryIcon />
+        </span>
         <span className="board-select__current">{active?.name ?? 'All Categories'}</span>
         <span className={'board-select__chevron' + (open ? ' board-select__chevron--open' : '')}>
           ▾

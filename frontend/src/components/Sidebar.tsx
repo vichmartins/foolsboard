@@ -36,6 +36,8 @@ interface Props {
   onRenameFolder: (id: string, name: string) => void
   onDeleteFolder: (id: string) => void
   onShareFolder: (folder: Folder) => void
+  onMoveFolder: (folder: Folder) => void
+  onMoveBoard: (board: Board) => void
   onCreateBoardInFolder: (folderId: string, name: string) => void
   onMoveBoardToFolder: (boardId: string, folderId: string | null) => void
   onMoveFolderToFolder: (folderId: string, parentFolderId: string | null) => void
@@ -105,6 +107,8 @@ export default function Sidebar(props: Props) {
     onRenameFolder,
     onDeleteFolder,
     onShareFolder,
+    onMoveFolder,
+    onMoveBoard,
     onCreateBoardInFolder,
     onMoveBoardToFolder,
     onMoveFolderToFolder,
@@ -739,6 +743,7 @@ export default function Sidebar(props: Props) {
                 ]
               : [
                   { label: 'Rename', mnemonic: 'r', onClick: () => startRenameBoard(menu.board) },
+                  { label: 'Move to…', mnemonic: 'v', onClick: () => onMoveBoard(menu.board) },
                   { label: 'Share', mnemonic: 's', onClick: () => onShareBoard(menu.board) },
                   { label: 'Merge', mnemonic: 'm', onClick: () => onMergeBoard(menu.board) },
                   ...(menu.board.shared_out
@@ -784,6 +789,7 @@ export default function Sidebar(props: Props) {
               mnemonic: 'b',
               onClick: () => beginCreate('folder:' + folderMenu.folder.id, 'board'),
             },
+            { label: 'Move to…', mnemonic: 'v', onClick: () => onMoveFolder(folderMenu.folder) },
             { label: 'Share', mnemonic: 's', onClick: () => onShareFolder(folderMenu.folder) },
             {
               label: 'Rename',

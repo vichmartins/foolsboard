@@ -755,6 +755,12 @@
   font-size: 14px;
   line-height: 1;
   color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+}
+.folder-select__icon svg {
+  width: 15px;
+  height: 15px;
 }
 .folder-menu {
   min-width: 250px;

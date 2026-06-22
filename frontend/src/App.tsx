@@ -56,6 +56,8 @@ function Workspace() {
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
   // Board awaiting a folder via the Move-to-Folder dialog.
   const [moveFolderBoard, setMoveFolderBoard] = useState<Board | null>(null)
+  // Folder being moved into a category via the Move dialog.
+  const [moveFolderTarget, setMoveFolderTarget] = useState<Folder | null>(null)
   // Resource being shared (opens the Share dialog).
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
   // Board awaiting delete confirmation (type-to-confirm dialog).
@@ -558,6 +560,8 @@ function Workspace() {
           onRenameFolder={renameFolder}
           onDeleteFolder={deleteFolder}
           onShareFolder={(f) => setShareTarget({ type: 'folder', id: f.id, name: f.name })}
+          onMoveFolder={(f) => setMoveFolderTarget(f)}
+          onMoveBoard={(b) => setMoveFolderBoard(b)}
           onCreateBoardInFolder={createBoardInFolder}
           onMoveBoardToFolder={moveBoardToFolder}
           onMoveFolderToFolder={moveFolderToFolder}
@@ -740,6 +744,23 @@ function Workspace() {
               fileItem(id, null)
             }
             setMoveFolderBoard(null)
+          }}
+        />
+      )}
+
+      {moveFolderTarget && (
+        <MoveToFolderDialog
+          folders={[]}
+          categories={categories}
+          boardName={moveFolderTarget.name}
+          currentFolderId={null}
+          currentCategoryId={
+            categories.find((c) => c.items.includes(moveFolderTarget.id))?.id ?? null
+          }
+          onCancel={() => setMoveFolderTarget(null)}
+          onMove={(dest) => {
+            fileItem(moveFolderTarget.id, dest.startsWith('cat:') ? dest.slice(4) : null)
+            setMoveFolderTarget(null)
           }}
         />
       )}

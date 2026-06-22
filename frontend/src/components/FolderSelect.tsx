@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Board, Folder } from '../types'
 import OwnerIcon from './OwnerIcon'
+import { FolderIcon } from './icons'
 
 const BOARD_DND = 'application/x-foolsboard-board'
 const FOLDER_DND = 'application/x-foolsboard-folder'
@@ -155,7 +156,9 @@ export default function FolderSelect({
         aria-expanded={open}
         title="Folders"
       >
-        <span className="folder-select__icon">🗀</span>
+        <span className="folder-select__icon">
+          <FolderIcon />
+        </span>
         <span className="board-select__current">{active?.name ?? 'All Boards'}</span>
         {active?.shared_out ? (
           <OwnerIcon className="owner-crown" />
