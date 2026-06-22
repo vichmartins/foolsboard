@@ -70,9 +70,10 @@
 .tree-folder__row:hover {
   background: var(--bg-hover);
 }
-.tree-folder__row--drop {
-  background: rgba(99, 102, 241, 0.16);
+.tree-folder--drop {
+  background: rgba(99, 102, 241, 0.1);
   box-shadow: inset 0 0 0 1px var(--accent);
+  border-radius: 7px;
 }
 /* Insertion line shown while dragging an item to reorder it between rows. */
 .tree-insert-before {

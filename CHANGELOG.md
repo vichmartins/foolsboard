@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.60.2
+
+- Dragging items around an **open folder** no longer flashes a stray highlight
+  box over the whole top/category area — the folder's body is now its own "drop
+  into this folder" zone, and the highlight covers the folder block.
+
 ## v0.60.1
 
 - Fixed explorer items still **jittering** while dragging inside a category — the

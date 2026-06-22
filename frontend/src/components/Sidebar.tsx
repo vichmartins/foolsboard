@@ -434,13 +434,13 @@ export default function Sidebar(props: Props) {
       )
     }
     return (
-      <div className="tree-folder" key={f.id} data-flip-id={f.id}>
+      <div
+        className={'tree-folder' + (dropTarget === f.id ? ' tree-folder--drop' : '')}
+        key={f.id}
+        data-flip-id={f.id}
+      >
         <div
-          className={
-            'tree-folder__row' +
-            (dropTarget === f.id ? ' tree-folder__row--drop' : '') +
-            insertClass(f.id)
-          }
+          className={'tree-folder__row' + insertClass(f.id)}
           draggable={!f.shared}
           onDragStart={(e) => startDrag(e, FOLDER_DND, f.id)}
           onDragOver={(e) => {
@@ -521,7 +521,23 @@ export default function Sidebar(props: Props) {
           )}
         </div>
         {isOpen && (
-          <div className="tree-children">
+          <div
+            className="tree-children"
+            // The open body is a "drop into this folder" zone; stop the event so
+            // it doesn't bubble up and highlight the whole top/category container.
+            onDragOver={(e) => {
+              if (!types(e).includes(BOARD_DND)) return
+              e.preventDefault()
+              e.stopPropagation()
+              setReorderHint(null)
+              setDropTarget((d) => (d === f.id ? d : f.id))
+            }}
+            onDrop={(e) => {
+              e.stopPropagation()
+              dropOnFolder(e, f.id)
+              clearHints()
+            }}
+          >
             {createInput('folder:' + f.id)}
             {inside.map((b) => boardRow(b, 'folder:' + f.id))}
             {inside.length === 0 && creating?.target !== 'folder:' + f.id && (
