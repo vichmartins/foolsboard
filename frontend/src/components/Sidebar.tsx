@@ -73,6 +73,7 @@ function loadSet(key: string): Set<string> {
 // its new spot, so reordering/filing animates smoothly instead of snapping.
 function useFlipReorder(ref: React.RefObject<HTMLElement | null>, paused: React.RefObject<boolean>) {
   const prev = useRef<Map<string, DOMRect>>(new Map())
+  const prevOrder = useRef('')
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
@@ -81,12 +82,20 @@ function useFlipReorder(ref: React.RefObject<HTMLElement | null>, paused: React.
     // each drag-over re-render just forces reflow and stutters. We still animate
     // the real reorder once the drag ends and the list updates.
     if (paused.current) return
+    const nodes = Array.from(el.querySelectorAll<HTMLElement>('[data-flip-id]'))
+    const order = nodes.map((n) => n.dataset.flipId).join('|')
+    // Only animate when the *set/order* of rows actually changed (a reorder,
+    // file, expand/collapse). Plain re-renders -- selecting a board, a bolded
+    // active row, presence updates -- leave the order intact, so we just record
+    // positions and skip the animation that otherwise made rows jitter.
+    const orderChanged = order !== prevOrder.current
     const next = new Map<string, DOMRect>()
-    el.querySelectorAll<HTMLElement>('[data-flip-id]').forEach((n) => {
+    nodes.forEach((n) => {
       const id = n.dataset.flipId
       if (!id) return
       const rect = n.getBoundingClientRect()
       next.set(id, rect)
+      if (!orderChanged) return
       const p = prev.current.get(id)
       if (!p) return
       const dx = p.left - rect.left
@@ -99,6 +108,7 @@ function useFlipReorder(ref: React.RefObject<HTMLElement | null>, paused: React.
       }
     })
     prev.current = next
+    prevOrder.current = order
   })
 }
 

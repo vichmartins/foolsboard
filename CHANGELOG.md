@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.64.2
+
+- Fixed explorer rows jittering when you **select** an item (most visible with
+  shared boards): the reorder animation now only runs when the item order
+  actually changes, not on every re-render (selection, presence updates, etc.).
+
 ## v0.64.1
 
 - Added a **moving** status badge (four-way-arrows) — shown while a collaborator
