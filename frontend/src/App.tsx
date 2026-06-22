@@ -40,6 +40,7 @@ import {
 import { realtime, useBoardActivity, useBoardPresence } from './realtime'
 import { useUpdateAvailable } from './useUpdateAvailable'
 import type { Board, Category, Folder } from './types'
+import { genId } from './types'
 import './App.css'
 
 type ShareTarget = { type: 'board' | 'folder'; id: string; name: string }
@@ -234,7 +235,7 @@ function Workspace() {
     persistLayout(next, topRef.current)
   }
   function createCategory(name: string) {
-    persistCategories([...catsRef.current, { id: crypto.randomUUID(), name, items: [] }])
+    persistCategories([...catsRef.current, { id: genId(), name, items: [] }])
   }
   function renameCategory(id: string, name: string) {
     persistCategories(catsRef.current.map((c) => (c.id === id ? { ...c, name } : c)))

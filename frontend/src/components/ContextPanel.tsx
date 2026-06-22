@@ -11,6 +11,7 @@ import {
 } from '../api'
 import {
   fileExt,
+  genId,
   KIND_COLORS,
   mediaKind,
   NODE_TYPES,
@@ -177,7 +178,7 @@ export default function ContextPanel({
       setUploadError(`${file.name}: ${tooBig}`)
       return
     }
-    const uploadId = crypto.randomUUID()
+    const uploadId = genId()
     setUploads((u) => [...u, { id: uploadId, name: file.name, progress: 0 }])
     try {
       const asset = await uploadAsset(node.id, file, (pct) =>

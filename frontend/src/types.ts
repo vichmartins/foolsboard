@@ -178,6 +178,18 @@ export function fileExt(filename: string): string {
   return i > 0 ? filename.slice(i + 1).toUpperCase() : ''
 }
 
+// A unique id. Prefers crypto.randomUUID, but falls back for insecure contexts
+// (plain-HTTP over LAN), where crypto.randomUUID is undefined and would throw.
+export function genId(): string {
+  try {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  } catch {
+    /* fall through to the manual generator */
+  }
+  const r = () => Math.floor(Math.random() * 0x10000).toString(16).padStart(4, '0')
+  return `${r()}${r()}-${r()}-4${r().slice(1)}-${r()}-${r()}${r()}${r()}`
+}
+
 const SAFE_LINK_SCHEMES = new Set(['http', 'https', 'mailto', 'tel'])
 
 // Returns a safe href for a user-supplied URL, or undefined if its scheme could
