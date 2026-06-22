@@ -37,6 +37,7 @@ interface Props {
   onCreateBoardInFolder: (folderId: string, name: string) => void
   onMoveBoardToFolder: (boardId: string, folderId: string | null) => void
   onMoveFolderToFolder: (folderId: string, parentFolderId: string | null) => void
+  orderedTop: string[] // ordered ids of uncategorized top-level items
   onShareBoard: (board: Board) => void
   onRenameBoard: (id: string, name: string) => void
   onDeleteBoard: (board: Board) => void
@@ -47,7 +48,7 @@ interface Props {
   onRenameCategory: (id: string, name: string) => void
   onDeleteCategory: (id: string) => void
   onReorderCategories: (ids: string[]) => void
-  onFileItem: (itemId: string, categoryId: string | null) => void
+  onFileItem: (itemId: string, categoryId: string | null, index?: number) => void
   onCreateFolderIn: (categoryId: string | null, name: string) => void
   onCreateBoardIn: (categoryId: string | null, name: string) => void
 }
@@ -77,6 +78,7 @@ export default function Sidebar(props: Props) {
     onCreateBoardInFolder,
     onMoveBoardToFolder,
     onMoveFolderToFolder,
+    orderedTop,
     onShareBoard,
     onRenameBoard,
     onDeleteBoard,
@@ -103,6 +105,7 @@ export default function Sidebar(props: Props) {
   const [creating, setCreating] = useState<Creating | null>(null)
   const [createName, setCreateName] = useState('')
   const [dropTarget, setDropTarget] = useState<string | null>(null) // folder id / 'cat:<id>' / 'top'
+  const [reorderHint, setReorderHint] = useState<{ id: string; after: boolean } | null>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; board: Board } | null>(null)
   const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; folder: Folder } | null>(null)
   const [addMenu, setAddMenu] = useState<{ x: number; y: number; catId: string } | null>(null)
@@ -118,17 +121,12 @@ export default function Sidebar(props: Props) {
   const toggleCat = (id: string) => toggle(collapsedCats, COLLAPSED_CATS_KEY, id, setCollapsedCats)
 
   // --- placement ------------------------------------------------------------
+  // The top-level ordering and which items are uncategorized is decided by the
+  // parent (App) via `orderedTop`; here we only need lookups and folder contents.
   const folderById = new Map(folders.map((f) => [f.id, f]))
   const boardById = new Map(boards.map((b) => [b.id, b]))
-  const myFolderIds = new Set(folders.map((f) => f.id))
-  const categorizedIds = new Set(categories.flatMap((c) => c.items))
-  // A board grouped under a folder I can see (so it renders inside that folder).
-  const isFiled = (b: Board) => !!b.folder_id && myFolderIds.has(b.folder_id)
   const boardsIn = (fid: string) => boards.filter((b) => b.folder_id === fid)
   const subFoldersOf = (fid: string) => folders.filter((f) => f.parent_folder_id === fid)
-  // Top folders: no parent and not filed into a category.
-  const topFolders = folders.filter((f) => !f.parent_folder_id && !categorizedIds.has(f.id))
-  const topBoards = boards.filter((b) => !isFiled(b) && !categorizedIds.has(b.id))
 
   function startRenameBoard(b: Board) {
     setEditingBoardId(b.id)
@@ -226,8 +224,47 @@ export default function Sidebar(props: Props) {
     }
   }
 
+  // --- reorder (drop between rows) ------------------------------------------
+  const clearHints = () => {
+    setReorderHint(null)
+    setDropTarget(null)
+  }
+  // Which third of a row the pointer is over. `allowInto` (folders) reserves the
+  // middle for nesting; otherwise the row splits in half.
+  const rowZone = (e: React.DragEvent, allowInto: boolean): 'before' | 'after' | 'into' => {
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const y = e.clientY - r.top
+    if (allowInto) {
+      if (y < r.height * 0.3) return 'before'
+      if (y > r.height * 0.7) return 'after'
+      return 'into'
+    }
+    return y < r.height / 2 ? 'before' : 'after'
+  }
+  // Reorder the dragged item next to `targetId` within a container ('top' or
+  // 'cat:<id>'), pulling it out of any folder/category it was in first.
+  const reorderInto = (e: React.DragEvent, targetId: string, container: string, after: boolean) => {
+    const dfid = getId(e, FOLDER_DND)
+    const bid = getId(e, BOARD_DND)
+    const draggedId = dfid || bid
+    if (!draggedId || draggedId === targetId) return
+    const catId = container === 'top' ? null : container.slice(4)
+    if (dfid && folderById.get(dfid)?.parent_folder_id) onMoveFolderToFolder(dfid, null)
+    if (bid && boardById.get(bid)?.folder_id) onMoveBoardToFolder(bid, null)
+    const siblings = container === 'top' ? orderedTop : categories.find((c) => c.id === catId)?.items ?? []
+    let idx = siblings.indexOf(targetId)
+    if (idx < 0) idx = siblings.length
+    if (after) idx += 1
+    const from = siblings.indexOf(draggedId)
+    if (from >= 0 && from < idx) idx -= 1
+    onFileItem(draggedId, catId, idx)
+  }
+  const canReorder = (container: string) => container === 'top' || container.startsWith('cat:')
+  const insertClass = (id: string) =>
+    reorderHint?.id === id ? (reorderHint.after ? ' tree-insert-after' : ' tree-insert-before') : ''
+
   // --- renderers ------------------------------------------------------------
-  const boardRow = (b: Board) => {
+  const boardRow = (b: Board, container: string) => {
     if (editingBoardId === b.id) {
       return (
         <input
@@ -244,14 +281,39 @@ export default function Sidebar(props: Props) {
         />
       )
     }
+    const reorderable = canReorder(container)
     return (
       <div
         key={b.id}
-        className={'tree-board-row' + (b.id === activeId ? ' tree-board-row--active' : '')}
+        className={
+          'tree-board-row' + (b.id === activeId ? ' tree-board-row--active' : '') + insertClass(b.id)
+        }
         onContextMenu={(e) => {
           e.preventDefault()
           setMenu({ x: e.clientX, y: e.clientY, board: b })
         }}
+        onDragOver={
+          reorderable
+            ? (e) => {
+                if (!types(e).some((t) => t === BOARD_DND || t === FOLDER_DND)) return
+                e.preventDefault()
+                setReorderHint({ id: b.id, after: rowZone(e, false) === 'after' })
+              }
+            : undefined
+        }
+        onDragLeave={
+          reorderable ? () => setReorderHint((h) => (h?.id === b.id ? null : h)) : undefined
+        }
+        onDrop={
+          reorderable
+            ? (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                reorderInto(e, b.id, container, rowZone(e, false) === 'after')
+                clearHints()
+              }
+            : undefined
+        }
       >
         <button
           className="tree-board"
@@ -291,7 +353,7 @@ export default function Sidebar(props: Props) {
     )
   }
 
-  const folderNode = (f: Folder) => {
+  const folderNode = (f: Folder, container: string) => {
     const isOpen = expanded.has(f.id)
     const inside = boardsIn(f.id)
     if (editingId === f.id) {
@@ -313,12 +375,39 @@ export default function Sidebar(props: Props) {
     return (
       <div className="tree-folder" key={f.id}>
         <div
-          className={'tree-folder__row' + (dropTarget === f.id ? ' tree-folder__row--drop' : '')}
+          className={
+            'tree-folder__row' +
+            (dropTarget === f.id ? ' tree-folder__row--drop' : '') +
+            insertClass(f.id)
+          }
           draggable={!f.shared}
           onDragStart={(e) => startDrag(e, FOLDER_DND, f.id)}
-          onDragOver={(e) => overIf(e, [BOARD_DND, FOLDER_DND], f.id)}
-          onDragLeave={() => setDropTarget((d) => (d === f.id ? null : d))}
-          onDrop={(e) => dropOnFolder(e, f.id)}
+          onDragOver={(e) => {
+            if (!types(e).some((t) => t === BOARD_DND || t === FOLDER_DND)) return
+            e.preventDefault()
+            const zone = rowZone(e, true)
+            if (zone === 'into' || !canReorder(container)) {
+              setReorderHint(null)
+              setDropTarget(f.id)
+            } else {
+              setDropTarget(null)
+              setReorderHint({ id: f.id, after: zone === 'after' })
+            }
+          }}
+          onDragLeave={() => {
+            setDropTarget((d) => (d === f.id ? null : d))
+            setReorderHint((h) => (h?.id === f.id ? null : h))
+          }}
+          onDrop={(e) => {
+            e.stopPropagation()
+            const zone = rowZone(e, true)
+            if (zone === 'into' || !canReorder(container)) dropOnFolder(e, f.id)
+            else {
+              e.preventDefault()
+              reorderInto(e, f.id, container, zone === 'after')
+            }
+            clearHints()
+          }}
           onContextMenu={
             f.shared
               ? undefined
@@ -373,8 +462,8 @@ export default function Sidebar(props: Props) {
         {isOpen && (
           <div className="tree-children">
             {createInput('folder:' + f.id)}
-            {subFoldersOf(f.id).map(folderNode)}
-            {inside.map(boardRow)}
+            {subFoldersOf(f.id).map((sf) => folderNode(sf, 'folder:' + f.id))}
+            {inside.map((b) => boardRow(b, 'folder:' + f.id))}
             {subFoldersOf(f.id).length === 0 &&
               inside.length === 0 &&
               creating?.target !== 'folder:' + f.id && <div className="tree-empty">Empty</div>}
@@ -384,11 +473,11 @@ export default function Sidebar(props: Props) {
     )
   }
 
-  const renderItem = (id: string) => {
+  const renderItem = (id: string, container: string) => {
     const f = folderById.get(id)
-    if (f) return folderNode(f)
+    if (f) return folderNode(f, container)
     const b = boardById.get(id)
-    if (b) return boardRow(b)
+    if (b) return boardRow(b, container)
     return null
   }
 
@@ -454,9 +543,8 @@ export default function Sidebar(props: Props) {
               onDrop={(e) => dropOnCat(e, null)}
             >
               {createInput('top')}
-              {topFolders.map(folderNode)}
-              {topBoards.map(boardRow)}
-              {topFolders.length === 0 && topBoards.length === 0 && !creating && (
+              {orderedTop.map((id) => renderItem(id, 'top'))}
+              {orderedTop.length === 0 && !creating && (
                 <div className="tree-empty">Drag items here to uncategorize</div>
               )}
             </div>
@@ -544,7 +632,7 @@ export default function Sidebar(props: Props) {
                   {isOpen && (
                     <div className="tree-children">
                       {createInput('cat:' + c.id)}
-                      {c.items.map(renderItem)}
+                      {c.items.map((id) => renderItem(id, 'cat:' + c.id))}
                       {c.items.length === 0 && creating?.target !== 'cat:' + c.id && (
                         <div className="tree-empty">Empty — use + or drag items here</div>
                       )}

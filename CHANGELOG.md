@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.52.0
+
+- **Reorder by dragging**: drop a board or folder onto the top/bottom half of
+  another row to place it before/after — within the top list or any category. An
+  accent insertion line shows where it'll land. The manual order persists
+  per-user (`top` array in the explorer layout). Folders still nest when dropped
+  on the middle of another folder.
+
 ## v0.51.0
 
 - **Nested folders**: drag a folder onto another folder to nest it inside.

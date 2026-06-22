@@ -208,16 +208,30 @@ function Workspace() {
     setActiveFolderId(folder.id)
   }
 
-  // --- Explorer categories (user-defined collapsible sections) --------------
+  // --- Explorer layout (user-defined collapsible categories + a manual order
+  // for the uncategorized top-level items) ----------------------------------
   const [categories, setCategories] = useState<Category[]>([])
+  const [topOrder, setTopOrder] = useState<string[]>([])
   useEffect(() => {
-    api.getCategories().then(setCategories).catch(() => {})
+    api
+      .getLayout()
+      .then(({ categories, top }) => {
+        setCategories(categories)
+        setTopOrder(top)
+      })
+      .catch(() => {})
   }, [])
   const catsRef = useRef<Category[]>(categories)
   catsRef.current = categories
-  function persistCategories(next: Category[]) {
+  const topRef = useRef<string[]>(topOrder)
+  topRef.current = topOrder
+  function persistLayout(next: Category[], top: string[]) {
     setCategories(next)
-    void api.saveCategories(next).catch(() => {})
+    setTopOrder(top)
+    void api.saveLayout({ categories: next, top }).catch(() => {})
+  }
+  function persistCategories(next: Category[]) {
+    persistLayout(next, topRef.current)
   }
   function createCategory(name: string) {
     persistCategories([...catsRef.current, { id: crypto.randomUUID(), name, items: [] }])
@@ -232,22 +246,44 @@ function Workspace() {
     const by = new Map(catsRef.current.map((c) => [c.id, c]))
     persistCategories(ids.map((id) => by.get(id)).filter((c): c is Category => !!c))
   }
-  // Move a folder/board into a category (categoryId=null to uncategorize),
-  // optionally at a position. Removes it from any other category first.
+  // The complete, ordered list of uncategorized top-level item ids: the saved
+  // order first (members only), then any new top items in natural order. Used so
+  // reorder indices line up with what's rendered.
+  function computeOrderedTop(): string[] {
+    const categorized = new Set(catsRef.current.flatMap((c) => c.items))
+    const folderIds = new Set(folders.map((f) => f.id))
+    const members: string[] = []
+    for (const f of folders) if (!f.parent_folder_id && !categorized.has(f.id)) members.push(f.id)
+    for (const b of boards) {
+      const filed = !!b.folder_id && folderIds.has(b.folder_id)
+      if (!filed && !categorized.has(b.id)) members.push(b.id)
+    }
+    const order = topRef.current
+    const memberSet = new Set(members)
+    return [...order.filter((id) => memberSet.has(id)), ...members.filter((id) => !order.includes(id))]
+  }
+  // Place a folder/board into a category (categoryId=null = uncategorized top),
+  // optionally at a position. Removes it from every other category and from the
+  // top order first, so it lands in exactly one place.
   function fileItem(itemId: string, categoryId: string | null, index?: number) {
     const cleaned = catsRef.current.map((c) => ({
       ...c,
       items: c.items.filter((i) => i !== itemId),
     }))
-    const next = !categoryId
-      ? cleaned
-      : cleaned.map((c) => {
-          if (c.id !== categoryId) return c
-          const items = c.items.filter((i) => i !== itemId)
-          items.splice(index ?? items.length, 0, itemId)
-          return { ...c, items }
-        })
-    persistCategories(next)
+    let top = topRef.current.filter((i) => i !== itemId)
+    let next = cleaned
+    if (categoryId) {
+      next = cleaned.map((c) => {
+        if (c.id !== categoryId) return c
+        const items = [...c.items]
+        items.splice(index ?? items.length, 0, itemId)
+        return { ...c, items }
+      })
+    } else {
+      top = computeOrderedTop().filter((i) => i !== itemId)
+      top.splice(index ?? top.length, 0, itemId)
+    }
+    persistLayout(next, top)
   }
   async function createFolderIn(categoryId: string | null, name: string) {
     const folder = await api.createFolder(name)
@@ -479,6 +515,7 @@ function Workspace() {
           boards={boards}
           folders={folders}
           categories={categories}
+          orderedTop={computeOrderedTop()}
           activeId={activeId}
           onSelectBoard={setActiveId}
           onRenameFolder={renameFolder}

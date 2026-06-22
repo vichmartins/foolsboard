@@ -266,6 +266,8 @@ class CategoryIn(BaseModel):
 
 class CategoriesPayload(BaseModel):
     categories: list[CategoryIn] = Field(default_factory=list, max_length=200)
+    # Ordered ids of the uncategorized (top-level) items, for manual sort.
+    top: list[str] = Field(default_factory=list, max_length=5000)
 
 
 class UserOut(ORMModel):
