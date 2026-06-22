@@ -201,9 +201,10 @@ function Workspace() {
     else if (galleryOpen) act = 'gallery'
     else if (impexOpen) act = 'transferring'
     else if (dialog === 'merge' || mergeConfirm) act = 'merging'
+    else if (moveFolderBoard || moveFolderTarget || moveIds) act = 'moving'
     else if (dialog === 'new') act = 'creating'
     realtime.sendActivity(act)
-  }, [idle, flashAct, galleryOpen, impexOpen, dialog, mergeConfirm])
+  }, [idle, flashAct, galleryOpen, impexOpen, dialog, mergeConfirm, moveFolderBoard, moveFolderTarget, moveIds])
 
   const activeBoard = boards.find((b) => b.id === activeId) ?? null
   // Announce the active board (join) and get other collaborators + what each is

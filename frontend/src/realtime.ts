@@ -45,6 +45,7 @@ export type ActivityKind =
   | 'uploading'
   | 'gallery'
   | 'merging'
+  | 'moving'
   | 'transferring'
   | 'creating'
   | 'renaming'
@@ -52,7 +53,7 @@ export type ActivityKind =
   | 'away'
 
 const ACTIVITY_KINDS = new Set<ActivityKind>([
-  'viewing', 'editing', 'uploading', 'gallery', 'merging',
+  'viewing', 'editing', 'uploading', 'gallery', 'merging', 'moving',
   'transferring', 'creating', 'renaming', 'downloading', 'away',
 ])
 

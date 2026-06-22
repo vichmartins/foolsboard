@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.64.1
+
+- Added a **moving** status badge (four-way-arrows) — shown while a collaborator
+  has a Move dialog open (moving a board/folder into a folder/category, or moving
+  objects to another board).
+
 ## v0.64.0
 
 - **Status badges for what collaborators are doing.** Beyond editing/uploading, a
