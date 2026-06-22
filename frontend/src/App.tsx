@@ -253,7 +253,7 @@ function Workspace() {
     const categorized = new Set(catsRef.current.flatMap((c) => c.items))
     const folderIds = new Set(folders.map((f) => f.id))
     const members: string[] = []
-    for (const f of folders) if (!f.parent_folder_id && !categorized.has(f.id)) members.push(f.id)
+    for (const f of folders) if (!categorized.has(f.id)) members.push(f.id)
     for (const b of boards) {
       const filed = !!b.folder_id && folderIds.has(b.folder_id)
       if (!filed && !categorized.has(b.id)) members.push(b.id)

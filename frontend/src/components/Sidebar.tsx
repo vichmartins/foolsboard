@@ -126,7 +126,6 @@ export default function Sidebar(props: Props) {
   const folderById = new Map(folders.map((f) => [f.id, f]))
   const boardById = new Map(boards.map((b) => [b.id, b]))
   const boardsIn = (fid: string) => boards.filter((b) => b.folder_id === fid)
-  const subFoldersOf = (fid: string) => folders.filter((f) => f.parent_folder_id === fid)
 
   function startRenameBoard(b: Board) {
     setEditingBoardId(b.id)
@@ -191,17 +190,12 @@ export default function Sidebar(props: Props) {
     }
   }
   const getId = (e: React.DragEvent, type: string) => e.dataTransfer.getData(type)
-  // Drop on a folder: nest a folder inside it, or move a board inside it (both
-  // pulled out of any category).
+  // Drop a board onto a folder: move it inside (and out of any category).
+  // Folders don't nest, so a dropped folder is handled as a reorder instead.
   const dropOnFolder = (e: React.DragEvent, fid: string) => {
     setDropTarget(null)
-    const dfid = getId(e, FOLDER_DND)
     const bid = getId(e, BOARD_DND)
-    if (dfid && dfid !== fid) {
-      e.preventDefault()
-      onMoveFolderToFolder(dfid, fid)
-      onFileItem(dfid, null)
-    } else if (bid) {
+    if (bid) {
       e.preventDefault()
       onMoveBoardToFolder(bid, fid)
       onFileItem(bid, null)
@@ -383,10 +377,12 @@ export default function Sidebar(props: Props) {
           draggable={!f.shared}
           onDragStart={(e) => startDrag(e, FOLDER_DND, f.id)}
           onDragOver={(e) => {
-            if (!types(e).some((t) => t === BOARD_DND || t === FOLDER_DND)) return
+            const t = types(e)
+            if (!t.some((x) => x === BOARD_DND || x === FOLDER_DND)) return
             e.preventDefault()
-            const zone = rowZone(e, true)
-            if (zone === 'into' || !canReorder(container)) {
+            // Only a board can drop *into* a folder; a folder always reorders.
+            const zone = rowZone(e, t.includes(BOARD_DND))
+            if (zone === 'into') {
               setReorderHint(null)
               setDropTarget(f.id)
             } else {
@@ -400,8 +396,8 @@ export default function Sidebar(props: Props) {
           }}
           onDrop={(e) => {
             e.stopPropagation()
-            const zone = rowZone(e, true)
-            if (zone === 'into' || !canReorder(container)) dropOnFolder(e, f.id)
+            const zone = rowZone(e, types(e).includes(BOARD_DND))
+            if (zone === 'into') dropOnFolder(e, f.id)
             else {
               e.preventDefault()
               reorderInto(e, f.id, container, zone === 'after')
@@ -427,7 +423,7 @@ export default function Sidebar(props: Props) {
           <button className="tree-folder__main" onClick={() => toggleFolder(f.id)}>
             <FolderIcon />
             <span className="tree-folder__name">{f.name}</span>
-            <span className="tree-folder__count">{inside.length + subFoldersOf(f.id).length}</span>
+            <span className="tree-folder__count">{inside.length}</span>
           </button>
           {!f.shared && (
             <span className="tree-folder__tools">
@@ -462,11 +458,10 @@ export default function Sidebar(props: Props) {
         {isOpen && (
           <div className="tree-children">
             {createInput('folder:' + f.id)}
-            {subFoldersOf(f.id).map((sf) => folderNode(sf, 'folder:' + f.id))}
             {inside.map((b) => boardRow(b, 'folder:' + f.id))}
-            {subFoldersOf(f.id).length === 0 &&
-              inside.length === 0 &&
-              creating?.target !== 'folder:' + f.id && <div className="tree-empty">Empty</div>}
+            {inside.length === 0 && creating?.target !== 'folder:' + f.id && (
+              <div className="tree-empty">Empty</div>
+            )}
           </div>
         )}
       </div>

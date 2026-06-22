@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.52.1
+
+- **Folders no longer nest.** A folder dragged onto another folder now reorders
+  (before/after) like any other item, so folders move up and down freely among
+  boards. Dropping a **board** onto the middle of a folder still files it inside
+  the folder — only folder-into-folder nesting was removed.
+
 ## v0.52.0
 
 - **Reorder by dragging**: drop a board or folder onto the top/bottom half of
