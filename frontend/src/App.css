@@ -218,6 +218,20 @@
   border-radius: 2px;
   background: var(--text-dim);
 }
+.tree-board__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+}
+.tree-board__icon svg {
+  width: 15px;
+  height: 15px;
+}
+.tree-board-row--active .tree-board__icon {
+  color: var(--accent);
+}
 .tree-board__dot--shared {
   background: #14b8a6;
   border-radius: 50%;
@@ -294,15 +308,15 @@
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
   color: var(--text-dim);
 }
 .tree-cat__count {
   flex: none;
   font-size: 11px;
+  font-variant-numeric: tabular-nums;
   color: var(--text-dim);
 }
 .tree-cat__tools {

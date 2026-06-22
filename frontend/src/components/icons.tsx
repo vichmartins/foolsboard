@@ -1,6 +1,18 @@
 // Small line icons (Feather-style) that inherit color via currentColor, so they
 // sit naturally in the themed icon buttons.
 
+// A storyboard: two linked nodes — the canvas's beats connected by an edge.
+export function BoardIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3.5" width="8" height="7" rx="1.6" />
+      <rect x="13" y="13.5" width="8" height="7" rx="1.6" />
+      <path d="M11 7h3.5a2.5 2.5 0 0 1 2.5 2.5v4" />
+    </svg>
+  )
+}
+
 export function PencilIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"

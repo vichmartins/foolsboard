@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.53.0
+
+- **Reorderable categories**: drag a category section onto another to move it
+  up/down the list. The category body is now a drop target too, so items can be
+  filed/reordered by dropping anywhere inside it.
+- **Smooth reordering**: rows now glide (FLIP animation) to their new position
+  instead of snapping.
+- **New board icon** — a small linked-nodes glyph replaces the plain dot, and
+  turns accent on the active board.
+- **Cleaner category labels**: dropped the wide-tracked uppercase styling for a
+  calmer 12px label that sits better with board/folder names.
+
 ## v0.52.1
 
 - **Folders no longer nest.** A folder dragged onto another folder now reorders

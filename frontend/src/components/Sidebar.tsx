@@ -2,12 +2,13 @@
 // sections) each holding folders and/or boards, plus loose (uncategorized) items
 // at the top. Drag a board/folder onto a category to file it; drag a board onto a
 // folder to move it inside. The "+" on a category creates a folder or board in it.
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { Board, Category, Folder } from '../types'
 import { useGlobalPresence } from '../realtime'
 import ContextMenu from './ContextMenu'
 import ShareMark from './ShareMark'
 import {
+  BoardIcon,
   CategoryPlusIcon,
   ChevronIcon,
   FolderIcon,
@@ -21,6 +22,7 @@ import {
 
 const BOARD_DND = 'application/x-foolsboard-board'
 const FOLDER_DND = 'application/x-foolsboard-folder'
+const CATEGORY_DND = 'application/x-foolsboard-category'
 const EXPANDED_KEY = 'foolsboard:sidebar-expanded'
 const COLLAPSED_CATS_KEY = 'foolsboard:sidebar-collapsed-cats'
 
@@ -64,6 +66,34 @@ function loadSet(key: string): Set<string> {
   }
 }
 
+// FLIP: after each render, glide any [data-flip-id] row that changed position to
+// its new spot, so reordering/filing animates smoothly instead of snapping.
+function useFlipReorder(ref: React.RefObject<HTMLElement | null>) {
+  const prev = useRef<Map<string, DOMRect>>(new Map())
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const next = new Map<string, DOMRect>()
+    el.querySelectorAll<HTMLElement>('[data-flip-id]').forEach((n) => {
+      const id = n.dataset.flipId
+      if (!id) return
+      const rect = n.getBoundingClientRect()
+      next.set(id, rect)
+      const p = prev.current.get(id)
+      if (!p) return
+      const dx = p.left - rect.left
+      const dy = p.top - rect.top
+      if ((dx || dy) && Math.abs(dx) < 2000 && Math.abs(dy) < 2000) {
+        n.animate(
+          [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
+          { duration: 190, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+        )
+      }
+    })
+    prev.current = next
+  })
+}
+
 export default function Sidebar(props: Props) {
   const {
     open,
@@ -88,6 +118,7 @@ export default function Sidebar(props: Props) {
     onCreateCategory,
     onRenameCategory,
     onDeleteCategory,
+    onReorderCategories,
     onFileItem,
     onCreateFolderIn,
     onCreateBoardIn,
@@ -109,6 +140,8 @@ export default function Sidebar(props: Props) {
   const [menu, setMenu] = useState<{ x: number; y: number; board: Board } | null>(null)
   const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; folder: Folder } | null>(null)
   const [addMenu, setAddMenu] = useState<{ x: number; y: number; catId: string } | null>(null)
+  const treeRef = useRef<HTMLDivElement>(null)
+  useFlipReorder(treeRef)
 
   const toggle = (set: Set<string>, key: string, id: string, save: (s: Set<string>) => void) => {
     const n = new Set(set)
@@ -177,7 +210,7 @@ export default function Sidebar(props: Props) {
   }
 
   // --- drag and drop --------------------------------------------------------
-  const startDrag = (e: React.DragEvent, type: typeof BOARD_DND | typeof FOLDER_DND, id: string) => {
+  const startDrag = (e: React.DragEvent, type: string, id: string) => {
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData(type, id)
     e.dataTransfer.setData('text/plain', id)
@@ -256,6 +289,16 @@ export default function Sidebar(props: Props) {
   const canReorder = (container: string) => container === 'top' || container.startsWith('cat:')
   const insertClass = (id: string) =>
     reorderHint?.id === id ? (reorderHint.after ? ' tree-insert-after' : ' tree-insert-before') : ''
+  // Move a category before/after another in the section list.
+  const reorderCats = (draggedId: string, targetId: string, after: boolean) => {
+    if (draggedId === targetId) return
+    const ids = categories.map((c) => c.id).filter((id) => id !== draggedId)
+    let idx = ids.indexOf(targetId)
+    if (idx < 0) idx = ids.length
+    if (after) idx += 1
+    ids.splice(idx, 0, draggedId)
+    onReorderCategories(ids)
+  }
 
   // --- renderers ------------------------------------------------------------
   const boardRow = (b: Board, container: string) => {
@@ -279,6 +322,7 @@ export default function Sidebar(props: Props) {
     return (
       <div
         key={b.id}
+        data-flip-id={b.id}
         className={
           'tree-board-row' + (b.id === activeId ? ' tree-board-row--active' : '') + insertClass(b.id)
         }
@@ -316,7 +360,9 @@ export default function Sidebar(props: Props) {
           onClick={() => onSelectBoard(b.id)}
           title={b.name}
         >
-          <span className="tree-board__dot" aria-hidden="true" />
+          <span className="tree-board__icon" aria-hidden="true">
+            <BoardIcon />
+          </span>
           <span className="tree-board__name">{b.name}</span>
           {(b.shared || b.shared_out) && (
             <ShareMark
@@ -367,7 +413,7 @@ export default function Sidebar(props: Props) {
       )
     }
     return (
-      <div className="tree-folder" key={f.id}>
+      <div className="tree-folder" key={f.id} data-flip-id={f.id}>
         <div
           className={
             'tree-folder__row' +
@@ -529,7 +575,7 @@ export default function Sidebar(props: Props) {
             </div>
           </div>
 
-          <div className="sidebar__tree">
+          <div className="sidebar__tree" ref={treeRef}>
             {/* Loose (uncategorized) items at the top -- a drop target to un-file. */}
             <div
               className={'tree-top' + (dropTarget === 'top' ? ' tree-top--drop' : '')}
@@ -562,7 +608,7 @@ export default function Sidebar(props: Props) {
             {categories.map((c) => {
               const isOpen = !collapsedCats.has(c.id)
               return (
-                <div className="tree-cat" key={c.id}>
+                <div className="tree-cat" key={c.id} data-flip-id={c.id}>
                   {editingId === c.id ? (
                     <input
                       className="tree-input tree-input--cat"
@@ -577,10 +623,39 @@ export default function Sidebar(props: Props) {
                     />
                   ) : (
                     <div
-                      className={'tree-cat__row' + (dropTarget === 'cat:' + c.id ? ' tree-cat__row--drop' : '')}
-                      onDragOver={(e) => overIf(e, [BOARD_DND, FOLDER_DND], 'cat:' + c.id)}
-                      onDragLeave={() => setDropTarget((d) => (d === 'cat:' + c.id ? null : d))}
-                      onDrop={(e) => dropOnCat(e, c.id)}
+                      className={
+                        'tree-cat__row' +
+                        (dropTarget === 'cat:' + c.id ? ' tree-cat__row--drop' : '') +
+                        insertClass(c.id)
+                      }
+                      draggable
+                      onDragStart={(e) => startDrag(e, CATEGORY_DND, c.id)}
+                      onDragOver={(e) => {
+                        const t = types(e)
+                        if (t.includes(CATEGORY_DND)) {
+                          // reorder this category
+                          e.preventDefault()
+                          setDropTarget(null)
+                          setReorderHint({ id: c.id, after: rowZone(e, false) === 'after' })
+                        } else {
+                          overIf(e, [BOARD_DND, FOLDER_DND], 'cat:' + c.id)
+                        }
+                      }}
+                      onDragLeave={() => {
+                        setDropTarget((d) => (d === 'cat:' + c.id ? null : d))
+                        setReorderHint((h) => (h?.id === c.id ? null : h))
+                      }}
+                      onDrop={(e) => {
+                        const catDrag = getId(e, CATEGORY_DND)
+                        if (catDrag) {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          reorderCats(catDrag, c.id, rowZone(e, false) === 'after')
+                        } else {
+                          dropOnCat(e, c.id)
+                        }
+                        clearHints()
+                      }}
                     >
                       <button
                         className={'tree-chevron' + (isOpen ? ' tree-chevron--open' : '')}
@@ -625,7 +700,19 @@ export default function Sidebar(props: Props) {
                     </div>
                   )}
                   {isOpen && (
-                    <div className="tree-children">
+                    <div
+                      className="tree-children"
+                      onDragOver={(e) => {
+                        if (types(e).includes(CATEGORY_DND)) return
+                        overIf(e, [BOARD_DND, FOLDER_DND], 'cat:' + c.id)
+                      }}
+                      onDragLeave={() => setDropTarget((d) => (d === 'cat:' + c.id ? null : d))}
+                      onDrop={(e) => {
+                        if (getId(e, CATEGORY_DND)) return
+                        dropOnCat(e, c.id)
+                        clearHints()
+                      }}
+                    >
                       {createInput('cat:' + c.id)}
                       {c.items.map((id) => renderItem(id, 'cat:' + c.id))}
                       {c.items.length === 0 && creating?.target !== 'cat:' + c.id && (
