@@ -2,7 +2,7 @@
 // sections) each holding folders and/or boards, plus loose (uncategorized) items
 // at the top. Drag a board/folder onto a category to file it; drag a board onto a
 // folder to move it inside. The "+" on a category creates a folder or board in it.
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Board, Category, Folder } from '../types'
 import { useGlobalPresence } from '../realtime'
 import ContextMenu from './ContextMenu'
@@ -141,6 +141,20 @@ export default function Sidebar(props: Props) {
   const [createName, setCreateName] = useState('')
   const [dropTarget, setDropTarget] = useState<string | null>(null) // folder id / 'cat:<id>' / 'top'
   const [reorderHint, setReorderHint] = useState<{ id: string; after: boolean } | null>(null)
+  // Clear the drag indicators whenever any drag ends (drop, Esc, or off-window),
+  // so we don't rely on per-row dragleave (which flickers over child elements).
+  useEffect(() => {
+    const clear = () => {
+      setReorderHint(null)
+      setDropTarget(null)
+    }
+    window.addEventListener('dragend', clear)
+    window.addEventListener('drop', clear)
+    return () => {
+      window.removeEventListener('dragend', clear)
+      window.removeEventListener('drop', clear)
+    }
+  }, [])
   const [menu, setMenu] = useState<{ x: number; y: number; board: Board } | null>(null)
   const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; folder: Folder } | null>(null)
   const [addMenu, setAddMenu] = useState<{ x: number; y: number; catId: string } | null>(null)
@@ -223,7 +237,8 @@ export default function Sidebar(props: Props) {
   const overIf = (e: React.DragEvent, accept: string[], key: string) => {
     if (accept.some((t) => types(e).includes(t))) {
       e.preventDefault()
-      setDropTarget(key)
+      setDropTarget((d) => (d === key ? d : key))
+      setReorderHint(null) // hovering a container's empty area, not between rows
     }
   }
   const getId = (e: React.DragEvent, type: string) => e.dataTransfer.getData(type)
@@ -339,15 +354,14 @@ export default function Sidebar(props: Props) {
             ? (e) => {
                 if (!types(e).some((t) => t === BOARD_DND || t === FOLDER_DND)) return
                 e.preventDefault()
+                e.stopPropagation() // don't let the container also flag a drop
                 const after = rowZone(e, false) === 'after'
+                setDropTarget(null) // clear any folder/container highlight
                 // Keep the same object when nothing changed so React skips the
                 // re-render (otherwise dragover fires a render storm -> jitter).
                 setReorderHint((h) => (h && h.id === b.id && h.after === after ? h : { id: b.id, after }))
               }
             : undefined
-        }
-        onDragLeave={
-          reorderable ? () => setReorderHint((h) => (h?.id === b.id ? null : h)) : undefined
         }
         onDrop={
           reorderable
@@ -433,20 +447,17 @@ export default function Sidebar(props: Props) {
             const t = types(e)
             if (!t.some((x) => x === BOARD_DND || x === FOLDER_DND)) return
             e.preventDefault()
+            e.stopPropagation() // don't let the container also flag a drop
             // Only a board can drop *into* a folder; a folder always reorders.
             const zone = rowZone(e, t.includes(BOARD_DND))
             if (zone === 'into') {
               setReorderHint(null)
               setDropTarget(f.id)
             } else {
-              setDropTarget(null)
+              setDropTarget((d) => (d === f.id ? null : d))
               const after = zone === 'after'
               setReorderHint((h) => (h && h.id === f.id && h.after === after ? h : { id: f.id, after }))
             }
-          }}
-          onDragLeave={() => {
-            setDropTarget((d) => (d === f.id ? null : d))
-            setReorderHint((h) => (h?.id === f.id ? null : h))
           }}
           onDrop={(e) => {
             e.stopPropagation()

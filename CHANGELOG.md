@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.60.1
+
+- Fixed explorer items still **jittering** while dragging inside a category — the
+  per-row drag-leave flickered whenever the cursor crossed onto a child element;
+  the indicators are now cleared on drag end instead.
+
 ## v0.60.0
 
 - The node **Move** dialog (top bar + right-click) now navigates folders and
