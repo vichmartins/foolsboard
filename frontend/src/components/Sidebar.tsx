@@ -9,6 +9,7 @@ import ContextMenu from './ContextMenu'
 import ShareMark from './ShareMark'
 import {
   BoardIcon,
+  CategoryIcon,
   CategoryPlusIcon,
   ChevronIcon,
   FolderIcon,
@@ -716,7 +717,10 @@ export default function Sidebar(props: Props) {
                         <ChevronIcon />
                       </button>
                       <button className="tree-cat__name" onClick={() => toggleCat(c.id)}>
-                        {c.name}
+                        <span className="tree-cat__icon">
+                          <CategoryIcon />
+                        </span>
+                        <span className="tree-cat__label">{c.name}</span>
                       </button>
                       <span className="tree-cat__count">{items.length}</span>
                       <span className="tree-cat__tools">

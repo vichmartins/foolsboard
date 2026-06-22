@@ -317,17 +317,31 @@
 .tree-cat__name {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 7px;
   text-align: left;
   padding: 6px 4px;
   background: none;
   border: none;
   cursor: pointer;
+}
+.tree-cat__icon {
+  flex: none;
+  display: inline-flex;
+  color: var(--text-dim);
+}
+.tree-cat__icon svg {
+  width: 14px;
+  height: 14px;
+}
+.tree-cat__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0;
   color: var(--text-dim);
 }
 .tree-cat__count {

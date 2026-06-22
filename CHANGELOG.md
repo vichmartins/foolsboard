@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.61.0
+
+- Categories in the explorer now show the **category icon** next to their name,
+  matching how boards and folders display their icons.
+
 ## v0.60.5
 
 - Dragging a board over an **open folder** now shows only the soft "drop inside"
