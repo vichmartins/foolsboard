@@ -1382,9 +1382,9 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 4px;
   padding: 6px;
-  max-width: 340px;
   background: var(--bg-elev-2);
   border: 2px solid transparent;
   border-radius: 12px;

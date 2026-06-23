@@ -257,7 +257,13 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
     )
   } else if (mk === 'audio') {
     body = (
-      <div className="media-node__audio">
+      <div
+        ref={(el) => {
+          mediaRef.current = el
+        }}
+        className="media-node__audio"
+        style={sizeStyle}
+      >
         {thumb && (
           <img className="media-node__audio-cover" src={thumb} alt="" draggable={false} />
         )}
@@ -285,7 +291,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
       {handles}
       <div className="media-node__body">{body}</div>
       {mk !== 'file' && caption}
-      {(mk === 'image' || mk === 'video') && resizeGrip}
+      {(mk === 'image' || mk === 'video' || mk === 'audio') && resizeGrip}
     </div>
   )
 }
