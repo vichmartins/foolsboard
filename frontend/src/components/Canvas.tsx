@@ -175,6 +175,7 @@ function CanvasInner({
   // True while I'm dragging, so incoming remote moves don't yank my own nodes.
   const isDragging = useRef(false)
   const lastMoveSent = useRef(0)
+
   const broadcastMove = useCallback(
     (throttle: boolean) => {
       const now = performance.now()
@@ -193,6 +194,42 @@ function CanvasInner({
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  // Smoothly track remote node moves by easing each node's *position* toward its
+  // latest target every frame -- so React Flow recomputes the node and its edges
+  // together, keeping connections glued to the node (a CSS transform transition
+  // can't do this: edges follow the data position, not the animated transform).
+  const moveTargets = useRef(new Map<string, { x: number; y: number }>())
+  const moveRaf = useRef(0)
+  const stepMoves = useCallback(() => {
+    const targets = moveTargets.current
+    if (targets.size === 0) {
+      moveRaf.current = 0
+      return
+    }
+    setNodes((nds) =>
+      nds.map((n) => {
+        const t = targets.get(n.id)
+        if (!t) return n
+        if (isDragging.current && n.selected) {
+          targets.delete(n.id) // my own drag wins
+          return n
+        }
+        const dx = t.x - n.position.x
+        const dy = t.y - n.position.y
+        if (dx * dx + dy * dy < 0.25) {
+          targets.delete(n.id) // close enough -> land exactly
+          return { ...n, position: { x: t.x, y: t.y } }
+        }
+        // Ease 40% of the remaining distance per frame: smooth but snappy.
+        return { ...n, position: { x: n.position.x + dx * 0.4, y: n.position.y + dy * 0.4 } }
+      }),
+    )
+    moveRaf.current = requestAnimationFrame(stepMoves)
+  }, [setNodes])
+  const startMoves = useCallback(() => {
+    if (!moveRaf.current) moveRaf.current = requestAnimationFrame(stepMoves)
+  }, [stepMoves])
   const [panelClosing, setPanelClosing] = useState(false)
   const panelCloseTimer = useRef<number | null>(null)
   // File drag-and-drop: 'ready' = a panel is open (drop uploads), 'blocked' =
@@ -251,18 +288,11 @@ function CanvasInner({
     const off = realtime.subscribeOps((msg) => {
       if (msg.board_id !== boardId) return
       if (msg.type === 'node_move') {
-        const moved = new Map<string, { x: number; y: number }>(
-          msg.positions.map((p: { id: string; x: number; y: number }) => [p.id, p]),
-        )
-        setNodes((nds) =>
-          nds.map((n) => {
-            const p = moved.get(n.id)
-            // Don't override a node I'm actively dragging.
-            return p && !(isDragging.current && n.selected)
-              ? { ...n, position: { x: p.x, y: p.y } }
-              : n
-          }),
-        )
+        // Record targets; the rAF loop eases nodes (and their edges) toward them.
+        for (const p of msg.positions as { id: string; x: number; y: number }[]) {
+          moveTargets.current.set(p.id, { x: p.x, y: p.y })
+        }
+        startMoves()
       } else if (msg.type === 'board_dirty') {
         if (dirtyTimer) window.clearTimeout(dirtyTimer)
         dirtyTimer = window.setTimeout(() => {
@@ -285,7 +315,11 @@ function CanvasInner({
     return () => {
       off()
       if (dirtyTimer) window.clearTimeout(dirtyTimer)
+      if (moveRaf.current) cancelAnimationFrame(moveRaf.current)
+      moveRaf.current = 0
+      moveTargets.current.clear()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId])
 
   const onNodesChange = useCallback(

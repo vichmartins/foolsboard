@@ -1192,21 +1192,9 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
-/* Smooth remote movement: interpolate the transform between the samples we
-   receive (~30 fps) so collaborators' selection/edit outlines and nodes glide
-   instead of jumping. The node I'm actively dragging opts out (React Flow's
-   .dragging) so my own drag stays exactly 1:1 with my pointer. Remote cursors
-   are driven by a jitter buffer (CollabLayer) rather than a CSS transition. */
-.collab-select,
-.collab-edit {
-  transition: transform 80ms linear;
-}
-.react-flow__node {
-  transition: transform 80ms linear;
-}
-.react-flow__node.dragging {
-  transition: none;
-}
+/* Remote selection/edit outlines track their node's (already JS-eased) position
+   each frame -- no CSS transition, so they stay exactly glued to the node rather
+   than trailing it. Remote cursors use a jitter buffer (CollabLayer). */
 
 .theme-toggle {
   display: inline-flex;

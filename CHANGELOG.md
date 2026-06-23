@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.66.1
+
+- Connections now move in lockstep with their nodes during remote drags. Remote
+  node positions are eased on a frame loop (instead of a CSS transform
+  transition), so React Flow recomputes each node *and its edges* together —
+  edges no longer snap ahead while the node glides.
+
 ## v0.66.0
 
 - **Jitter buffer for remote cursors.** Other people's cursors now play back from
