@@ -1304,10 +1304,12 @@ function CanvasInner({
     }
     // A modal (e.g. the import dialog) handles its own drops -- don't hijack them.
     const modalOpen = () => document.querySelector('.overlay') !== null
-    // Asset drags (from the gallery/panel/drawer) are always allowed -- the
-    // gallery fades + goes click-through while dragging, so its overlay being
-    // present shouldn't block the drop onto the canvas behind it.
-    const droppable = (e: DragEvent) => assetDrag() || (!modalOpen() && externalDrag(e))
+    const hasFiles = (e: DragEvent) =>
+      Array.from(e.dataTransfer?.types ?? []).includes('Files')
+    // A real OS file drag must always be droppable -- never gate it behind
+    // modalOpen, internalDrag, or a stale asset ref. Asset drags use the ref.
+    const droppable = (e: DragEvent) =>
+      hasFiles(e) || assetDrag() || (!modalOpen() && externalDrag(e))
     const onDragStart = () => {
       internalDrag = true
     }
@@ -1325,10 +1327,10 @@ function CanvasInner({
     const onOver = (e: DragEvent) => {
       if (!droppable(e)) return
       e.preventDefault() // required to allow a drop
-      // Mark the drop as a copy so a real drop reports dropEffect 'copy' on
-      // dragend, while a right-click/Esc cancel reports 'none' (lets the gallery
-      // tell a cancel from a placement).
-      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+      // Only force dropEffect for asset drags (we set effectAllowed='copy' on
+      // those). Forcing 'copy' on an OS file drag whose source doesn't allow it
+      // makes the browser show the no-drop cursor and refuse the drop.
+      if (assetDrag() && e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
     }
     const onLeave = (e: DragEvent) => {
       if (!droppable(e)) return
