@@ -11,6 +11,7 @@ import {
   uploadAsset,
 } from '../api'
 import {
+  downloadAsset,
   fileExt,
   genId,
   KIND_COLORS,
@@ -433,6 +434,20 @@ export default function ContextPanel({
                     <span className="media-tile__processing">optimizing…</span>
                   )}
 
+                  {a.url && (
+                    <span
+                      className="media-tile__download"
+                      role="button"
+                      aria-label="Download"
+                      title="Download"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        downloadAsset(a)
+                      }}
+                    >
+                      ⬇
+                    </span>
+                  )}
                   <span
                     className="media-tile__remove"
                     role="button"

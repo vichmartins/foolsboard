@@ -35,6 +35,7 @@ import { findNodeAt, nodeSize, snapToBorder } from '../edgeGeometry'
 import { toRFEdge } from '../rfMappers'
 import {
   ASSET_DRAG_MIME,
+  downloadAsset,
   isMediaNodeType,
   KIND_COLORS,
   mediaKind,
@@ -1382,6 +1383,16 @@ function CanvasInner({
     (nodes.find((n) => n.id === selectedId)?.data?.story as StoryNode | undefined) ?? null
   // Media/link nodes render themselves -- no object editor panel for them.
   const editorStory = selectedStory && !isMediaNodeType(selectedStory.type) ? selectedStory : null
+  // A downloadable file behind the selected media node (for the context menu).
+  const selMediaDl =
+    selectedStory?.type === 'media'
+      ? (() => {
+          const c = selectedStory.content as Record<string, unknown>
+          const url = typeof c?.url === 'string' ? c.url : null
+          const filename = typeof c?.filename === 'string' ? c.filename : 'file'
+          return url ? { url, filename } : null
+        })()
+      : null
   // Tracked in a ref so the (mount-once) drag listeners read the latest value.
   hasPanelRef.current = editorStory !== null
 
@@ -1583,6 +1594,9 @@ function CanvasInner({
             { label: 'Move', mnemonic: 'M', onClick: () => doMove() },
             ...(clipboardHasContent()
               ? [{ label: 'Paste', mnemonic: 'P', onClick: () => void doPaste() }]
+              : []),
+            ...(selMediaDl
+              ? [{ label: 'Download', mnemonic: 'w', onClick: () => downloadAsset(selMediaDl) }]
               : []),
             { label: 'Delete', mnemonic: 'l', onClick: () => doDelete() },
           ]}

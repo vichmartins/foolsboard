@@ -216,6 +216,18 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   const mk = str('mediaKind') || 'file'
   const url = str('url')
   const thumb = str('thumbnailUrl')
+  const downloadBtn = url ? (
+    <a
+      className="media-node__dl nodrag"
+      href={url}
+      download={filename}
+      title="Download"
+      aria-label="Download"
+      onClick={(e) => e.stopPropagation()}
+    >
+      ⬇
+    </a>
+  ) : null
 
   // Created node before its upload finished: show a placeholder.
   if (!url) {
@@ -289,6 +301,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   return (
     <div className={'media-node media-node--' + mk} style={ring}>
       {handles}
+      {downloadBtn}
       <div className="media-node__body">{body}</div>
       {mk !== 'file' && caption}
       {(mk === 'image' || mk === 'video' || mk === 'audio') && resizeGrip}

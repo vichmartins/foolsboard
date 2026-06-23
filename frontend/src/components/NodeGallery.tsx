@@ -11,6 +11,7 @@ import {
   fileExt,
   KIND_COLORS,
   mediaKind,
+  downloadAsset,
   isMediaNodeType,
   nodePreview,
   OBJECT_COLOR,
@@ -383,6 +384,17 @@ export default function NodeGallery({
                 const badge = kind === 'file' ? fileExt(a.filename) || 'FILE' : kind.toUpperCase()
                 return (
                   <div key={a.id} className="gallery-media">
+                    {a.url && (
+                      <button
+                        type="button"
+                        className="gallery-media__dl"
+                        title="Download"
+                        aria-label="Download"
+                        onClick={() => downloadAsset({ url: a.url, filename: displayName(a) })}
+                      >
+                        ⬇
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="gallery-media__open"

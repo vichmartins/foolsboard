@@ -178,6 +178,18 @@ export function fileExt(filename: string): string {
   return i > 0 ? filename.slice(i + 1).toUpperCase() : ''
 }
 
+// Trigger a browser download of an asset under its filename (same-origin URL, so
+// the download attribute is honored).
+export function downloadAsset(a: { url: string | null; filename: string }): void {
+  if (!a.url) return
+  const link = document.createElement('a')
+  link.href = a.url
+  link.download = a.filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
 // Standalone media placed directly on the canvas (an image/video/audio/file, or
 // a link) rather than a story object with editable fields. Stored as a node with
 // one of these `type`s; rendered by MediaNodeCard instead of the object editor.
