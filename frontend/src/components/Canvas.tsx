@@ -1477,6 +1477,24 @@ function CanvasInner({
       className="canvas-wrap"
       style={{ '--me-color': myColor } as React.CSSProperties}
       onPointerMove={broadcastCursor}
+      // Element-level file-drop zone (the canonical pattern -- more reliable
+      // across Chromium than window listeners alone). Handles OS file drops here
+      // and stops the event so the window drop handler doesn't double-process it.
+      onDragOver={(e) => {
+        if (Array.from(e.dataTransfer.types).includes('Files')) {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'copy'
+        }
+      }}
+      onDrop={(e) => {
+        const files = Array.from(e.dataTransfer.files)
+        if (!files.length) return // let the window handler deal with assets/urls
+        e.preventDefault()
+        e.stopPropagation()
+        const onPanel = !!(e.target as Element | null)?.closest?.('.panel')
+        if (onPanel && hasPanelRef.current) setDroppedFiles(files)
+        else void createMediaNodesAtRef.current(files, e.clientX, e.clientY)
+      }}
     >
       <ReactFlow
         nodes={displayNodes}
