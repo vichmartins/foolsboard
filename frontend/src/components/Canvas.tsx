@@ -257,27 +257,6 @@ function CanvasInner({
   // File drag-and-drop: 'ready' = a panel is open (drop uploads), 'blocked' =
   // none open (hint only). droppedFiles are handed to the panel to upload.
   const [dragKind, setDragKind] = useState<'none' | 'ready'>('none')
-  // TEMP DEBUG: surface what the browser actually delivers during a drag, so we
-  // can see why Vivaldi refuses OS file drops. Remove once diagnosed.
-  const [dragDebug, setDragDebug] = useState<string | null>(null)
-  useEffect(() => {
-    const show = (e: DragEvent) => {
-      const t = Array.from(e.dataTransfer?.types ?? [])
-      const f = e.dataTransfer?.files?.length ?? 0
-      setDragDebug(`${e.type} · types:[${t.join(', ') || '—'}] · files:${f}`)
-    }
-    const onEnter = (e: DragEvent) => show(e)
-    const onDropDbg = (e: DragEvent) => {
-      show(e)
-      window.setTimeout(() => setDragDebug(null), 4000)
-    }
-    window.addEventListener('dragenter', onEnter)
-    window.addEventListener('drop', onDropDbg)
-    return () => {
-      window.removeEventListener('dragenter', onEnter)
-      window.removeEventListener('drop', onDropDbg)
-    }
-  }, [])
   const [droppedFiles, setDroppedFiles] = useState<File[] | null>(null)
   const hasPanelRef = useRef(false)
   // Live shift-drag selection rectangle (flow coords), mirrored on the minimap.
@@ -1612,27 +1591,6 @@ function CanvasInner({
           }}
           onClose={() => onCloseGallery?.()}
         />
-      )}
-
-      {dragDebug && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 8,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 99999,
-            padding: '8px 14px',
-            borderRadius: 8,
-            background: '#d6336c',
-            color: '#fff',
-            font: '600 13px monospace',
-            pointerEvents: 'none',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-          }}
-        >
-          {dragDebug}
-        </div>
       )}
 
       {dragKind !== 'none' && (
