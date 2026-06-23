@@ -1294,9 +1294,13 @@ function CanvasInner({
     // read null, so the drop is refused.)
     const assetDrag = () => getDraggedAsset() !== null
     const externalDrag = (e: DragEvent) => {
-      if (internalDrag) return false
       const types = Array.from(e.dataTransfer?.types ?? [])
-      return types.includes('Files') || types.includes('text/uri-list')
+      // A real OS file drag is the only thing that reports 'Files' now that every
+      // in-page media image is draggable=false. Accept it regardless of the
+      // internalDrag flag, which can get stuck true if a drag's dragend is missed.
+      if (types.includes('Files')) return true
+      if (internalDrag) return false
+      return types.includes('text/uri-list')
     }
     // A modal (e.g. the import dialog) handles its own drops -- don't hijack them.
     const modalOpen = () => document.querySelector('.overlay') !== null
@@ -1362,6 +1366,9 @@ function CanvasInner({
         if (!onPanel) void createMediaNodeFromAssetRef.current(asset, e.clientX, e.clientY)
         return
       }
+      // A 'Files' drag that produced no real files is an in-page image drag --
+      // don't turn it into a link node.
+      if (Array.from(dt.types).includes('Files')) return
       if (onPanel && hasPanelRef.current) return
       const uri = dt.getData('text/uri-list') || dt.getData('text/plain')
       const url = uri
