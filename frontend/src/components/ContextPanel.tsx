@@ -31,6 +31,7 @@ import ConfirmDialog from './ConfirmDialog'
 import Gallery from './Gallery'
 import NearbyNodes from './NearbyNodes'
 import ReferencesField from './ReferencesField'
+import TimestampsField from './TimestampsField'
 import Select from './Select'
 
 interface Props {
@@ -584,6 +585,15 @@ export default function ContextPanel({
         <ReferencesField
           value={content.references}
           onChange={(refs) => setField('references', refs)}
+        />
+      </div>
+
+      {/* Timestamps: time markers, on every kind (like References). */}
+      <div className="panel__refs">
+        <h3 className="panel__refs-head">Timestamps</h3>
+        <TimestampsField
+          value={content.timestamps}
+          onChange={(stamps) => setField('timestamps', stamps)}
         />
       </div>
 

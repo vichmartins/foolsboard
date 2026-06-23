@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.68.1
+
+- **Timestamps field** on every object type (alongside References): add time
+  markers (free-form time + an optional note) — e.g. when the object appears or
+  happens.
+
 ## v0.68.0
 
 - **Rename media files.** Click a media item's filename in an object's Media
