@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.70.0
+
+- **Media on the canvas.** Drop an image, video, audio clip, or any file onto an
+  empty part of the board and it becomes a standalone node you can drag around
+  and connect like an object — images render inline, video/audio get players,
+  files show a download card. Dropping a link makes a link-preview node.
+  (Dropping onto an open object's panel still attaches media to that object.)
+
 ## v0.69.1
 
 - Timestamps saved before the YouTube preview fix (URL but no thumbnail/title)

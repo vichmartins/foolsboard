@@ -34,9 +34,12 @@ import { clipboardHasContent, readClipboard, writeClipboard } from '../clipboard
 import { findNodeAt, nodeSize, snapToBorder } from '../edgeGeometry'
 import { toRFEdge } from '../rfMappers'
 import {
+  isMediaNodeType,
   KIND_COLORS,
+  mediaKind,
   nodePreview,
   OBJECT_COLOR,
+  uploadSizeError,
   type Board,
   type Category,
   type Folder,
@@ -54,6 +57,7 @@ import ConfirmDialog from './ConfirmDialog'
 import ContextMenu from './ContextMenu'
 import ContextPanel from './ContextPanel'
 import FloatingEdge from './FloatingEdge'
+import MediaNodeCard from './MediaNodeCard'
 import MinimapSelection from './MinimapSelection'
 import NodeGallery from './NodeGallery'
 import PromptDialog from './PromptDialog'
@@ -96,7 +100,7 @@ function countLabel(n: number, singular: string) {
   return `${n} ${singular}${n === 1 ? '' : 's'}`
 }
 
-const nodeTypes = { story: StoryNodeCard }
+const nodeTypes = { story: StoryNodeCard, media: MediaNodeCard, link: MediaNodeCard }
 const edgeTypes = { floating: FloatingEdge }
 
 // Flatten a node's text (title, type, field values, link titles/urls) into one
@@ -123,7 +127,8 @@ function nodeSearchText(story: StoryNode | undefined): string {
 function toRFNode(n: StoryNode): Node {
   return {
     id: n.id,
-    type: 'story',
+    // Media/link nodes render with MediaNodeCard; everything else is a story card.
+    type: isMediaNodeType(n.type) ? n.type : 'story',
     position: { x: n.x, y: n.y },
     data: {
       title: n.title,
@@ -238,7 +243,7 @@ function CanvasInner({
   const panelCloseTimer = useRef<number | null>(null)
   // File drag-and-drop: 'ready' = a panel is open (drop uploads), 'blocked' =
   // none open (hint only). droppedFiles are handed to the panel to upload.
-  const [dragKind, setDragKind] = useState<'none' | 'ready' | 'blocked'>('none')
+  const [dragKind, setDragKind] = useState<'none' | 'ready'>('none')
   const [droppedFiles, setDroppedFiles] = useState<File[] | null>(null)
   const hasPanelRef = useRef(false)
   // Live shift-drag selection rectangle (flow coords), mirrored on the minimap.
@@ -763,6 +768,87 @@ function CanvasInner({
     [boardId, screenToFlowPosition, markDirty],
   )
 
+  // Drop file(s) onto the canvas -> standalone media node(s) at that point. The
+  // node is created first (a placeholder shows immediately), then the asset is
+  // uploaded and folded into the node's content so it renders.
+  const createMediaNodesAt = useCallback(
+    async (files: File[], clientX: number, clientY: number) => {
+      const base = screenToFlowPosition({ x: clientX, y: clientY })
+      let i = 0
+      for (const file of files) {
+        if (uploadSizeError(file)) continue // skip oversized files (would 413)
+        const pos = { x: base.x + i * 28, y: base.y + i * 28 }
+        i += 1
+        let nodeId: string | null = null
+        try {
+          const node = await api.createNode(boardId, {
+            type: 'media',
+            title: file.name,
+            x: pos.x,
+            y: pos.y,
+          })
+          nodeId = node.id
+          setNodes((nds) => [...nds, toRFNode(node)])
+          setSelectedId(node.id)
+          const asset = await api.uploadAsset(node.id, file)
+          const updated = await api.updateNode(boardId, node.id, {
+            content: {
+              assetId: asset.id,
+              mediaKind: mediaKind(asset),
+              url: asset.url,
+              thumbnailUrl: asset.thumbnail_url,
+              filename: asset.filename,
+              contentType: asset.content_type,
+            },
+          })
+          setNodes((nds) => nds.map((n) => (n.id === updated.id ? toRFNode(updated) : n)))
+          markDirty()
+        } catch {
+          // Upload failed: drop the placeholder node so nothing dangles.
+          if (nodeId) {
+            const dead = nodeId
+            setNodes((nds) => nds.filter((n) => n.id !== dead))
+            void api.deleteNode(boardId, dead).catch(() => {})
+          }
+        }
+      }
+    },
+    [boardId, screenToFlowPosition, markDirty],
+  )
+
+  // Drop a link onto the canvas -> a link node with its preview at that point.
+  const createLinkNodeAt = useCallback(
+    async (url: string, clientX: number, clientY: number) => {
+      const pos = screenToFlowPosition({ x: clientX, y: clientY })
+      let content: Record<string, unknown> = { url }
+      let title = url
+      try {
+        const preview = await api.fetchLinkPreview(url)
+        content = { ...preview }
+        title = preview.title || url
+      } catch {
+        // keep the bare url
+      }
+      const node = await api.createNode(boardId, {
+        type: 'link',
+        title,
+        x: pos.x,
+        y: pos.y,
+        content,
+      })
+      setNodes((nds) => [...nds, toRFNode(node)])
+      setSelectedId(node.id)
+      markDirty()
+    },
+    [boardId, screenToFlowPosition, markDirty],
+  )
+
+  // The drag listeners are mounted once; read the latest creators via refs.
+  const createMediaNodesAtRef = useRef(createMediaNodesAt)
+  createMediaNodesAtRef.current = createMediaNodesAt
+  const createLinkNodeAtRef = useRef(createLinkNodeAt)
+  createLinkNodeAtRef.current = createLinkNodeAt
+
   // Gate every deletion (objects and/or connections) behind a confirm dialog.
   const onBeforeDelete = useCallback(
     ({ nodes: delNodes, edges: delEdges }: { nodes: Node[]; edges: Edge[] }) => {
@@ -980,12 +1066,15 @@ function CanvasInner({
   // Broadcast which node I'm editing (and its current title) so collaborators can
   // lock it and show "editing X". Re-fires when the title changes too, so renaming
   // a freshly-created node updates "editing New object" to its real name.
-  const editingTitle = selectedId
-    ? ((nodes.find((n) => n.id === selectedId)?.data?.story as StoryNode | undefined)?.title ?? '')
-    : ''
+  const selectedNode = selectedId
+    ? (nodes.find((n) => n.id === selectedId)?.data?.story as StoryNode | undefined)
+    : undefined
+  // Media/link nodes have no editor, so selecting one shouldn't take an edit lock.
+  const editingNodeId = selectedNode && !isMediaNodeType(selectedNode.type) ? selectedId : null
+  const editingTitle = editingNodeId ? selectedNode?.title ?? '' : ''
   useEffect(() => {
-    realtime.sendEdit(selectedId, editingTitle)
-  }, [selectedId, editingTitle])
+    realtime.sendEdit(editingNodeId, editingTitle)
+  }, [editingNodeId, editingTitle])
   useEffect(
     () => () => {
       realtime.sendEdit(null)
@@ -1082,8 +1171,11 @@ function CanvasInner({
     // 'Files' even for an <img> being dragged, so without this flag dragging an
     // existing media item would wrongly pop the "drop to add media" overlay.
     let internalDrag = false
-    const hasFiles = (e: DragEvent) =>
-      !internalDrag && Array.from(e.dataTransfer?.types ?? []).includes('Files')
+    const externalDrag = (e: DragEvent) => {
+      if (internalDrag) return false
+      const types = Array.from(e.dataTransfer?.types ?? [])
+      return types.includes('Files') || types.includes('text/uri-list')
+    }
     const onDragStart = () => {
       internalDrag = true
     }
@@ -1094,27 +1186,42 @@ function CanvasInner({
     const modalOpen = () => document.querySelector('.overlay') !== null
     let depth = 0
     const onEnter = (e: DragEvent) => {
-      if (!hasFiles(e) || modalOpen()) return
+      if (!externalDrag(e) || modalOpen()) return
       e.preventDefault()
       depth += 1
-      setDragKind(hasPanelRef.current ? 'ready' : 'blocked')
+      setDragKind('ready')
     }
     const onOver = (e: DragEvent) => {
-      if (hasFiles(e) && !modalOpen()) e.preventDefault() // required to allow a drop
+      if (externalDrag(e) && !modalOpen()) e.preventDefault() // required to allow a drop
     }
     const onLeave = (e: DragEvent) => {
-      if (!hasFiles(e)) return
+      if (!externalDrag(e)) return
       depth = Math.max(0, depth - 1)
       if (depth === 0) setDragKind('none')
     }
     const onDrop = (e: DragEvent) => {
-      if (!hasFiles(e) || modalOpen()) return
+      if (!externalDrag(e) || modalOpen()) return
       e.preventDefault() // stop the browser from opening the file
       depth = 0
       setDragKind('none')
-      if (hasPanelRef.current && e.dataTransfer?.files.length) {
-        setDroppedFiles(Array.from(e.dataTransfer.files))
+      const dt = e.dataTransfer
+      if (!dt) return
+      // Dropping on the open object's panel attaches there; anywhere else on the
+      // canvas places a standalone media/link node at the drop point.
+      const onPanel = !!(e.target as Element | null)?.closest?.('.panel')
+      const files = Array.from(dt.files)
+      if (files.length) {
+        if (onPanel && hasPanelRef.current) setDroppedFiles(files)
+        else void createMediaNodesAtRef.current(files, e.clientX, e.clientY)
+        return
       }
+      if (onPanel && hasPanelRef.current) return
+      const uri = dt.getData('text/uri-list') || dt.getData('text/plain')
+      const url = uri
+        .split('\n')
+        .map((s) => s.trim())
+        .find((s) => /^https?:\/\//i.test(s))
+      if (url) void createLinkNodeAtRef.current(url, e.clientX, e.clientY)
     }
     window.addEventListener('dragstart', onDragStart)
     window.addEventListener('dragend', onDragEnd)
@@ -1144,8 +1251,10 @@ function CanvasInner({
 
   const selectedStory =
     (nodes.find((n) => n.id === selectedId)?.data?.story as StoryNode | undefined) ?? null
+  // Media/link nodes render themselves -- no object editor panel for them.
+  const editorStory = selectedStory && !isMediaNodeType(selectedStory.type) ? selectedStory : null
   // Tracked in a ref so the (mount-once) drag listeners read the latest value.
-  hasPanelRef.current = selectedStory !== null
+  hasPanelRef.current = editorStory !== null
 
   // Nearby nodes for the panel drawer: linked nodes first, then nearest by
   // canvas distance, capped so the list stays browsable.
@@ -1261,10 +1370,10 @@ function CanvasInner({
 
       {lockMsg && <div className="toast">{lockMsg}</div>}
 
-      {selectedStory && (
+      {editorStory && (
         <ContextPanel
           boardId={boardId}
-          node={selectedStory}
+          node={editorStory}
           nearby={nearby}
           closing={panelClosing}
           droppedFiles={droppedFiles}
@@ -1298,20 +1407,14 @@ function CanvasInner({
       )}
 
       {dragKind !== 'none' && (
-        <div className={'drop-overlay drop-overlay--' + dragKind}>
+        <div className="drop-overlay drop-overlay--ready">
           <div className="drop-overlay__card">
-            <div className="drop-overlay__icon">{dragKind === 'ready' ? '⬆' : '🚫'}</div>
-            {dragKind === 'ready' ? (
-              <div className="drop-overlay__text">
-                Drop to add media to “{selectedStory?.title || 'Untitled'}”
+            <div className="drop-overlay__icon">⬆</div>
+            <div className="drop-overlay__text">Drop to place it on the canvas</div>
+            {editorStory && (
+              <div className="drop-overlay__sub">
+                …or drop on the panel to add it to “{editorStory.title || 'Untitled'}”
               </div>
-            ) : (
-              <>
-                <div className="drop-overlay__text">Open an object to add media</div>
-                <div className="drop-overlay__sub">
-                  Double-click an object first, then drop your file
-                </div>
-              </>
             )}
           </div>
         </div>

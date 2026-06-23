@@ -178,6 +178,23 @@ export function fileExt(filename: string): string {
   return i > 0 ? filename.slice(i + 1).toUpperCase() : ''
 }
 
+// Standalone media placed directly on the canvas (an image/video/audio/file, or
+// a link) rather than a story object with editable fields. Stored as a node with
+// one of these `type`s; rendered by MediaNodeCard instead of the object editor.
+export function isMediaNodeType(type: string | undefined): boolean {
+  return type === 'media' || type === 'link'
+}
+
+// What a media node stores in `content` (a link node stores a LinkRef instead).
+export interface MediaNodeContent {
+  assetId?: string
+  mediaKind?: MediaKind
+  url?: string | null
+  thumbnailUrl?: string | null
+  filename?: string
+  contentType?: string
+}
+
 // A unique id. Prefers crypto.randomUUID, but falls back for insecure contexts
 // (plain-HTTP over LAN), where crypto.randomUUID is undefined and would throw.
 export function genId(): string {
