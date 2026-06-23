@@ -34,16 +34,16 @@ import { clipboardHasContent, readClipboard, writeClipboard } from '../clipboard
 import { findNodeAt, nodeSize, snapToBorder } from '../edgeGeometry'
 import { toRFEdge } from '../rfMappers'
 import {
-  ASSET_DRAG_MIME,
+  cancelAssetDrag,
   clearDraggedAsset,
   downloadAsset,
   getDraggedAsset,
+  isAssetDragActive,
   isMediaNodeType,
   KIND_COLORS,
   mediaKind,
   nodePreview,
   OBJECT_COLOR,
-  readAssetDragData,
   uploadSizeError,
   type Asset,
   type AssetDragPayload,
@@ -1290,12 +1290,11 @@ function CanvasInner({
     // 'Files' even for an <img> being dragged, so without this flag dragging an
     // existing media item would wrongly pop the "drop to add media" overlay.
     let internalDrag = false
-    // Existing media dragged from the panel/gallery: detected via the module ref
-    // (reliable) with the MIME type as a fallback. It's an internal drag, so it's
-    // allowed even though internalDrag is set.
-    const assetDrag = (e: DragEvent) =>
-      getDraggedAsset() !== null ||
-      Array.from(e.dataTransfer?.types ?? []).includes(ASSET_DRAG_MIME)
+    // Existing media dragged from the panel/gallery/card: detected via the module
+    // ref, which every asset drag source sets. It's an internal drag, so it's
+    // allowed even though internalDrag is set. (Backspace cancel makes the ref
+    // read null, so the drop is refused.)
+    const assetDrag = () => getDraggedAsset() !== null
     const externalDrag = (e: DragEvent) => {
       if (internalDrag) return false
       const types = Array.from(e.dataTransfer?.types ?? [])
@@ -1306,13 +1305,23 @@ function CanvasInner({
     // Asset drags (from the gallery/panel/drawer) are always allowed -- the
     // gallery fades + goes click-through while dragging, so its overlay being
     // present shouldn't block the drop onto the canvas behind it.
-    const droppable = (e: DragEvent) => assetDrag(e) || (!modalOpen() && externalDrag(e))
+    const droppable = (e: DragEvent) => assetDrag() || (!modalOpen() && externalDrag(e))
     const onDragStart = () => {
       internalDrag = true
     }
     const onDragEnd = () => {
       internalDrag = false
       clearDraggedAsset()
+    }
+    // Backspace cancels an in-flight asset drag (Esc already does so natively).
+    // After this, getDraggedAsset() returns null, so the drop is refused like a
+    // cancel -- no node placed, and the gallery stays open.
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Backspace' && isAssetDragActive()) {
+        e.preventDefault()
+        cancelAssetDrag()
+        setDragKind('none')
+      }
     }
     let depth = 0
     const onEnter = (e: DragEvent) => {
@@ -1344,7 +1353,7 @@ function CanvasInner({
       // Dropping on the open object's panel attaches there; anywhere else on the
       // canvas places a standalone media/link node at the drop point.
       const onPanel = !!(e.target as Element | null)?.closest?.('.panel')
-      const asset = getDraggedAsset() ?? readAssetDragData(dt)
+      const asset = getDraggedAsset()
       if (asset) {
         if (!onPanel) void createMediaNodeFromAssetRef.current(asset, e.clientX, e.clientY)
         return
@@ -1369,6 +1378,7 @@ function CanvasInner({
     window.addEventListener('dragover', onOver)
     window.addEventListener('dragleave', onLeave)
     window.addEventListener('drop', onDrop)
+    window.addEventListener('keydown', onKeyDown)
     return () => {
       window.removeEventListener('dragstart', onDragStart)
       window.removeEventListener('dragend', onDragEnd)
@@ -1376,6 +1386,7 @@ function CanvasInner({
       window.removeEventListener('dragover', onOver)
       window.removeEventListener('dragleave', onLeave)
       window.removeEventListener('drop', onDrop)
+      window.removeEventListener('keydown', onKeyDown)
     }
   }, [])
 

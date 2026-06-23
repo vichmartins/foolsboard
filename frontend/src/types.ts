@@ -226,13 +226,27 @@ export interface AssetDragPayload {
 // module-level ref (set on dragstart, cleared on dragend) that the canvas reads
 // directly -- the same pattern the explorer uses for multi-drag.
 let _draggedAsset: AssetDragPayload | null = null
+let _dragCancelled = false
 
+// The pending drop's asset, or null if there's no asset drag or it was cancelled
+// (Backspace). The canvas uses this to decide whether to accept the drop.
 export function getDraggedAsset(): AssetDragPayload | null {
-  return _draggedAsset
+  return _dragCancelled ? null : _draggedAsset
+}
+
+// Whether an asset drag is in flight (ignores cancellation) -- used by the
+// Backspace-to-cancel handler.
+export function isAssetDragActive(): boolean {
+  return _draggedAsset !== null
+}
+
+export function cancelAssetDrag(): void {
+  _dragCancelled = true
 }
 
 export function clearDraggedAsset(): void {
   _draggedAsset = null
+  _dragCancelled = false
 }
 
 export function setAssetDragData(dt: DataTransfer, a: Asset): void {
@@ -244,6 +258,7 @@ export function setAssetDragData(dt: DataTransfer, a: Asset): void {
     thumbnail_url: a.thumbnail_url,
   }
   _draggedAsset = payload
+  _dragCancelled = false
   dt.setData(ASSET_DRAG_MIME, JSON.stringify(payload))
   dt.effectAllowed = 'copy'
 }
