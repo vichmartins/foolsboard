@@ -1327,11 +1327,11 @@ function CanvasInner({
     const onOver = (e: DragEvent) => {
       if (!droppable(e)) return
       e.preventDefault() // required to allow a drop
-      // Chromium needs dropEffect set in dragover for a file drop to be accepted
-      // (Firefox is lenient). 'copy' is valid for OS files (effectAllowed 'all')
-      // and our asset drags (effectAllowed 'copy'). A native Esc cancel still
-      // reports dropEffect 'none' on dragend, so the gallery cancel keeps working.
-      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+      // Only set dropEffect for our own asset drags (effectAllowed='copy'), which
+      // the gallery cancel relies on. Do NOT set it for OS file drags: forcing
+      // 'copy' when the source's effectAllowed doesn't permit it makes Chromium
+      // reject the drop (this was the regression that broke filesystem drops).
+      if (assetDrag() && e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
     }
     const onLeave = (e: DragEvent) => {
       if (!droppable(e)) return
@@ -1484,8 +1484,7 @@ function CanvasInner({
       // time (dataTransfer.files is reliable on drop even if the type was hidden).
       onDragOver={(e) => {
         if (getDraggedAsset()) return // our asset drags are handled by the window
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'copy'
+        e.preventDefault() // allow the drop; don't force dropEffect on file drags
       }}
       onDrop={(e) => {
         const files = Array.from(e.dataTransfer.files)
