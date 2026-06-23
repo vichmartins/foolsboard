@@ -27,6 +27,20 @@
   color-scheme: light;
 }
 
+:root[data-theme='pink'] {
+  --bg: #1a0e18;
+  --bg-elev: #241320;
+  --bg-elev-2: #30192a;
+  --border: #4a2540;
+  --text: #fbe9f6;
+  --text-dim: #cf9dc0;
+  --accent: #f611ff;
+  --danger: #ff5d73;
+  --bg-hover: #3a1f33;
+  --minimap-mask: rgba(20, 8, 16, 0.55);
+  color-scheme: dark;
+}
+
 :root {
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px;

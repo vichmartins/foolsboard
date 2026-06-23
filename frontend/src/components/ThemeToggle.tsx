@@ -3,7 +3,7 @@
 // instant switch where unsupported or when reduced motion is requested.
 import { useEffect, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { applyTheme, getInitialTheme, saveTheme, type Theme } from '../theme'
+import { applyTheme, getInitialTheme, nextTheme, saveTheme, type Theme } from '../theme'
 
 type ViewTransitionDoc = Document & {
   startViewTransition?: (cb: () => void) => { ready: Promise<void> }
@@ -28,6 +28,22 @@ function MoonIcon() {
   )
 }
 
+function HeartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path d="M12 21s-6.7-4.35-9.33-8.07C.9 10.36 1.4 6.9 4.1 5.4c2.04-1.13 4.3-.5 5.6 1.1L12 9l2.3-2.5c1.3-1.6 3.56-2.23 5.6-1.1 2.7 1.5 3.2 4.96 1.43 7.53C18.7 16.65 12 21 12 21z" />
+    </svg>
+  )
+}
+
+const THEME_LABEL: Record<Theme, string> = { dark: 'Dark', light: 'Light', pink: 'Pink' }
+
+function ThemeIcon({ theme }: { theme: Theme }) {
+  if (theme === 'dark') return <MoonIcon />
+  if (theme === 'pink') return <HeartIcon />
+  return <SunIcon />
+}
+
 export default function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
 
@@ -38,7 +54,7 @@ export default function ThemeToggle() {
   }, [theme])
 
   function toggle(e: React.MouseEvent) {
-    const next: Theme = theme === 'dark' ? 'light' : 'dark'
+    const next: Theme = nextTheme(theme)
     const doc = document as ViewTransitionDoc
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -82,12 +98,12 @@ export default function ThemeToggle() {
   return (
     <button
       className="icon-btn theme-toggle"
-      title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-      aria-label="Toggle Light/Dark Mode"
+      title={`Theme: ${THEME_LABEL[theme]} — click for ${THEME_LABEL[nextTheme(theme)]}`}
+      aria-label="Switch theme"
       onClick={toggle}
     >
       <span key={theme} className="theme-toggle__icon">
-        {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+        <ThemeIcon theme={theme} />
       </span>
     </button>
   )

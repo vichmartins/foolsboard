@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.72.0
+
+- **Pink Mode.** A third theme (alongside Dark and Light) with a vivid pink
+  accent (#F611FF) and a deep-magenta palette. The top-bar theme button now
+  cycles Dark → Light → Pink.
+
+
 ## v0.71.3
 
 - Gallery object cards now wrap long unbroken filenames (e.g.
