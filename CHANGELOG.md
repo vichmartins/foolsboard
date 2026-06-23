@@ -8,16 +8,16 @@
 
 ## v0.72.22
 
-- feat: **Drag media onto the canvas** from your computer's files, the Gallery, an
-  object's Media section, the media drawer, and an expanded card's preview.
+- feat: Drag media onto the canvas from an **expanded card's preview** (a new
+  source, alongside the Gallery, an object's Media, and the drawer).
 - feat: Press **Esc** to cancel an in-progress drag.
 - feat: Zoom the canvas out much further to take in a whole large board.
 - fix: Dragging a media tile started the browser's image drag instead of placing
   it — tiles now drag correctly from the panel, drawer, and Gallery.
-- fix: Filesystem drops were silently rejected in Chromium (a dropEffect
-  mismatch); files now drop onto the canvas and into an object's Media reliably.
+- fix: Dragging an image file from your computer onto the canvas (and into an
+  object's Media) was silently rejected in Chromium; it works reliably now.
 - fix: The "Drop to place it on the canvas" overlay no longer sticks after a drop.
-- fix: The Gallery stays open when you cancel a drag instead of closing.
+- fix: The Gallery now stays open when you cancel a drag instead of closing.
 
 ## v0.72.9
 
@@ -72,61 +72,56 @@
 
 ## v0.70.2
 
-- **Remove media nodes from the board.** Media/link nodes now show a ✕ badge on
-  hover, and the right-click menu has a **Delete** item (for every node — it was
-  missing before). Both confirm, then delete the node and free its file.
+- feat: **Remove media nodes from the board** — a ✕ badge on hover, plus a
+  **Delete** item in the right-click menu (which was missing for every node).
+  Both confirm, then delete the node and free its file.
 
 ## v0.70.1
 
-- You can now **drag existing media onto the canvas** to place it as a node —
-  from an object's Media section or from the Gallery (which closes as you drag
-  so you can drop it where you want). The node references the same file (no
+- feat: **Drag existing media onto the canvas** to place it as a node — from an
+  object's Media section or the Gallery. It references the same file (no
   re-upload).
 
 ## v0.70.0
 
-- **Media on the canvas.** Drop an image, video, audio clip, or any file onto an
-  empty part of the board and it becomes a standalone node you can drag around
-  and connect like an object — images render inline, video/audio get players,
-  files show a download card. Dropping a link makes a link-preview node.
-  (Dropping onto an open object's panel still attaches media to that object.)
+- feat: **Media on the canvas.** Drop an image, video, audio clip, or any file
+  onto an empty part of the board and it becomes a standalone node you can drag
+  around and connect — images render inline, video/audio get players, files show
+  a download card, and a link becomes a link-preview node.
 
 ## v0.69.1
 
-- Timestamps saved before the YouTube preview fix (URL but no thumbnail/title)
-  now self-heal: the field re-fetches the preview on open and fills it in. Save
-  to keep it.
+- fix: Timestamps saved before the YouTube preview fix (URL but no thumbnail)
+  now self-heal — the field re-fetches the preview on open and fills it in.
 
 ## v0.69.0
 
-- **YouTube link previews now work** (References and Timestamps): titles and
+- fix: **YouTube link previews now work** (References and Timestamps): titles and
   thumbnails are fetched via YouTube's oEmbed API, which doesn't hit the
   consent/bot walls that blocked plain scraping.
-- An object's expanded card preview now shows its **Timestamps** too (with the
-  thumbnail + time), alongside References, fields, and media.
+- feat: An object's expanded card preview now shows its **Timestamps** too (with
+  the thumbnail + time), alongside References, fields, and media.
 
 ## v0.68.3
 
-- Renaming a media file can no longer change its extension/type: you edit only
-  the base name and the original extension is kept (it never changed the actual
-  file type on the server, but the displayed extension was editable).
+- fix: Renaming a media file can no longer change its extension/type — you edit
+  only the base name and the original extension is kept.
 
 ## v0.68.2
 
-- **Timestamps are link-based now.** Paste a video link with a time (e.g.
-  `youtu.be/…?t=658`) and it shows a rich preview (thumbnail + title) with the
-  time as a badge; clicking opens the video at that exact moment.
+- feat: **Timestamps are link-based** — paste a video link with a time (e.g.
+  `youtu.be/…?t=658`) for a rich preview (thumbnail + title) with the time as a
+  badge; clicking opens the video at that exact moment.
 
 ## v0.68.1
 
-- **Timestamps field** on every object type (alongside References): add time
-  markers (free-form time + an optional note) — e.g. when the object appears or
-  happens.
+- feat: **Timestamps field** on every object type (alongside References): add time
+  markers (free-form time + an optional note).
 
 ## v0.68.0
 
-- **Rename media files.** Click a media item's filename in an object's Media
-  section to rename it (the original extension is kept if you drop it).
+- feat: **Rename media files** — click a media item's filename in an object's
+  Media section to rename it (the original extension is kept if you drop it).
 
 ## v0.67.3
 
