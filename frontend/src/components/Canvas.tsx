@@ -1477,14 +1477,15 @@ function CanvasInner({
       className="canvas-wrap"
       style={{ '--me-color': myColor } as React.CSSProperties}
       onPointerMove={broadcastCursor}
-      // Element-level file-drop zone (the canonical pattern -- more reliable
-      // across Chromium than window listeners alone). Handles OS file drops here
-      // and stops the event so the window drop handler doesn't double-process it.
+      // Element-level file-drop zone. Some Chromium setups (e.g. a VPN/privacy
+      // extension) strip the 'Files' type from the drag during dragover, so we
+      // can't detect a file drag that way. Instead preventDefault for any drag
+      // that isn't one of our own in-app drags, then read the real files at drop
+      // time (dataTransfer.files is reliable on drop even if the type was hidden).
       onDragOver={(e) => {
-        if (Array.from(e.dataTransfer.types).includes('Files')) {
-          e.preventDefault()
-          e.dataTransfer.dropEffect = 'copy'
-        }
+        if (getDraggedAsset()) return // our asset drags are handled by the window
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'copy'
       }}
       onDrop={(e) => {
         const files = Array.from(e.dataTransfer.files)
