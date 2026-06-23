@@ -1332,24 +1332,34 @@ function CanvasInner({
       if (depth === 0) setDragKind('none')
     }
     const onDrop = (e: DragEvent) => {
-      if (!droppable(e)) return
+      const dt = e.dataTransfer
+      // Real OS files are detected directly from the drop (dt.files only has
+      // content on drop). Checking them here -- not via externalDrag's
+      // internalDrag flag -- keeps a stale in-page drag from blocking a file
+      // drop. An asset drag is the in-memory ref.
+      const files = dt ? Array.from(dt.files) : []
+      const asset = getDraggedAsset()
+      const allow = !!asset || (!modalOpen() && (files.length > 0 || externalDrag(e)))
+      // Always reset the drag bookkeeping on any drop, even one we ignore, so a
+      // missed dragend can't leave stale state that breaks the next drop.
+      internalDrag = false
+      clearDraggedAsset()
+      if (!allow) return
       e.preventDefault() // stop the browser from opening the file
       depth = 0
       setDragKind('none')
-      const dt = e.dataTransfer
       if (!dt) return
       // Dropping on the open object's panel attaches there; anywhere else on the
       // canvas places a standalone media/link node at the drop point.
       const onPanel = !!(e.target as Element | null)?.closest?.('.panel')
-      const asset = getDraggedAsset()
-      if (asset) {
-        if (!onPanel) void createMediaNodeFromAssetRef.current(asset, e.clientX, e.clientY)
-        return
-      }
-      const files = Array.from(dt.files)
+      // Files first: a real file drop must win over any lingering asset ref.
       if (files.length) {
         if (onPanel && hasPanelRef.current) setDroppedFiles(files)
         else void createMediaNodesAtRef.current(files, e.clientX, e.clientY)
+        return
+      }
+      if (asset) {
+        if (!onPanel) void createMediaNodeFromAssetRef.current(asset, e.clientX, e.clientY)
         return
       }
       if (onPanel && hasPanelRef.current) return
