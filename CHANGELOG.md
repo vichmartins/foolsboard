@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.68.2
+
+- **Timestamps are link-based now.** Paste a video link with a time (e.g.
+  `youtu.be/…?t=658`) and it shows a rich preview (thumbnail + title) with the
+  time as a badge; clicking opens the video at that exact moment.
+
 ## v0.68.1
 
 - **Timestamps field** on every object type (alongside References): add time
