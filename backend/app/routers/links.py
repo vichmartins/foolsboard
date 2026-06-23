@@ -14,10 +14,11 @@ from __future__ import annotations
 
 import gzip
 import ipaddress
+import json
 import socket
 import zlib
 from html.parser import HTMLParser
-from urllib.parse import unquote, urljoin, urlparse
+from urllib.parse import quote, unquote, urljoin, urlparse
 from urllib.request import Request, urlopen
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -113,12 +114,43 @@ def _decompress(raw: bytes, encoding: str) -> bytes:
     return raw
 
 
+_YOUTUBE_HOSTS = ("youtube.com", "youtu.be", "youtube-nocookie.com")
+
+
+def _youtube_oembed(url: str) -> LinkPreview | None:
+    """YouTube blocks plain page scraping (consent/bot walls), so get the title +
+    thumbnail from its oEmbed endpoint instead."""
+    try:
+        oembed = "https://www.youtube.com/oembed?format=json&url=" + quote(url, safe="")
+        req = Request(oembed, headers={"User-Agent": USER_AGENT})
+        with urlopen(req, timeout=TIMEOUT) as resp:  # noqa: S310
+            data = json.loads(resp.read(MAX_BYTES))
+    except Exception:
+        return None
+    title = data.get("title")
+    if not title:
+        return None
+    return LinkPreview(
+        url=url,
+        title=title,
+        image=data.get("thumbnail_url"),
+        site_name="YouTube",
+        description=data.get("author_name"),
+    )
+
+
 def _fetch(url: str) -> LinkPreview:
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.hostname:
         raise HTTPException(status_code=400, detail="Only http(s) links are supported")
     if _host_is_blocked(parsed.hostname):
         raise HTTPException(status_code=400, detail="That host can't be previewed")
+
+    host = parsed.hostname.lower()
+    if any(host == h or host.endswith("." + h) for h in _YOUTUBE_HOSTS):
+        yt = _youtube_oembed(url)
+        if yt is not None:
+            return yt
 
     # A URL that points straight at an image is its own preview -- no fetch needed.
     if parsed.path.lower().endswith(IMAGE_EXTS):

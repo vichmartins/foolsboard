@@ -30,7 +30,7 @@ function hostname(url: string): string {
 }
 
 // Seconds the link points to, from ?t= / &start= (plain seconds or 1h2m3s).
-function parseTime(url: string): number | null {
+export function parseTime(url: string): number | null {
   let t: string | null = null
   try {
     const u = new URL(url)
@@ -46,7 +46,7 @@ function parseTime(url: string): number | null {
   return total || null
 }
 
-function fmt(sec: number): string {
+export function fmt(sec: number): string {
   const p = (n: number) => String(n).padStart(2, '0')
   const h = Math.floor(sec / 3600)
   const m = Math.floor((sec % 3600) / 60)

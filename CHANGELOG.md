@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.69.0
+
+- **YouTube link previews now work** (References and Timestamps): titles and
+  thumbnails are fetched via YouTube's oEmbed API, which doesn't hit the
+  consent/bot walls that blocked plain scraping.
+- An object's expanded card preview now shows its **Timestamps** too (with the
+  thumbnail + time), alongside References, fields, and media.
+
 ## v0.68.3
 
 - Renaming a media file can no longer change its extension/type: you edit only

@@ -26,6 +26,7 @@ import {
 import { useAuth } from '../auth'
 import { collabColor } from '../collab'
 import Gallery from './Gallery'
+import { fmt, parseTime } from './TimestampsField'
 
 export interface StoryNodeData extends Record<string, unknown> {
   title: string
@@ -79,6 +80,9 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
   const references: LinkRef[] = Array.isArray(content.references)
     ? (content.references as LinkRef[])
     : []
+  const timestamps: LinkRef[] = Array.isArray(content.timestamps)
+    ? (content.timestamps as LinkRef[])
+    : []
 
   // Load this node's media the first time the preview is opened.
   useEffect(() => {
@@ -90,7 +94,8 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
   }, [expanded, assets, story?.id])
 
   const media = assets ?? []
-  const isEmpty = rows.length === 0 && media.length === 0 && references.length === 0
+  const isEmpty =
+    rows.length === 0 && media.length === 0 && references.length === 0 && timestamps.length === 0
 
   // Keep the preview's images mounted only while open (plus a short window so
   // the collapse animation can play). Collapsing releases the decoded images.
@@ -240,6 +245,49 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
               {references.length > MAX_LINKS && (
                 <span className="story-node__refs-more">
                   +{references.length - MAX_LINKS} more
+                </span>
+              )}
+            </div>
+          )}
+
+          {timestamps.length > 0 && (
+            <div className="story-node__refs">
+              {timestamps.slice(0, MAX_LINKS).map((r, i) => {
+                const t = parseTime(r.url)
+                return (
+                  <a
+                    className="story-node__ref nodrag"
+                    key={r.url + i}
+                    href={safeHref(r.url)}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    title={r.url}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="story-node__ref-thumb">
+                      {r.image ? (
+                        <img
+                          className="story-node__ref-img"
+                          src={r.image}
+                          alt=""
+                          loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      ) : (
+                        <span className="story-node__ref-img story-node__ref-img--blank">▶</span>
+                      )}
+                      {t != null && <span className="stamp-time">{fmt(t)}</span>}
+                    </span>
+                    <span className="story-node__ref-title">{r.title || r.url}</span>
+                  </a>
+                )
+              })}
+              {timestamps.length > MAX_LINKS && (
+                <span className="story-node__refs-more">
+                  +{timestamps.length - MAX_LINKS} more
                 </span>
               )}
             </div>
