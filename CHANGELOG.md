@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.71.1
+
+- Multi-select now reads clearly on the **active board** too: a selected row
+  gets an accent ring, so Cmd/Ctrl-clicking the open board highlights it like
+  the rest of the selection instead of blending into the active tint.
+
 ## v0.71.0
 
 - **Multi-select in the explorer.** Cmd/Ctrl-click to add or remove items,

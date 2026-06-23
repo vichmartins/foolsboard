@@ -209,14 +209,16 @@
 .tree-board-row--active {
   background: var(--bg-elev-2);
 }
-/* Multi-select highlight (Cmd/Ctrl/Shift-click), distinct from the active row. */
+/* Multi-select highlight (Cmd/Ctrl/Shift-click). The inset ring keeps it clearly
+   distinct even when the row is also the active board (which has its own tint). */
 .tree-board-row--selected,
 .tree-folder__row--selected {
-  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 .tree-board-row--selected:hover,
 .tree-folder__row--selected:hover {
-  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: color-mix(in srgb, var(--accent) 32%, transparent);
 }
 /* Drag chip shown when dragging multiple items at once. */
 .drag-ghost {
