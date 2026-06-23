@@ -135,7 +135,10 @@ export default function ContextPanel({
 
   function startRename(a: Asset) {
     setRenamingId(a.id)
-    setRenameVal(a.filename)
+    // Edit only the base name -- the extension is fixed (it reflects the file
+    // type), and the server re-appends it on save.
+    const dot = a.filename.lastIndexOf('.')
+    setRenameVal(dot > 0 ? a.filename.slice(0, dot) : a.filename)
   }
   function submitRename(id: string) {
     const v = renameVal.trim()

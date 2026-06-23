@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.68.3
+
+- Renaming a media file can no longer change its extension/type: you edit only
+  the base name and the original extension is kept (it never changed the actual
+  file type on the server, but the displayed extension was editable).
+
 ## v0.68.2
 
 - **Timestamps are link-based now.** Paste a video link with a time (e.g.

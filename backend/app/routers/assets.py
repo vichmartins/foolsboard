@@ -340,11 +340,12 @@ def rename_asset(
     new = (payload.filename or "").strip()
     if not new:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Name can't be empty")
-    # Keep the original extension if the new name dropped it, so type/icon stay right.
+    # The extension is locked: renaming must never change the file type. Drop a
+    # re-typed copy of the original extension, then always re-append the original.
     old_ext = Path(asset.filename).suffix
-    if old_ext and not Path(new).suffix:
-        new += old_ext
-    asset.filename = new[:500]
+    if old_ext and new.lower().endswith(old_ext.lower()):
+        new = new[: -len(old_ext)]
+    asset.filename = (new + old_ext)[:500]
     db.commit()
     db.refresh(asset)
     log_event(db, user=user, action="media.rename", entity_type="media", entity_id=asset.id,
