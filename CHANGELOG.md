@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.73.4
+
+- fix: Media/link nodes now show as purple in the minimap too (they were still
+  drawn grey there).
+
+
 ## v0.73.3
 
 - improve: Media nodes on the canvas (video/audio/file/link) now use a dark
