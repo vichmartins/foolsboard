@@ -6,6 +6,7 @@ import {
   deleteNode,
   listAssets,
   referenceAssets,
+  renameAsset,
   updateNode,
   uploadAsset,
 } from '../api'
@@ -77,6 +78,8 @@ export default function ContextPanel({
   // so switching type never loses data the other type captured.
   const [content, setContent] = useState<Record<string, unknown>>(node.content ?? {})
   const [assets, setAssets] = useState<Asset[]>([])
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameVal, setRenameVal] = useState('')
   const [justSaved, setJustSaved] = useState(false)
   const savingRef = useRef(false)
   const savedTimer = useRef<number | null>(null)
@@ -127,6 +130,19 @@ export default function ContextPanel({
       const have = new Set(prev.map((a) => a.id))
       return [...prev, ...added.filter((a) => !have.has(a.id))]
     })
+  }
+
+  function startRename(a: Asset) {
+    setRenamingId(a.id)
+    setRenameVal(a.filename)
+  }
+  function submitRename(id: string) {
+    const v = renameVal.trim()
+    setRenamingId(null)
+    if (!v) return
+    void renameAsset(node.id, id, v)
+      .then((updated) => setAssets((prev) => prev.map((x) => (x.id === id ? updated : x))))
+      .catch(() => {})
   }
 
   // Pull reference links from a nearby node into this node's References (saved
@@ -423,9 +439,28 @@ export default function ContextPanel({
                     ✕
                   </span>
                 </button>
-                <span className="media-name" title={a.filename}>
-                  {a.filename}
-                </span>
+                {renamingId === a.id ? (
+                  <input
+                    className="media-name media-name--edit"
+                    autoFocus
+                    value={renameVal}
+                    onChange={(e) => setRenameVal(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') submitRename(a.id)
+                      if (e.key === 'Escape') setRenamingId(null)
+                    }}
+                    onBlur={() => submitRename(a.id)}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="media-name"
+                    title={`${a.filename} — click to rename`}
+                    onClick={() => startRename(a)}
+                  >
+                    {a.filename}
+                  </button>
+                )}
               </div>
             )
           })}

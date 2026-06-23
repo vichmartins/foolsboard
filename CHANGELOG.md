@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.68.0
+
+- **Rename media files.** Click a media item's filename in an object's Media
+  section to rename it (the original extension is kept if you drop it).
+
 ## v0.67.3
 
 - Dragging a media item that's already attached to an object no longer pops the

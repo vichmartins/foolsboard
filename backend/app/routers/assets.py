@@ -322,6 +322,36 @@ def reference_assets(
     return [_to_out(asset) for asset in created]
 
 
+class AssetRenameIn(BaseModel):
+    filename: str
+
+
+@router.patch("/{asset_id}", response_model=AssetOut)
+def rename_asset(
+    asset_id: UUID,
+    payload: AssetRenameIn,
+    node: Node = Depends(get_owned_node),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> AssetOut:
+    asset = db.get(Asset, asset_id)
+    if asset is None or asset.node_id != node.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Asset not found")
+    new = (payload.filename or "").strip()
+    if not new:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Name can't be empty")
+    # Keep the original extension if the new name dropped it, so type/icon stay right.
+    old_ext = Path(asset.filename).suffix
+    if old_ext and not Path(new).suffix:
+        new += old_ext
+    asset.filename = new[:500]
+    db.commit()
+    db.refresh(asset)
+    log_event(db, user=user, action="media.rename", entity_type="media", entity_id=asset.id,
+              summary=f"renamed media to “{asset.filename}”")
+    return _to_out(asset)
+
+
 @router.delete("/{asset_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_asset(
     asset_id: UUID,

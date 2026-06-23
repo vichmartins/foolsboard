@@ -425,6 +425,9 @@ export async function uploadAsset(
 export async function deleteAsset(nodeId: string, assetId: string): Promise<void> {
   await http.delete(`/nodes/${nodeId}/assets/${assetId}`)
 }
+export async function renameAsset(nodeId: string, assetId: string, filename: string): Promise<Asset> {
+  return (await http.patch(`/nodes/${nodeId}/assets/${assetId}`, { filename })).data
+}
 
 // Attach existing media (by id, e.g. from a nearby node) to a node, sharing the
 // stored file via dedup. Returns the newly-created assets on the target node.
