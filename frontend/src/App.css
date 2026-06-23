@@ -1323,12 +1323,17 @@
   vector-effect: non-scaling-stroke;
 }
 
-/* Shift-drag selection box + the bounding box around selected nodes — drawn in
-   the user's own highlight color (--me-color, set on the canvas). */
-.react-flow__selection,
-.react-flow__nodesselection-rect {
+/* The live shift-drag rubber band, drawn in the user's own highlight color. */
+.react-flow__selection {
   background: color-mix(in srgb, var(--me-color, #6366f1) 14%, transparent);
   border: 1px solid var(--me-color, #6366f1);
+}
+/* The box React Flow draws *around* a finished multi-selection is redundant --
+   each selected node already shows its own ring -- so keep it invisible (but
+   present, so the selection can still be dragged as a group). */
+.react-flow__nodesselection-rect {
+  background: transparent;
+  border: none;
 }
 
 /* --- Story node card ----------------------------------------------------- */

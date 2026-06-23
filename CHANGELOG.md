@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.66.2
+
+- After a shift-drag multi-select, the redundant bounding box React Flow draws
+  around the selection is now hidden (each node already shows its own highlight
+  ring); the live rubber band is unchanged, and group dragging still works.
+
 ## v0.66.1
 
 - Connections now move in lockstep with their nodes during remote drags. Remote
