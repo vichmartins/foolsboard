@@ -3266,6 +3266,13 @@ button.media-name:hover {
 }
 
 /* --- Modal: gradient overlay + dialog ------------------------------------ */
+/* While dragging a gallery media tile onto the canvas, fade the overlay and let
+   pointer events fall through to the board behind it. */
+.overlay--drag {
+  opacity: 0.1;
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+}
 .overlay {
   position: fixed;
   inset: 0;

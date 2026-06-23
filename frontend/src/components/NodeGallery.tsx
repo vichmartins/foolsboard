@@ -78,6 +78,9 @@ export default function NodeGallery({
   const [cat, setCat] = useState<Cat>('objects')
   const [query, setQuery] = useState('')
   const [lightbox, setLightbox] = useState<number | null>(null)
+  // While dragging a media tile to the canvas, fade the gallery and let pointers
+  // through so the drop lands on the board behind it.
+  const [dragging, setDragging] = useState(false)
 
   // Load every accessible board's contents once.
   useEffect(() => {
@@ -259,7 +262,7 @@ export default function NodeGallery({
 
   return (
     <>
-      <div className="overlay" onMouseDown={onClose}>
+      <div className={'overlay' + (dragging ? ' overlay--drag' : '')} onMouseDown={onClose}>
         <div className="dialog gallery-dialog" onMouseDown={(e) => e.stopPropagation()}>
           <div className="admin-panel__head">
             <h2 className="dialog__title">Gallery</h2>
@@ -361,7 +364,10 @@ export default function NodeGallery({
                       draggable
                       onDragStart={(e) => {
                         setAssetDragData(e.dataTransfer, a)
-                        // Close the gallery so the drop lands on the canvas behind it.
+                        setDragging(true)
+                      }}
+                      onDragEnd={() => {
+                        setDragging(false)
                         onClose()
                       }}
                       title={`View ${a.filename} · drag onto the canvas to place it`}

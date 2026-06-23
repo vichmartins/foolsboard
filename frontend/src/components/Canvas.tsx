@@ -1242,7 +1242,10 @@ function CanvasInner({
     }
     // A modal (e.g. the import dialog) handles its own drops -- don't hijack them.
     const modalOpen = () => document.querySelector('.overlay') !== null
-    const droppable = (e: DragEvent) => !modalOpen() && (assetDrag(e) || externalDrag(e))
+    // Asset drags (from the gallery/panel/drawer) are always allowed -- the
+    // gallery fades + goes click-through while dragging, so its overlay being
+    // present shouldn't block the drop onto the canvas behind it.
+    const droppable = (e: DragEvent) => assetDrag(e) || (!modalOpen() && externalDrag(e))
     const onDragStart = () => {
       internalDrag = true
     }
