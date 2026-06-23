@@ -1327,10 +1327,11 @@ function CanvasInner({
     const onOver = (e: DragEvent) => {
       if (!droppable(e)) return
       e.preventDefault() // required to allow a drop
-      // Only force dropEffect for asset drags (we set effectAllowed='copy' on
-      // those). Forcing 'copy' on an OS file drag whose source doesn't allow it
-      // makes the browser show the no-drop cursor and refuse the drop.
-      if (assetDrag() && e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+      // Chromium needs dropEffect set in dragover for a file drop to be accepted
+      // (Firefox is lenient). 'copy' is valid for OS files (effectAllowed 'all')
+      // and our asset drags (effectAllowed 'copy'). A native Esc cancel still
+      // reports dropEffect 'none' on dragend, so the gallery cancel keeps working.
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
     }
     const onLeave = (e: DragEvent) => {
       if (!droppable(e)) return
