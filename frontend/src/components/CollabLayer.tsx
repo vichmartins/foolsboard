@@ -6,29 +6,11 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useViewport, type Node } from '@xyflow/react'
 import { realtime, useCollab } from '../realtime'
 
-// Jitter buffer: render remote cursors this far in the past, so we always have
-// samples on both sides to interpolate between even when packets arrive raggedly
-// (the cost is a fixed, smooth ~100ms of cursor lag).
-const INTERP_DELAY = 100
-
-type Pt = { t: number; x: number; y: number }
-// Position at time t by linear interpolation between the two bracketing samples
-// (clamped to the ends; holds the last spot when the cursor goes idle).
-function sampleAt(s: Pt[], t: number): { x: number; y: number } | null {
-  const n = s.length
-  if (n === 0) return null
-  if (t <= s[0].t) return s[0]
-  if (t >= s[n - 1].t) return s[n - 1]
-  for (let i = 1; i < n; i++) {
-    if (t <= s[i].t) {
-      const a = s[i - 1]
-      const b = s[i]
-      const f = (t - a.t) / (b.t - a.t || 1)
-      return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f }
-    }
-  }
-  return s[n - 1]
-}
+// Cursors are smoothed the same way as nodes: each frame, ease toward the latest
+// received position. This keeps a collaborator's cursor glued to the node they're
+// dragging (matching latency) and naturally absorbs jitter -- bursty/late packets
+// just update the target, they don't replay as a jerky path.
+const CURSOR_EASE = 0.4
 
 export default function CollabLayer({
   boardId,
@@ -43,24 +25,45 @@ export default function CollabLayer({
   const { x: tx, y: ty, zoom } = useViewport()
   const lockEntries = Object.entries(editLocks)
 
-  // --- jitter-buffered cursor playback --------------------------------------
-  // Position each cursor element on every animation frame from its sample buffer
-  // (read live from realtime), so motion stays smooth regardless of when packets
-  // land. Driving it here via refs avoids re-rendering React on every sample.
+  // --- smoothed cursor playback ---------------------------------------------
+  // Each frame, ease each cursor element toward its latest received position
+  // (read live from realtime). Driving it via refs avoids re-rendering React on
+  // every sample.
   const cursorEls = useRef(new Map<string, HTMLDivElement>())
+  const curPos = useRef(new Map<string, { x: number; y: number }>())
   const vp = useRef({ tx, ty, zoom })
   vp.current = { tx, ty, zoom }
+  const latest = (uid: string) => {
+    const s = realtime.cursorSamples(boardId, uid)
+    return s.length ? s[s.length - 1] : null
+  }
+  const draw = (el: HTMLDivElement, x: number, y: number) => {
+    const { tx, ty, zoom } = vp.current
+    el.style.transform = `translate(${x * zoom + tx}px, ${y * zoom + ty}px)`
+  }
+  // Snap a freshly-mounted cursor to its current spot (no glide in from 0,0).
   const placeCursor = (el: HTMLDivElement, uid: string) => {
-    const p = sampleAt(realtime.cursorSamples(boardId, uid), performance.now() - INTERP_DELAY)
-    if (p) {
-      const { tx, ty, zoom } = vp.current
-      el.style.transform = `translate(${p.x * zoom + tx}px, ${p.y * zoom + ty}px)`
+    const t = latest(uid)
+    if (t) {
+      curPos.current.set(uid, { x: t.x, y: t.y })
+      draw(el, t.x, t.y)
     }
   }
   useEffect(() => {
     let raf = 0
     const tick = () => {
-      cursorEls.current.forEach((el, uid) => placeCursor(el, uid))
+      cursorEls.current.forEach((el, uid) => {
+        const t = latest(uid)
+        if (!t) return
+        let cur = curPos.current.get(uid)
+        if (!cur) {
+          cur = { x: t.x, y: t.y }
+          curPos.current.set(uid, cur)
+        }
+        cur.x += (t.x - cur.x) * CURSOR_EASE
+        cur.y += (t.y - cur.y) * CURSOR_EASE
+        draw(el, cur.x, cur.y)
+      })
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -147,6 +150,7 @@ export default function CollabLayer({
               placeCursor(el, c.userId) // position immediately so it doesn't flash at 0,0
             } else {
               cursorEls.current.delete(c.userId)
+              curPos.current.delete(c.userId)
             }
           }}
         >

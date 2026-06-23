@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.66.3
+
+- Remote cursors are now smoothed the same way as nodes (eased toward the latest
+  position) instead of via a delayed replay buffer — so a collaborator's cursor
+  stays glued to the node they're dragging instead of lagging and swinging
+  around. Cursor position also keeps streaming during a node drag (the pane's
+  pointer events can otherwise be swallowed mid-drag).
+
 ## v0.66.2
 
 - After a shift-drag multi-select, the redundant bounding box React Flow draws

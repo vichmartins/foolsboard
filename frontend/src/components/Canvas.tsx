@@ -153,15 +153,19 @@ function CanvasInner({
 
   // --- Live collaboration: broadcast my cursor + selection to others ---------
   const lastCursorSent = useRef(0)
-  const broadcastCursor = useCallback(
-    (e: React.PointerEvent) => {
+  const sendCursorAt = useCallback(
+    (clientX: number, clientY: number) => {
       const now = performance.now()
       if (now - lastCursorSent.current < 30) return // ~33 fps cap on the wire
       lastCursorSent.current = now
-      const p = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      const p = screenToFlowPosition({ x: clientX, y: clientY })
       realtime.sendCursor(p.x, p.y)
     },
     [screenToFlowPosition],
+  )
+  const broadcastCursor = useCallback(
+    (e: React.PointerEvent) => sendCursorAt(e.clientX, e.clientY),
+    [sendCursorAt],
   )
   const lastSelSent = useRef('')
   const broadcastSelection = useCallback(({ nodes: sel }: { nodes: Node[] }) => {
@@ -483,7 +487,17 @@ function CanvasInner({
   )
 
   // Stream positions to collaborators while dragging (throttled).
-  const onNodeDrag = useCallback(() => broadcastMove(true), [broadcastMove])
+  // Also stream my cursor while dragging a node -- the pane's pointermove can be
+  // swallowed by the drag, which would otherwise make my cursor look frozen then
+  // jump on collaborators' screens.
+  const onNodeDrag = useCallback(
+    (e: MouseEvent | TouchEvent) => {
+      broadcastMove(true)
+      const pt = 'touches' in e ? e.touches[0] : e
+      if (pt) sendCursorAt(pt.clientX, pt.clientY)
+    },
+    [broadcastMove, sendCursorAt],
+  )
 
   const onNodeDragStop = useCallback(
     (_: unknown, node: Node) => {
