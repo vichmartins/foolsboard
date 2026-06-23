@@ -220,6 +220,21 @@ export interface AssetDragPayload {
   thumbnail_url: string | null
 }
 
+// Chromium does not reliably expose a custom dataTransfer MIME type in
+// `dataTransfer.types` during dragover for same-page drags, so the canvas can't
+// tell it's an asset drag and refuses the drop. We also stash the payload in a
+// module-level ref (set on dragstart, cleared on dragend) that the canvas reads
+// directly -- the same pattern the explorer uses for multi-drag.
+let _draggedAsset: AssetDragPayload | null = null
+
+export function getDraggedAsset(): AssetDragPayload | null {
+  return _draggedAsset
+}
+
+export function clearDraggedAsset(): void {
+  _draggedAsset = null
+}
+
 export function setAssetDragData(dt: DataTransfer, a: Asset): void {
   const payload: AssetDragPayload = {
     id: a.id,
@@ -228,6 +243,7 @@ export function setAssetDragData(dt: DataTransfer, a: Asset): void {
     url: a.url,
     thumbnail_url: a.thumbnail_url,
   }
+  _draggedAsset = payload
   dt.setData(ASSET_DRAG_MIME, JSON.stringify(payload))
   dt.effectAllowed = 'copy'
 }

@@ -3336,11 +3336,12 @@ button.media-name:hover {
 }
 
 /* --- Modal: gradient overlay + dialog ------------------------------------ */
-/* While dragging a gallery media tile onto the canvas, fade the overlay and let
-   pointer events fall through to the board behind it. */
+/* While dragging a gallery media tile onto the canvas, fade the overlay so the
+   board behind it is visible. NOTE: do NOT set pointer-events:none here -- doing
+   that mid-drag cancels the HTML5 drag in Chromium. The drop still lands on the
+   canvas because the window-level drop listener catches it regardless. */
 .overlay--drag {
-  opacity: 0.1;
-  pointer-events: none;
+  opacity: 0.12;
   transition: opacity 0.1s ease;
 }
 .overlay {

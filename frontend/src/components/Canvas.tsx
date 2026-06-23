@@ -35,7 +35,9 @@ import { findNodeAt, nodeSize, snapToBorder } from '../edgeGeometry'
 import { toRFEdge } from '../rfMappers'
 import {
   ASSET_DRAG_MIME,
+  clearDraggedAsset,
   downloadAsset,
+  getDraggedAsset,
   isMediaNodeType,
   KIND_COLORS,
   mediaKind,
@@ -1288,9 +1290,11 @@ function CanvasInner({
     // 'Files' even for an <img> being dragged, so without this flag dragging an
     // existing media item would wrongly pop the "drop to add media" overlay.
     let internalDrag = false
-    // Existing media dragged from the panel/gallery carries our asset MIME; it's
-    // an internal drag, so it's allowed even though internalDrag is set.
+    // Existing media dragged from the panel/gallery: detected via the module ref
+    // (reliable) with the MIME type as a fallback. It's an internal drag, so it's
+    // allowed even though internalDrag is set.
     const assetDrag = (e: DragEvent) =>
+      getDraggedAsset() !== null ||
       Array.from(e.dataTransfer?.types ?? []).includes(ASSET_DRAG_MIME)
     const externalDrag = (e: DragEvent) => {
       if (internalDrag) return false
@@ -1308,6 +1312,7 @@ function CanvasInner({
     }
     const onDragEnd = () => {
       internalDrag = false
+      clearDraggedAsset()
     }
     let depth = 0
     const onEnter = (e: DragEvent) => {
@@ -1334,7 +1339,7 @@ function CanvasInner({
       // Dropping on the open object's panel attaches there; anywhere else on the
       // canvas places a standalone media/link node at the drop point.
       const onPanel = !!(e.target as Element | null)?.closest?.('.panel')
-      const asset = readAssetDragData(dt)
+      const asset = getDraggedAsset() ?? readAssetDragData(dt)
       if (asset) {
         if (!onPanel) void createMediaNodeFromAssetRef.current(asset, e.clientX, e.clientY)
         return
