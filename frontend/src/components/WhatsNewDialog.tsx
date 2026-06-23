@@ -45,7 +45,10 @@ function Rich({ text }: { text: string }) {
 }
 
 export default function WhatsNewDialog({ onClose }: { onClose: () => void }) {
-  const releases = useMemo(() => parseChangelog(__CHANGELOG__), [])
+  // typeof guard: if the Vite dev server hasn't reloaded the config that defines
+  // __CHANGELOG__ yet, referencing it directly would throw -- fall back to empty.
+  const raw = typeof __CHANGELOG__ === 'string' ? __CHANGELOG__ : ''
+  const releases = useMemo(() => parseChangelog(raw), [raw])
 
   return (
     <div className="overlay" onMouseDown={onClose}>
