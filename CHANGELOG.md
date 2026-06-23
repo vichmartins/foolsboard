@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.70.2
+
+- **Remove media nodes from the board.** Media/link nodes now show a ✕ badge on
+  hover, and the right-click menu has a **Delete** item (for every node — it was
+  missing before). Both confirm, then delete the node and free its file.
+
 ## v0.70.1
 
 - You can now **drag existing media onto the canvas** to place it as a node —

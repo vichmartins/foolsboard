@@ -1484,7 +1484,7 @@
 }
 .media-node__open {
   position: absolute;
-  top: 6px;
+  bottom: 6px;
   right: 6px;
   display: flex;
   align-items: center;
@@ -1499,6 +1499,32 @@
 }
 .media-node__open:hover {
   background: var(--bg-hover);
+}
+/* Hover-reveal remove badge, shared by every media/link node. */
+.media-node__del {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid var(--bg-elev);
+  border-radius: 50%;
+  background: var(--danger, #ef4444);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.media-node:hover .media-node__del,
+.media-node__del:focus-visible {
+  opacity: 1;
 }
 
 .story-node {

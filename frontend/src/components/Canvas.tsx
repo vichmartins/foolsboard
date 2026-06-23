@@ -157,7 +157,7 @@ function CanvasInner({
   focusNodeId,
   onFocusHandled,
 }: CanvasProps) {
-  const { screenToFlowPosition, getNodes, getEdges, getZoom, setCenter, fitView } =
+  const { screenToFlowPosition, getNodes, getEdges, getZoom, setCenter, fitView, deleteElements } =
     useReactFlow()
 
   // --- Live collaboration: broadcast my cursor + selection to others ---------
@@ -975,6 +975,12 @@ function CanvasInner({
     if (ids.length) onMoveSelection?.(ids)
   }, [getNodes, onMoveSelection])
 
+  // Delete the selection (routes through onBeforeDelete -> confirm dialog).
+  const doDelete = useCallback(() => {
+    const sel = getNodes().filter((n) => n.selected)
+    if (sel.length) void deleteElements({ nodes: sel.map((n) => ({ id: n.id })) })
+  }, [getNodes, deleteElements])
+
   const deleteEdgeById = useCallback(
     (edge: Edge) => {
       setEdges((eds) => eds.filter((e) => e.id !== edge.id))
@@ -1519,6 +1525,7 @@ function CanvasInner({
             ...(clipboardHasContent()
               ? [{ label: 'Paste', mnemonic: 'P', onClick: () => void doPaste() }]
               : []),
+            { label: 'Delete', mnemonic: 'l', onClick: () => doDelete() },
           ]}
         />
       )}

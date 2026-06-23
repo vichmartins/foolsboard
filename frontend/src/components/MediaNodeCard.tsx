@@ -6,7 +6,7 @@
 // `nodrag` so React Flow doesn't start a drag from them; the frame, caption, and
 // padding remain draggable so the node can still be moved.
 import { Fragment } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react'
 import { safeHref, type StoryNode } from '../types'
 import { useAuth } from '../auth'
 import { collabColor } from '../collab'
@@ -27,9 +27,10 @@ function hostname(url: string): string {
   }
 }
 
-export default function MediaNodeCard({ data, selected }: NodeProps) {
+export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   const d = data as MediaNodeData
   const { user } = useAuth()
+  const { deleteElements } = useReactFlow()
   const selColor = user ? user.color ?? collabColor(user.id) : '#94a3b8'
   const content = (d.story?.content ?? {}) as Record<string, unknown>
   const str = (k: string) => (typeof content[k] === 'string' ? (content[k] as string) : '')
@@ -46,6 +47,18 @@ export default function MediaNodeCard({ data, selected }: NodeProps) {
           <Handle id={pos} type="source" position={pos} className="story-handle" />
         </Fragment>
       ))}
+      <button
+        type="button"
+        className="media-node__del nodrag"
+        title="Remove from board"
+        aria-label="Remove from board"
+        onClick={(e) => {
+          e.stopPropagation()
+          void deleteElements({ nodes: [{ id }] })
+        }}
+      >
+        ✕
+      </button>
     </>
   )
 
