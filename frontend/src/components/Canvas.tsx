@@ -1480,6 +1480,8 @@ function CanvasInner({
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
         fitView
+        // Allow zooming out much further than the default 0.5 floor for big boards.
+        minZoom={0.05}
         proOptions={{ hideAttribution: true }}
         // Only mount nodes within the viewport: off-screen cards (and their
         // decoded images) are unmounted, which keeps memory flat on big boards.
