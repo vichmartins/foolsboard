@@ -209,6 +209,28 @@
 .tree-board-row--active {
   background: var(--bg-elev-2);
 }
+/* Multi-select highlight (Cmd/Ctrl/Shift-click), distinct from the active row. */
+.tree-board-row--selected,
+.tree-folder__row--selected {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.tree-board-row--selected:hover,
+.tree-folder__row--selected:hover {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+/* Drag chip shown when dragging multiple items at once. */
+.drag-ghost {
+  position: fixed;
+  top: -1000px;
+  left: -1000px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
 .tree-board-row--active .tree-board {
   box-shadow: inset 2px 0 0 var(--accent);
 }

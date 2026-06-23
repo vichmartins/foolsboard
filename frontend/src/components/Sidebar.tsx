@@ -54,6 +54,12 @@ interface Props {
   onDeleteCategory: (id: string) => void
   onReorderCategories: (ids: string[]) => void
   onFileItem: (itemId: string, categoryId: string | null, index?: number) => void
+  onFileItems: (
+    itemIds: string[],
+    categoryId: string | null,
+    targetId?: string | null,
+    after?: boolean,
+  ) => void
   onCreateFolderIn: (categoryId: string | null, name: string) => void
   onCreateBoardIn: (categoryId: string | null, name: string) => void
 }
@@ -139,7 +145,7 @@ export default function Sidebar(props: Props) {
     onRenameCategory,
     onDeleteCategory,
     onReorderCategories,
-    onFileItem,
+    onFileItems,
     onCreateFolderIn,
     onCreateBoardIn,
   } = props
@@ -157,11 +163,19 @@ export default function Sidebar(props: Props) {
   const [createName, setCreateName] = useState('')
   const [dropTarget, setDropTarget] = useState<string | null>(null) // folder id / 'cat:<id>' / 'top'
   const [reorderHint, setReorderHint] = useState<{ id: string; after: boolean } | null>(null)
+  // Multi-select of explorer items (boards/folders): Cmd/Ctrl-click toggles,
+  // Shift-click ranges, plain click resets. Dragging a selected item drags the
+  // whole set. anchorRef is the pivot for Shift-range; dragItemsRef is the set
+  // currently being dragged.
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const anchorRef = useRef<string | null>(null)
+  const dragItemsRef = useRef<{ id: string; kind: 'board' | 'folder' }[]>([])
   // Clear the drag indicators whenever any drag ends (drop, Esc, or off-window),
   // so we don't rely on per-row dragleave (which flickers over child elements).
   useEffect(() => {
     const clear = () => {
       dragging.current = false
+      dragItemsRef.current = []
       setReorderHint(null)
       setDropTarget(null)
     }
@@ -195,6 +209,60 @@ export default function Sidebar(props: Props) {
   const folderById = new Map(folders.map((f) => [f.id, f]))
   const boardById = new Map(boards.map((b) => [b.id, b]))
   const boardsIn = (fid: string) => boards.filter((b) => b.folder_id === fid)
+  const kindOf = (id: string): 'board' | 'folder' => (folderById.has(id) ? 'folder' : 'board')
+
+  // --- multi-select ---------------------------------------------------------
+  // Selectable ids in the order they're shown (skipping collapsed categories and
+  // closed folders), so Shift-click can grab a contiguous range.
+  function flatOrder(): string[] {
+    const out: string[] = []
+    const add = (id: string) => {
+      out.push(id)
+      if (folderById.has(id) && expanded.has(id)) for (const b of boardsIn(id)) out.push(b.id)
+    }
+    for (const id of orderedTop) add(id)
+    for (const c of categories) {
+      if (collapsedCats.has(c.id)) continue
+      for (const id of c.items.filter((i) => folderById.has(i) || boardById.has(i))) add(id)
+    }
+    return out
+  }
+  // File-explorer click model. onPlain runs only for an unmodified click (open a
+  // board / toggle a folder) and resets the selection.
+  function clickItem(e: React.MouseEvent, id: string, onPlain: () => void) {
+    if (e.metaKey || e.ctrlKey) {
+      e.preventDefault()
+      setSelected((s) => {
+        const n = new Set(s)
+        if (n.has(id)) n.delete(id)
+        else n.add(id)
+        return n
+      })
+      anchorRef.current = id
+      return
+    }
+    if (e.shiftKey && anchorRef.current) {
+      e.preventDefault()
+      const order = flatOrder()
+      const a = order.indexOf(anchorRef.current)
+      const b = order.indexOf(id)
+      if (a >= 0 && b >= 0) {
+        const [lo, hi] = a < b ? [a, b] : [b, a]
+        setSelected(new Set(order.slice(lo, hi + 1)))
+        return
+      }
+    }
+    if (selected.size) setSelected(new Set())
+    anchorRef.current = id
+    onPlain()
+  }
+  // The item set a drag should carry: the whole selection if the grabbed row is
+  // part of a multi-selection, otherwise just that row.
+  const dragSet = (id: string) =>
+    (selected.has(id) && selected.size > 1 ? [...selected] : [id]).map((i) => ({
+      id: i,
+      kind: kindOf(i),
+    }))
 
   function startRenameBoard(b: Board) {
     setEditingBoardId(b.id)
@@ -252,6 +320,30 @@ export default function Sidebar(props: Props) {
     e.dataTransfer.setData(type, id)
     e.dataTransfer.setData('text/plain', id)
   }
+  // Begin dragging an item: remember the dragged set (selection or just this
+  // one), and show a "N items" chip when dragging several.
+  const beginItemDrag = (e: React.DragEvent, type: string, id: string) => {
+    dragItemsRef.current = dragSet(id)
+    startDrag(e, type, id)
+    if (dragItemsRef.current.length > 1) {
+      const ghost = document.createElement('div')
+      ghost.className = 'drag-ghost'
+      ghost.textContent = `${dragItemsRef.current.length} items`
+      document.body.appendChild(ghost)
+      e.dataTransfer.setDragImage(ghost, -8, -8)
+      setTimeout(() => ghost.remove(), 0)
+    }
+  }
+  // The items a drop should act on: the multi-selection if we were dragging one,
+  // else the single id from the dataTransfer.
+  const draggedList = (e: React.DragEvent): { id: string; kind: 'board' | 'folder' }[] => {
+    if (dragItemsRef.current.length) return dragItemsRef.current
+    const fid = getId(e, FOLDER_DND)
+    const bid = getId(e, BOARD_DND)
+    if (fid) return [{ id: fid, kind: 'folder' }]
+    if (bid) return [{ id: bid, kind: 'board' }]
+    return []
+  }
   const types = (e: React.DragEvent) => Array.from(e.dataTransfer.types)
   const overIf = (e: React.DragEvent, accept: string[], key: string) => {
     if (accept.some((t) => types(e).includes(t))) {
@@ -265,28 +357,33 @@ export default function Sidebar(props: Props) {
   // Folders don't nest, so a dropped folder is handled as a reorder instead.
   const dropOnFolder = (e: React.DragEvent, fid: string) => {
     setDropTarget(null)
-    const bid = getId(e, BOARD_DND)
-    if (bid) {
-      e.preventDefault()
-      onMoveBoardToFolder(bid, fid)
-      onFileItem(bid, null)
-    }
+    const boardItems = draggedList(e).filter((it) => it.kind === 'board')
+    if (!boardItems.length) return
+    e.preventDefault()
+    for (const it of boardItems) onMoveBoardToFolder(it.id, fid)
+    onFileItems(
+      boardItems.map((i) => i.id),
+      null,
+    )
   }
   // Drop on a category (or the top, catId=null): file the item there, un-nesting
   // folders / un-filing boards from their folder first.
   const dropOnCat = (e: React.DragEvent, catId: string | null) => {
     setDropTarget(null)
-    const fid = getId(e, FOLDER_DND)
-    const bid = getId(e, BOARD_DND)
-    if (fid) {
-      e.preventDefault()
-      if (folderById.get(fid)?.parent_folder_id) onMoveFolderToFolder(fid, null)
-      onFileItem(fid, catId)
-    } else if (bid) {
-      e.preventDefault()
-      if (boardById.get(bid)?.folder_id) onMoveBoardToFolder(bid, null)
-      onFileItem(bid, catId)
+    const items = draggedList(e)
+    if (!items.length) return
+    e.preventDefault()
+    for (const it of items) {
+      if (it.kind === 'folder') {
+        if (folderById.get(it.id)?.parent_folder_id) onMoveFolderToFolder(it.id, null)
+      } else if (boardById.get(it.id)?.folder_id) {
+        onMoveBoardToFolder(it.id, null)
+      }
     }
+    onFileItems(
+      items.map((i) => i.id),
+      catId,
+    )
   }
 
   // --- reorder (drop between rows) ------------------------------------------
@@ -309,20 +406,20 @@ export default function Sidebar(props: Props) {
   // Reorder the dragged item next to `targetId` within a container ('top' or
   // 'cat:<id>'), pulling it out of any folder/category it was in first.
   const reorderInto = (e: React.DragEvent, targetId: string, container: string, after: boolean) => {
-    const dfid = getId(e, FOLDER_DND)
-    const bid = getId(e, BOARD_DND)
-    const draggedId = dfid || bid
-    if (!draggedId || draggedId === targetId) return
+    const items = draggedList(e)
+    const ids = items.map((i) => i.id)
+    if (!ids.length || ids.includes(targetId)) return
     const catId = container === 'top' ? null : container.slice(4)
-    if (dfid && folderById.get(dfid)?.parent_folder_id) onMoveFolderToFolder(dfid, null)
-    if (bid && boardById.get(bid)?.folder_id) onMoveBoardToFolder(bid, null)
-    const siblings = container === 'top' ? orderedTop : categories.find((c) => c.id === catId)?.items ?? []
-    let idx = siblings.indexOf(targetId)
-    if (idx < 0) idx = siblings.length
-    if (after) idx += 1
-    const from = siblings.indexOf(draggedId)
-    if (from >= 0 && from < idx) idx -= 1
-    onFileItem(draggedId, catId, idx)
+    for (const it of items) {
+      if (it.kind === 'folder') {
+        if (folderById.get(it.id)?.parent_folder_id) onMoveFolderToFolder(it.id, null)
+      } else if (boardById.get(it.id)?.folder_id) {
+        onMoveBoardToFolder(it.id, null)
+      }
+    }
+    // onFileItems places the group relative to targetId in the cleaned list, so
+    // no index adjustment is needed here.
+    onFileItems(ids, catId, targetId, after)
   }
   const canReorder = (container: string) => container === 'top' || container.startsWith('cat:')
   const insertClass = (id: string) =>
@@ -362,7 +459,10 @@ export default function Sidebar(props: Props) {
         key={b.id}
         data-flip-id={b.id}
         className={
-          'tree-board-row' + (b.id === activeId ? ' tree-board-row--active' : '') + insertClass(b.id)
+          'tree-board-row' +
+          (b.id === activeId ? ' tree-board-row--active' : '') +
+          (selected.has(b.id) ? ' tree-board-row--selected' : '') +
+          insertClass(b.id)
         }
         onContextMenu={(e) => {
           e.preventDefault()
@@ -396,8 +496,8 @@ export default function Sidebar(props: Props) {
         <button
           className="tree-board"
           draggable
-          onDragStart={(e) => startDrag(e, BOARD_DND, b.id)}
-          onClick={() => onSelectBoard(b.id)}
+          onDragStart={(e) => beginItemDrag(e, BOARD_DND, b.id)}
+          onClick={(e) => clickItem(e, b.id, () => onSelectBoard(b.id))}
           title={b.name}
         >
           <span className="tree-board__icon" aria-hidden="true">
@@ -459,9 +559,13 @@ export default function Sidebar(props: Props) {
         data-flip-id={f.id}
       >
         <div
-          className={'tree-folder__row' + insertClass(f.id)}
+          className={
+            'tree-folder__row' +
+            (selected.has(f.id) ? ' tree-folder__row--selected' : '') +
+            insertClass(f.id)
+          }
           draggable={!f.shared}
-          onDragStart={(e) => startDrag(e, FOLDER_DND, f.id)}
+          onDragStart={(e) => beginItemDrag(e, FOLDER_DND, f.id)}
           onDragOver={(e) => {
             const t = types(e)
             if (!t.some((x) => x === BOARD_DND || x === FOLDER_DND)) return
@@ -509,7 +613,10 @@ export default function Sidebar(props: Props) {
           >
             <ChevronIcon />
           </button>
-          <button className="tree-folder__main" onClick={() => toggleFolder(f.id)}>
+          <button
+            className="tree-folder__main"
+            onClick={(e) => clickItem(e, f.id, () => toggleFolder(f.id))}
+          >
             <FolderIcon />
             <span className="tree-folder__name">{f.name}</span>
             <span className="tree-folder__count">{inside.length}</span>

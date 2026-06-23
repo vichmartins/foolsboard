@@ -380,6 +380,42 @@ function Workspace() {
     }
     persistLayout(next, top)
   }
+  // Batch version of fileItem for multi-select drag: moves several items into a
+  // category/top in ONE layout update. (fileItem reads catsRef, which only
+  // refreshes per render, so looping it would clobber.) targetId+after place the
+  // group relative to an existing row; omit to append.
+  function fileItems(
+    itemIds: string[],
+    categoryId: string | null,
+    targetId?: string | null,
+    after = false,
+  ) {
+    if (!itemIds.length) return
+    const idSet = new Set(itemIds)
+    const cleaned = catsRef.current.map((c) => ({
+      ...c,
+      items: c.items.filter((i) => !idSet.has(i)),
+    }))
+    const place = (list: string[]) => {
+      let at = list.length
+      if (targetId) {
+        const ti = list.indexOf(targetId)
+        if (ti >= 0) at = ti + (after ? 1 : 0)
+      }
+      list.splice(at, 0, ...itemIds)
+      return list
+    }
+    let next = cleaned
+    let top = topRef.current.filter((i) => !idSet.has(i))
+    if (categoryId) {
+      next = cleaned.map((c) =>
+        c.id === categoryId ? { ...c, items: place([...c.items]) } : c,
+      )
+    } else {
+      top = place(computeOrderedTop().filter((i) => !idSet.has(i)))
+    }
+    persistLayout(next, top)
+  }
   async function createFolderIn(categoryId: string | null, name: string) {
     const folder = await api.createFolder(name)
     setFolders((fs) => [...fs, folder])
@@ -681,6 +717,7 @@ function Workspace() {
           onDeleteCategory={deleteCategory}
           onReorderCategories={reorderCategories}
           onFileItem={fileItem}
+          onFileItems={fileItems}
           onCreateFolderIn={createFolderIn}
           onCreateBoardIn={createBoardIn}
         />

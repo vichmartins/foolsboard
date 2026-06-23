@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.71.0
+
+- **Multi-select in the explorer.** Cmd/Ctrl-click to add or remove items,
+  Shift-click to select a range, then drag the whole set at once to move them
+  into a category, folder, or the top level (a "N items" chip shows during the
+  drag). A plain click still opens/expands as before.
+
 ## v0.70.2
 
 - **Remove media nodes from the board.** Media/link nodes now show a ✕ badge on
