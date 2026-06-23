@@ -257,6 +257,9 @@ function CanvasInner({
   // File drag-and-drop: 'ready' = a panel is open (drop uploads), 'blocked' =
   // none open (hint only). droppedFiles are handed to the panel to upload.
   const [dragKind, setDragKind] = useState<'none' | 'ready'>('none')
+  // Shared so both the window drag listeners and the element-level drop handler
+  // can keep the "drop to place" overlay (dragKind) in sync.
+  const dragDepthRef = useRef(0)
   const [droppedFiles, setDroppedFiles] = useState<File[] | null>(null)
   const hasPanelRef = useRef(false)
   // Live shift-drag selection rectangle (flow coords), mirrored on the minimap.
@@ -1317,11 +1320,10 @@ function CanvasInner({
       internalDrag = false
       clearDraggedAsset()
     }
-    let depth = 0
     const onEnter = (e: DragEvent) => {
       if (!droppable(e)) return
       e.preventDefault()
-      depth += 1
+      dragDepthRef.current += 1
       setDragKind('ready')
     }
     const onOver = (e: DragEvent) => {
@@ -1335,8 +1337,8 @@ function CanvasInner({
     }
     const onLeave = (e: DragEvent) => {
       if (!droppable(e)) return
-      depth = Math.max(0, depth - 1)
-      if (depth === 0) setDragKind('none')
+      dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
+      if (dragDepthRef.current === 0) setDragKind('none')
     }
     const onDrop = (e: DragEvent) => {
       const dt = e.dataTransfer
@@ -1353,7 +1355,7 @@ function CanvasInner({
       clearDraggedAsset()
       if (!allow) return
       e.preventDefault() // stop the browser from opening the file
-      depth = 0
+      dragDepthRef.current = 0
       setDragKind('none')
       if (!dt) return
       // Dropping on the open object's panel attaches there; anywhere else on the
@@ -1491,6 +1493,10 @@ function CanvasInner({
         if (!files.length) return // let the window handler deal with assets/urls
         e.preventDefault()
         e.stopPropagation()
+        // We stop propagation (so the window handler doesn't double-process), so
+        // clear the "drop to place" overlay ourselves -- otherwise it sticks.
+        dragDepthRef.current = 0
+        setDragKind('none')
         const onPanel = !!(e.target as Element | null)?.closest?.('.panel')
         if (onPanel && hasPanelRef.current) setDroppedFiles(files)
         else void createMediaNodesAtRef.current(files, e.clientX, e.clientY)
