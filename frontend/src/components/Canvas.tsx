@@ -34,11 +34,9 @@ import { clipboardHasContent, readClipboard, writeClipboard } from '../clipboard
 import { findNodeAt, nodeSize, snapToBorder } from '../edgeGeometry'
 import { toRFEdge } from '../rfMappers'
 import {
-  cancelAssetDrag,
   clearDraggedAsset,
   downloadAsset,
   getDraggedAsset,
-  isAssetDragActive,
   isMediaNodeType,
   KIND_COLORS,
   mediaKind,
@@ -1313,16 +1311,6 @@ function CanvasInner({
       internalDrag = false
       clearDraggedAsset()
     }
-    // Backspace cancels an in-flight asset drag (Esc already does so natively).
-    // After this, getDraggedAsset() returns null, so the drop is refused like a
-    // cancel -- no node placed, and the gallery stays open.
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Backspace' && isAssetDragActive()) {
-        e.preventDefault()
-        cancelAssetDrag()
-        setDragKind('none')
-      }
-    }
     let depth = 0
     const onEnter = (e: DragEvent) => {
       if (!droppable(e)) return
@@ -1378,7 +1366,6 @@ function CanvasInner({
     window.addEventListener('dragover', onOver)
     window.addEventListener('dragleave', onLeave)
     window.addEventListener('drop', onDrop)
-    window.addEventListener('keydown', onKeyDown)
     return () => {
       window.removeEventListener('dragstart', onDragStart)
       window.removeEventListener('dragend', onDragEnd)
@@ -1386,7 +1373,6 @@ function CanvasInner({
       window.removeEventListener('dragover', onOver)
       window.removeEventListener('dragleave', onLeave)
       window.removeEventListener('drop', onDrop)
-      window.removeEventListener('keydown', onKeyDown)
     }
   }, [])
 
