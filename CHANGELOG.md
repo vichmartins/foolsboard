@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.73.3
+
+- improve: Media nodes on the canvas (video/audio/file/link) now use a dark
+  purple card by default instead of grey.
+
+
 ## v0.73.2
 
 - improve: Every entry in this changelog is now categorized, so the "What's New"
