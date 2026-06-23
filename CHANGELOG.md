@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.71.3
+
+- Gallery object cards now wrap long unbroken filenames (e.g.
+  `Archmage_Sedridor_chathead.png`) within their 2-line clamp instead of
+  spilling past the card.
+- Gallery link cards have a guaranteed minimum height, so they can no longer
+  collapse into thin squished bars.
+
 ## v0.71.2
 
 - Image nodes on the canvas are now transparent-aware: a PNG/WebP with
