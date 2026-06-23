@@ -977,15 +977,15 @@ function CanvasInner({
     [showLockNotice],
   )
 
-  // Broadcast which node I'm editing (and its title) so collaborators can lock it
-  // and show "editing X"; clear on close, board change, or unmount.
+  // Broadcast which node I'm editing (and its current title) so collaborators can
+  // lock it and show "editing X". Re-fires when the title changes too, so renaming
+  // a freshly-created node updates "editing New object" to its real name.
+  const editingTitle = selectedId
+    ? ((nodes.find((n) => n.id === selectedId)?.data?.story as StoryNode | undefined)?.title ?? '')
+    : ''
   useEffect(() => {
-    const title = selectedId
-      ? ((nodes.find((n) => n.id === selectedId)?.data?.story as StoryNode | undefined)?.title ?? '')
-      : ''
-    realtime.sendEdit(selectedId, title)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId])
+    realtime.sendEdit(selectedId, editingTitle)
+  }, [selectedId, editingTitle])
   useEffect(
     () => () => {
       realtime.sendEdit(null)

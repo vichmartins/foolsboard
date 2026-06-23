@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.67.2
+
+- The "editing …" status now follows the object's real name. Renaming a
+  freshly-created object (default "New object") updates the badge for
+  collaborators instead of staying stuck on "New object".
+
 ## v0.67.1
 
 - The explorer is now **resizable** — drag its right edge. The width is clamped
