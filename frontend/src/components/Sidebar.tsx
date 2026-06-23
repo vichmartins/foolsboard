@@ -586,7 +586,7 @@ export default function Sidebar(props: Props) {
       <input
         className="tree-input"
         autoFocus
-        placeholder={creating.kind === 'folder' ? 'Folder name' : 'Board name'}
+        placeholder={creating.kind === 'folder' ? 'Folder Name' : 'Board Name'}
         value={createName}
         onChange={(e) => setCreateName(e.target.value)}
         onKeyDown={(e) => {
@@ -653,7 +653,7 @@ export default function Sidebar(props: Props) {
               <input
                 className="tree-input tree-input--cat"
                 autoFocus
-                placeholder="Category name"
+                placeholder="Category Name"
                 value={catName}
                 onChange={(e) => setCatName(e.target.value)}
                 onKeyDown={(e) => {

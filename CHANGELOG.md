@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.66.4
+
+- Explorer create inputs now use title-case placeholders ("Board Name", "Folder
+  Name", "Category Name").
+- On a board shared *with* you, the top-bar Share button is now hidden (it was
+  faded/disabled) — matching how Delete is hidden, since you can't share a board
+  you don't own.
+
 ## v0.66.3
 
 - Remote cursors are now smoothed the same way as nodes (eased toward the latest

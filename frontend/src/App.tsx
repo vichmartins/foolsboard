@@ -576,18 +576,20 @@ function Workspace() {
           >
             <MergeIcon />
           </button>
-          <button
-            className="icon-btn"
-            title={activeBoard?.shared ? 'Only the owner can share' : 'Share'}
-            aria-label="Share"
-            onClick={() =>
-              activeBoard &&
-              setShareTarget({ type: 'board', id: activeBoard.id, name: activeBoard.name })
-            }
-            disabled={!activeBoard || activeBoard.shared}
-          >
-            <ShareIcon />
-          </button>
+          {!activeBoard?.shared && (
+            <button
+              className="icon-btn"
+              title="Share"
+              aria-label="Share"
+              onClick={() =>
+                activeBoard &&
+                setShareTarget({ type: 'board', id: activeBoard.id, name: activeBoard.name })
+              }
+              disabled={!activeBoard}
+            >
+              <ShareIcon />
+            </button>
+          )}
           {activeBoard?.shared && (
             <>
               <button
