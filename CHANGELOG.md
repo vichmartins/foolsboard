@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.71.2
+
+- Image nodes on the canvas are now transparent-aware: a PNG/WebP with
+  transparency shows the canvas through it instead of a filled card.
+- Gallery: long media filenames truncate with an ellipsis instead of spilling
+  past their tile.
+- Gallery: link preview cards use a fixed landscape thumbnail, so wide images
+  are no longer cropped to a thin squished slice.
+
 ## v0.71.1
 
 - Multi-select now reads clearly on the **active board** too: a selected row

@@ -1400,6 +1400,18 @@
   border-radius: 8px;
   object-fit: contain;
 }
+/* An image node is just the image -- no card background, so a transparent PNG/
+   WebP shows the canvas through it instead of a filled rectangle. */
+.media-node--image {
+  background: transparent;
+  padding: 0;
+  gap: 2px;
+}
+.media-node--image .media-node__caption {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg-elev-2) 80%, transparent);
+}
 .media-node__video {
   display: block;
   max-width: 320px;
@@ -5129,6 +5141,8 @@ button.merge-tree__chev {
   letter-spacing: 0.04em;
 }
 .gallery-media__name {
+  min-width: 0;
+  max-width: 100%;
   font-size: 12px;
   font-weight: 600;
   color: var(--text);
@@ -5230,7 +5244,7 @@ button.merge-tree__chev {
   min-width: 0;
   display: flex;
   gap: 10px;
-  align-items: stretch;
+  align-items: center;
   background: var(--bg-elev-2);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -5241,6 +5255,15 @@ button.merge-tree__chev {
 }
 .gallery-link:hover {
   background: var(--bg-hover);
+}
+/* Fixed landscape thumbnail so wide previews aren't cropped to a thin slice. */
+.gallery-link .ref-card__img {
+  width: 104px;
+  height: 66px;
+  min-height: 0;
+  flex: none;
+  margin: 8px 0 8px 8px;
+  border-radius: 8px;
 }
 .gallery-link .ref-card__body {
   padding: 8px 12px 8px 0;
