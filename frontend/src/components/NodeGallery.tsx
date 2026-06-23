@@ -412,7 +412,7 @@ export default function NodeGallery({
                     >
                       <span className="gallery-media__thumb">
                         {thumb ? (
-                          <img src={thumb} loading="lazy" alt="" />
+                          <img src={thumb} loading="lazy" alt="" draggable={false} />
                         ) : (
                           <span className="gallery-media__badge">{badge}</span>
                         )}

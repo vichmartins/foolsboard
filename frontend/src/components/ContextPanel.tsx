@@ -404,6 +404,7 @@ export default function ContextPanel({
                       src={a.url ?? ''}
                       alt={a.filename}
                       className="media-tile__img"
+                      draggable={false}
                       onMouseEnter={(e) => showPreview(e, a.url)}
                       onMouseLeave={() => setPreview(null)}
                     />
@@ -411,7 +412,12 @@ export default function ContextPanel({
 
                   {k === 'video' &&
                     (a.thumbnail_url ? (
-                      <img src={a.thumbnail_url} alt={a.filename} className="media-tile__img" />
+                      <img
+                        src={a.thumbnail_url}
+                        alt={a.filename}
+                        className="media-tile__img"
+                        draggable={false}
+                      />
                     ) : (
                       <span className="media-tile__placeholder">🎬</span>
                     ))}
@@ -419,7 +425,12 @@ export default function ContextPanel({
 
                   {k === 'audio' &&
                     (a.thumbnail_url ? (
-                      <img src={a.thumbnail_url} alt={a.filename} className="media-tile__img" />
+                      <img
+                        src={a.thumbnail_url}
+                        alt={a.filename}
+                        className="media-tile__img"
+                        draggable={false}
+                      />
                     ) : (
                       <span className="media-tile__placeholder">♪</span>
                     ))}
