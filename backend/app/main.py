@@ -39,8 +39,8 @@ from .security import decode_token
 
 app = FastAPI(title="foolsboard API", version="0.4.0")
 
-# Content-Security-Policy. Shipped Report-Only first so we can confirm nothing is
-# wrongly blocked on a real deploy before switching it to enforcing. script-src
+# Content-Security-Policy. Now enforced (was Report-Only through v0.73.0, which
+# confirmed no legitimate resource was wrongly blocked on a real deploy). script-src
 # stays 'self' (the SPA loads only same-origin bundles -- no inline scripts);
 # style-src allows inline styles (React/React Flow set them); img-src allows
 # external link-preview thumbnails; connect-src 'self' covers the API + the
@@ -78,7 +78,7 @@ async def _security_headers(request: Request, call_next):
     h.setdefault("X-Content-Type-Options", "nosniff")
     h.setdefault("X-Frame-Options", "DENY")
     h.setdefault("Referrer-Policy", "no-referrer")
-    h.setdefault("Content-Security-Policy-Report-Only", _CSP)
+    h.setdefault("Content-Security-Policy", _CSP)
     if request.url.path.startswith(settings.storage_public_url):
         ct = h.get("content-type", "").split(";", 1)[0].strip().lower()
         if ct in _RISKY_MEDIA_TYPES:

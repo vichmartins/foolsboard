@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.73.1
+
+- improve: **Content-Security-Policy is now enforced** (it ran in monitor-only
+  mode through v0.73.0 with no violations). The browser now blocks any
+  script/resource that isn't from an approved same-origin source, hardening the
+  app against injected-code (XSS) attacks.
+
 ## v0.73.0
 
 - feat: **"What's New" dialog** — after an update, the first time you open the app
