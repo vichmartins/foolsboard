@@ -1322,7 +1322,12 @@ function CanvasInner({
       setDragKind('ready')
     }
     const onOver = (e: DragEvent) => {
-      if (droppable(e)) e.preventDefault() // required to allow a drop
+      if (!droppable(e)) return
+      e.preventDefault() // required to allow a drop
+      // Mark the drop as a copy so a real drop reports dropEffect 'copy' on
+      // dragend, while a right-click/Esc cancel reports 'none' (lets the gallery
+      // tell a cancel from a placement).
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
     }
     const onLeave = (e: DragEvent) => {
       if (!droppable(e)) return

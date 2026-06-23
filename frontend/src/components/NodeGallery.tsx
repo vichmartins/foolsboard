@@ -405,9 +405,12 @@ export default function NodeGallery({
                         setAssetDragData(e.dataTransfer, a)
                         setDragging(true)
                       }}
-                      onDragEnd={() => {
+                      onDragEnd={(e) => {
                         setDragging(false)
-                        onClose()
+                        // Right-click / Esc cancels the drag (dropEffect 'none');
+                        // keep the gallery open in that case. Only close after a
+                        // real placement onto the canvas.
+                        if (e.dataTransfer.dropEffect !== 'none') onClose()
                       }}
                       title={`View ${a.filename} · drag onto the canvas to place it`}
                     >

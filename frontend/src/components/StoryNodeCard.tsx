@@ -17,6 +17,7 @@ import {
   mediaKind,
   OBJECT_COLOR,
   safeHref,
+  setAssetDragData,
   TYPE_FIELDS,
   typeLabel,
   type Asset,
@@ -178,7 +179,9 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
                     type="button"
                     className="story-node__thumb nodrag"
                     key={a.id}
-                    title={a.filename}
+                    title={`${a.filename} · drag onto the canvas to place it`}
+                    draggable
+                    onDragStart={(e) => setAssetDragData(e.dataTransfer, a)}
                     onClick={(e) => {
                       e.stopPropagation()
                       setGalleryIndex(i)
@@ -186,7 +189,7 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
                     onDoubleClick={(e) => e.stopPropagation()}
                   >
                     {thumb ? (
-                      <img src={thumb} alt="" loading="lazy" />
+                      <img src={thumb} alt="" loading="lazy" draggable={false} />
                     ) : (
                       <span className="story-node__thumb-ph">
                         {k === 'audio' ? '♪' : fileExt(a.filename) || 'FILE'}
