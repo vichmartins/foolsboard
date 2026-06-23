@@ -1126,6 +1126,15 @@
   pointer-events: none;
   z-index: 6;
 }
+/* Selection/edit outlines live here, in flow coordinates; the container carries
+   the pan/zoom so the outlines don't re-lay-out (or lag) while you pan. */
+.collab-flow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
 .collab-cursor {
   position: absolute;
   top: 0;
@@ -1184,10 +1193,10 @@
 }
 
 /* Smooth remote movement: interpolate the transform between the samples we
-   receive (~30 fps) so collaborators' cursors, selection/edit outlines, and
-   nodes glide instead of jumping. The node I'm actively dragging opts out
-   (React Flow's .dragging) so my own drag stays exactly 1:1 with my pointer. */
-.collab-cursor,
+   receive (~30 fps) so collaborators' selection/edit outlines and nodes glide
+   instead of jumping. The node I'm actively dragging opts out (React Flow's
+   .dragging) so my own drag stays exactly 1:1 with my pointer. Remote cursors
+   are driven by a jitter buffer (CollabLayer) rather than a CSS transition. */
 .collab-select,
 .collab-edit {
   transition: transform 80ms linear;

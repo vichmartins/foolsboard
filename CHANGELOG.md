@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.66.0
+
+- **Jitter buffer for remote cursors.** Other people's cursors now play back from
+  a short (~100ms) buffer on a steady animation-frame loop and interpolate
+  between samples, so they stay smooth even when packets arrive unevenly (e.g. a
+  collaborator on a distant/jittery connection). Cursor position updates no
+  longer re-render React each sample.
+- Remote selection/edit outlines moved into a viewport-transformed layer, so they
+  glide with a dragged node but no longer lag while you pan/zoom.
+
 ## v0.65.0
 
 - **Smoother live collaboration.** Other people's cursors, selection/edit

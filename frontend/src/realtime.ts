@@ -21,6 +21,8 @@ export interface RemoteCursor {
   color: string
   x: number
   y: number
+  // Recent (receive-time, flow-coord) samples for jitter-buffered playback.
+  samples: { t: number; x: number; y: number }[]
 }
 
 export interface RemoteSelection {
@@ -222,14 +224,30 @@ class Realtime {
       this.emitCollab()
       this.emitEdit()
     } else if (msg.type === 'cursor') {
-      ;(this.cursors[board] ??= {})[msg.user_id] = {
-        userId: msg.user_id,
-        username: msg.username,
-        color: msg.color,
-        x: msg.x,
-        y: msg.y,
+      const map = (this.cursors[board] ??= {})
+      const t = performance.now()
+      const cur = map[msg.user_id]
+      if (cur) {
+        cur.x = msg.x
+        cur.y = msg.y
+        cur.username = msg.username
+        cur.color = msg.color
+        cur.samples.push({ t, x: msg.x, y: msg.y })
+        // Keep ~1s of history (and always a couple to interpolate between).
+        while (cur.samples.length > 3 && t - cur.samples[0].t > 1000) cur.samples.shift()
+        // No emit: the playback loop reads samples live, so position updates
+        // don't trigger a React re-render (only join/leave/color changes do).
+      } else {
+        map[msg.user_id] = {
+          userId: msg.user_id,
+          username: msg.username,
+          color: msg.color,
+          x: msg.x,
+          y: msg.y,
+          samples: [{ t, x: msg.x, y: msg.y }],
+        }
+        this.emitCollab() // a new cursor appeared -> render its element
       }
-      this.emitCollab()
     } else if (msg.type === 'select') {
       const map = (this.selections[board] ??= {})
       if (msg.node_ids?.length) {
@@ -382,6 +400,12 @@ class Realtime {
       ...c,
       color: colors[c.userId] ?? c.color,
     }))
+  }
+
+  // Live sample buffer for one cursor (read each frame by the playback loop).
+  cursorSamples(boardId: string | null, uid: string): { t: number; x: number; y: number }[] {
+    if (!boardId) return []
+    return this.cursors[boardId]?.[uid]?.samples ?? []
   }
 
   selectionsFor(boardId: string | null): RemoteSelection[] {
