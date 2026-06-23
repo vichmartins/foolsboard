@@ -11,6 +11,7 @@ import {
   fileExt,
   KIND_COLORS,
   mediaKind,
+  isMediaNodeType,
   nodePreview,
   OBJECT_COLOR,
   safeHref,
@@ -382,18 +383,34 @@ export default function NodeGallery({
                       </span>
                       <span className="gallery-media__name">{a.filename}</span>
                     </button>
-                    <span className="gallery-media__owner">
-                      in
-                      <button
-                        type="button"
-                        className="gallery-media__owner-link"
-                        onClick={() => pickNode(bid, a.node_id)}
-                        title={`Go to ${ownerName(a.node_id)}`}
-                      >
-                        {ownerName(a.node_id)}
-                      </button>
-                      {tag(bid)}
-                    </span>
+                    {isMediaNodeType(nodeById.get(a.node_id)?.type) ? (
+                      // Standalone media placed straight on a board (not inside an
+                      // object): show which board it lives on.
+                      <span className="gallery-media__owner">
+                        on
+                        <button
+                          type="button"
+                          className="gallery-media__owner-link"
+                          onClick={() => pickNode(bid, a.node_id)}
+                          title={`Go to ${boardName.get(bid) || 'board'}`}
+                        >
+                          {boardName.get(bid) || 'Board'}
+                        </button>
+                      </span>
+                    ) : (
+                      <span className="gallery-media__owner">
+                        in
+                        <button
+                          type="button"
+                          className="gallery-media__owner-link"
+                          onClick={() => pickNode(bid, a.node_id)}
+                          title={`Go to ${ownerName(a.node_id)}`}
+                        >
+                          {ownerName(a.node_id)}
+                        </button>
+                        {tag(bid)}
+                      </span>
+                    )}
                   </div>
                 )
               })}

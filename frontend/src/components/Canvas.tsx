@@ -157,8 +157,16 @@ function CanvasInner({
   focusNodeId,
   onFocusHandled,
 }: CanvasProps) {
-  const { screenToFlowPosition, getNodes, getEdges, getZoom, setCenter, fitView, deleteElements } =
-    useReactFlow()
+  const {
+    screenToFlowPosition,
+    getNodes,
+    getEdges,
+    getZoom,
+    setCenter,
+    fitView,
+    deleteElements,
+    getIntersectingNodes,
+  } = useReactFlow()
 
   // --- Live collaboration: broadcast my cursor + selection to others ---------
   const lastCursorSent = useRef(0)
@@ -512,6 +520,54 @@ function CanvasInner({
     (_: unknown, node: Node) => {
       isDragging.current = false
       broadcastMove(false) // send the settled positions
+
+      // Dropped a media node onto an object? File its media into that object's
+      // Media section and remove the canvas node. referenceAssets dedups by
+      // content, so an already-present file just makes the node disappear.
+      const dragged = node.data?.story as StoryNode | undefined
+      const assetId =
+        dragged?.type === 'media'
+          ? (dragged.content as Record<string, unknown> | undefined)?.assetId
+          : undefined
+      if (typeof assetId === 'string') {
+        const dim = (n: Node) => ({
+          w: n.measured?.width ?? (n.width as number | undefined) ?? 0,
+          h: n.measured?.height ?? (n.height as number | undefined) ?? 0,
+        })
+        const self = dim(node)
+        const cx = node.position.x + self.w / 2
+        const cy = node.position.y + self.h / 2
+        const target = getIntersectingNodes(node).find((o) => {
+          const t = (o.data?.story as StoryNode | undefined)?.type
+          if (t === undefined || isMediaNodeType(t)) return false
+          const b = dim(o)
+          return cx >= o.position.x && cx <= o.position.x + b.w && cy >= o.position.y && cy <= o.position.y + b.h
+        })
+        if (target) {
+          dragStartPos.current = null
+          const mediaNodeId = node.id
+          const objId = target.id
+          setNodes((nds) => nds.filter((n) => n.id !== mediaNodeId)) // optimistic
+          setSelectedId(null)
+          void (async () => {
+            // Copy the file onto the object BEFORE deleting the media node, so
+            // its shared storage isn't removed out from under the new reference.
+            try {
+              await api.referenceAssets(objId, [assetId])
+            } catch {
+              /* keep going -- still remove the node */
+            }
+            try {
+              await api.deleteNode(boardId, mediaNodeId)
+            } catch {
+              /* ignore */
+            }
+            markDirty()
+          })()
+          return
+        }
+      }
+
       const before = dragStartPos.current
       dragStartPos.current = null
       const ids = before ? [...before.keys()] : [node.id]
@@ -534,7 +590,7 @@ function CanvasInner({
         }
       }
     },
-    [boardId, getNodes, pushUndo, applyPositions],
+    [boardId, getNodes, pushUndo, applyPositions, getIntersectingNodes, markDirty],
   )
 
   // --- Clipboard actions (copy / cut / paste / duplicate) ------------------
