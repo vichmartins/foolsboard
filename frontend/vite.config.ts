@@ -6,6 +6,10 @@ const pkg = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
 ) as { version: string }
 
+// The repo CHANGELOG, baked into the bundle so the in-app "What's New" dialog can
+// render it (read here at build time -- avoids importing a file outside the root).
+const changelog = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8')
+
 // Emit a tiny version.json into the build so a running tab can detect when a
 // newer version has been deployed (see useUpdateAvailable).
 const emitVersion: Plugin = {
@@ -26,6 +30,7 @@ export default defineConfig({
   // Bake the build version into the bundle for the update check.
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
+    __CHANGELOG__: JSON.stringify(changelog),
   },
   server: {
     // Bind all interfaces (0.0.0.0 + ::) so the dev app is reachable from other

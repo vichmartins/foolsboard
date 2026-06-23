@@ -3384,6 +3384,61 @@ button.media-name:hover {
   gap: 14px;
   animation: dialog-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.25) forwards;
 }
+/* "What's New" changelog dialog. */
+.dialog.whatsnew {
+  width: min(560px, calc(100vw - 48px));
+  max-height: min(78vh, 720px);
+  gap: 0;
+}
+.whatsnew__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.whatsnew__ver {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.whatsnew__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.whatsnew__relver {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.whatsnew__list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+}
+.whatsnew__list code {
+  font-size: 12px;
+  background: var(--bg-elev-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.whatsnew__actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
 @keyframes dialog-in {
   from {
     opacity: 0;

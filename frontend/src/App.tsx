@@ -3,6 +3,7 @@ import * as api from './api'
 import { useAuth } from './auth'
 import AccountDialog from './components/AccountDialog'
 import PreferencesDialog from './components/PreferencesDialog'
+import WhatsNewDialog from './components/WhatsNewDialog'
 import AdminPanel from './components/AdminPanel'
 import BoardSelect from './components/BoardSelect'
 import CategorySelect from './components/CategorySelect'
@@ -90,6 +91,13 @@ function Workspace() {
   const [accountOpen, setAccountOpen] = useState(false)
   const [prefsOpen, setPrefsOpen] = useState(false)
   const [adminOpen, setAdminOpen] = useState(false)
+  // Show the "What's New" dialog once after the app updates to a new version.
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false)
+  useEffect(() => {
+    if (localStorage.getItem('foolsboard:changelogSeen') !== __APP_VERSION__) {
+      setWhatsNewOpen(true)
+    }
+  }, [])
   const [impexOpen, setImpexOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
   // Source boards to merge into the active board; handed to Canvas to import.
@@ -941,6 +949,14 @@ function Workspace() {
 
       {accountOpen && <AccountDialog onClose={() => setAccountOpen(false)} />}
       {prefsOpen && <PreferencesDialog onClose={() => setPrefsOpen(false)} />}
+      {whatsNewOpen && (
+        <WhatsNewDialog
+          onClose={() => {
+            localStorage.setItem('foolsboard:changelogSeen', __APP_VERSION__)
+            setWhatsNewOpen(false)
+          }}
+        />
+      )}
       {adminOpen && <AdminPanel onClose={() => setAdminOpen(false)} />}
       {impexOpen && (
         <ImportExportDialog

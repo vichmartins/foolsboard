@@ -1,11 +1,45 @@
 # Changelog
 
+## v0.73.0
+
+- **"What's New" dialog.** After an update, the first time you open the app you
+  get a changelog popup of what changed, scrollable through the full history.
+  Dismiss with "Got it"; it won't show again until the next update.
+
+## v0.72.22
+
+- **Reliable media drag-and-drop onto the canvas** — from your computer's files,
+  the Gallery, an object's Media section, the media drawer, and an expanded
+  card's preview. Press Esc to cancel an in-progress drag.
+- Zoom the canvas out much further to take in a whole large board.
+
+## v0.72.6
+
+- **Download media** from anywhere it appears: a canvas media node, an object's
+  Media section, the drawer, the Gallery, and the node right-click menu.
+
+## v0.72.5
+
+- **Resize media nodes** (images, video, audio) by dragging the corner grip; the
+  node frame grows with the media so it no longer overflows its box.
+
+## v0.72.3
+
+- Drop a media node onto an object to **file it into that object's Media** (it
+  vanishes from the canvas; duplicates are skipped).
+- Standalone media placed straight on a board now shows **which board it's on**
+  in the Gallery.
+
+## v0.72.1
+
+- **Rename media** from the canvas and the Gallery (on top of the Media section
+  and drawer).
+
 ## v0.72.0
 
 - **Pink Mode.** A third theme (alongside Dark and Light) with a vivid pink
   accent (#F611FF) and a deep-magenta palette. The top-bar theme button now
   cycles Dark → Light → Pink.
-
 
 ## v0.71.3
 
