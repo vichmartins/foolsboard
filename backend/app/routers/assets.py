@@ -187,6 +187,13 @@ def upload_asset(
         # re-compression). Only match finished assets so we never reference a
         # storage_key that a background pass is still about to swap.
         content_hash = _hash_file(src_path)
+        # Never attach the same content to a node twice -- if it's already here,
+        # return the existing asset instead of adding a duplicate row.
+        dup = db.scalars(
+            select(Asset).where(Asset.node_id == node_id, Asset.content_hash == content_hash)
+        ).first()
+        if dup is not None:
+            return _to_out(dup)
         existing = db.scalars(
             select(Asset)
             .where(Asset.content_hash == content_hash, Asset.processing.is_(False))
@@ -272,6 +279,10 @@ def reference_assets(
     """Attach existing media (from other nodes) to this node by sharing their
     stored files -- the dedup mechanism, keyed by asset id instead of an upload.
     Lets the UI pull a nearby node's media into the node being edited instantly."""
+    # Content already on this node, so we never reference a duplicate of it.
+    have: set[str | None] = set(
+        db.scalars(select(Asset.content_hash).where(Asset.node_id == node.id))
+    )
     created: list[Asset] = []
     for source_id in payload.asset_ids:
         src = db.get(Asset, source_id)
@@ -284,6 +295,9 @@ def reference_assets(
         src_board = db.get(Board, src_node.board_id)
         if src_board is None or src_board.owner_id != user.id:
             continue
+        if src.content_hash in have:
+            continue  # already attached to this node
+        have.add(src.content_hash)
         created.append(
             Asset(
                 node_id=node.id,

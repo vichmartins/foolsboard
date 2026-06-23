@@ -123,7 +123,10 @@ export default function ContextPanel({
   // via dedup -- instant, persisted immediately like an upload).
   async function addReferencedMedia(assetIds: string[]) {
     const added = await referenceAssets(node.id, assetIds)
-    setAssets((prev) => [...prev, ...added])
+    setAssets((prev) => {
+      const have = new Set(prev.map((a) => a.id))
+      return [...prev, ...added.filter((a) => !have.has(a.id))]
+    })
   }
 
   // Pull reference links from a nearby node into this node's References (saved
@@ -184,7 +187,7 @@ export default function ContextPanel({
       const asset = await uploadAsset(node.id, file, (pct) =>
         setUploads((u) => u.map((x) => (x.id === uploadId ? { ...x, progress: pct } : x))),
       )
-      setAssets((prev) => [...prev, asset])
+      setAssets((prev) => (prev.some((a) => a.id === asset.id) ? prev : [...prev, asset]))
     } catch (e) {
       // Backstop: the server also enforces limits (e.g. when the browser didn't
       // report a type), so surface its message too.

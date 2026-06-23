@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.67.0
+
+- **No duplicate media.** Adding the same file to a node again (re-upload or
+  pulling it from a nearby node) no longer creates a second copy — the node keeps
+  one entry per distinct file.
+
 ## v0.66.4
 
 - Explorer create inputs now use title-case placeholders ("Board Name", "Folder
