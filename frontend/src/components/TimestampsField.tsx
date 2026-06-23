@@ -1,7 +1,7 @@
 // Timestamps: YouTube (or any) links that point at a specific moment via a ?t=
 // parameter. Like References, we fetch a rich preview; we also parse the time out
 // of the URL and show it as a badge. A universal field, on every object type.
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fetchLinkPreview } from '../api'
 import { safeHref, type LinkRef } from '../types'
 
@@ -58,6 +58,38 @@ export default function TimestampsField({ value, onChange }: Props) {
   const stamps = toStamps(value)
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Self-heal: entries saved before link previews worked have a URL but no
+  // title/thumbnail. Re-fetch their previews once and fold the metadata back in.
+  const valueRef = useRef(value)
+  valueRef.current = value
+  const staleKey = stamps
+    .filter((r) => !r.title && !r.image)
+    .map((r) => r.url)
+    .join('\n')
+  useEffect(() => {
+    if (!staleKey) return
+    let cancelled = false
+    Promise.all(
+      staleKey
+        .split('\n')
+        .map((u) => fetchLinkPreview(u).then((meta) => ({ u, meta })).catch(() => null)),
+    ).then((results) => {
+      if (cancelled) return
+      const byUrl = new Map<string, LinkRef>()
+      for (const r of results) if (r && (r.meta.title || r.meta.image)) byUrl.set(r.u, r.meta)
+      if (byUrl.size === 0) return
+      onChange(
+        toStamps(valueRef.current).map((r) =>
+          !r.title && !r.image && byUrl.has(r.url) ? { ...byUrl.get(r.url)!, url: r.url } : r,
+        ),
+      )
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [staleKey])
 
   async function add() {
     const u = normalizeUrl(url)

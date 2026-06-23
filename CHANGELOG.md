@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.69.1
+
+- Timestamps saved before the YouTube preview fix (URL but no thumbnail/title)
+  now self-heal: the field re-fetches the preview on open and fills it in. Save
+  to keep it.
+
 ## v0.69.0
 
 - **YouTube link previews now work** (References and Timestamps): titles and
