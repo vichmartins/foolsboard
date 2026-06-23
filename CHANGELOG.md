@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.67.3
+
+- Dragging a media item that's already attached to an object no longer pops the
+  "Drop to add media" upload overlay. Only real files dragged in from outside the
+  app trigger it now (internal drags are detected via dragstart).
+
 ## v0.67.2
 
 - The "editing …" status now follows the object's real name. Renaming a

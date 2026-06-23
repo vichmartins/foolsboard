@@ -1077,8 +1077,19 @@ function CanvasInner({
   // File drag-and-drop onto the app. While a panel is open, dropping uploads to
   // that object; otherwise we only show a hint and never upload.
   useEffect(() => {
+    // An in-app drag (a media thumbnail, an explorer item, a node) fires a
+    // dragstart in the page; a real OS-file drag does not. Chromium reports
+    // 'Files' even for an <img> being dragged, so without this flag dragging an
+    // existing media item would wrongly pop the "drop to add media" overlay.
+    let internalDrag = false
     const hasFiles = (e: DragEvent) =>
-      Array.from(e.dataTransfer?.types ?? []).includes('Files')
+      !internalDrag && Array.from(e.dataTransfer?.types ?? []).includes('Files')
+    const onDragStart = () => {
+      internalDrag = true
+    }
+    const onDragEnd = () => {
+      internalDrag = false
+    }
     // A modal (e.g. the import dialog) handles its own drops -- don't hijack them.
     const modalOpen = () => document.querySelector('.overlay') !== null
     let depth = 0
@@ -1105,11 +1116,15 @@ function CanvasInner({
         setDroppedFiles(Array.from(e.dataTransfer.files))
       }
     }
+    window.addEventListener('dragstart', onDragStart)
+    window.addEventListener('dragend', onDragEnd)
     window.addEventListener('dragenter', onEnter)
     window.addEventListener('dragover', onOver)
     window.addEventListener('dragleave', onLeave)
     window.addEventListener('drop', onDrop)
     return () => {
+      window.removeEventListener('dragstart', onDragStart)
+      window.removeEventListener('dragend', onDragEnd)
       window.removeEventListener('dragenter', onEnter)
       window.removeEventListener('dragover', onOver)
       window.removeEventListener('dragleave', onLeave)
