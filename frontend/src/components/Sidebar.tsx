@@ -597,10 +597,45 @@ export default function Sidebar(props: Props) {
       />
     ) : null
 
+  // --- resizable width (drag the right edge), clamped + remembered -----------
+  const SB_MIN = 200
+  const SB_MAX = 480
+  const [width, setWidth] = useState(() => {
+    const saved = Number(localStorage.getItem('foolsboard:sidebarW'))
+    return saved >= SB_MIN && saved <= SB_MAX ? saved : 264
+  })
+  const widthRef = useRef(width)
+  widthRef.current = width
+  const [resizing, setResizing] = useState(false)
+  const resizeStart = useRef<{ x: number; w: number } | null>(null)
+  const onResizeDown = (e: React.PointerEvent) => {
+    e.preventDefault()
+    resizeStart.current = { x: e.clientX, w: widthRef.current }
+    setResizing(true)
+    document.body.style.userSelect = 'none'
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  const onResizeMove = (e: React.PointerEvent) => {
+    const s = resizeStart.current
+    if (!s) return
+    setWidth(Math.max(SB_MIN, Math.min(SB_MAX, s.w + (e.clientX - s.x))))
+  }
+  const onResizeUp = () => {
+    if (!resizeStart.current) return
+    resizeStart.current = null
+    setResizing(false)
+    document.body.style.userSelect = ''
+    localStorage.setItem('foolsboard:sidebarW', String(widthRef.current))
+  }
+
   return (
     <>
-      <aside className={'sidebar' + (open ? '' : ' sidebar--collapsed')} aria-hidden={!open}>
-        <div className="sidebar__inner">
+      <aside
+        className={'sidebar' + (open ? '' : ' sidebar--collapsed')}
+        aria-hidden={!open}
+        style={{ width: open ? width : 0, transition: resizing ? 'none' : undefined }}
+      >
+        <div className="sidebar__inner" style={{ width }}>
           <div className="sidebar__head">
             <span className="sidebar__title">Explorer</span>
             <div className="sidebar__actions">
@@ -790,6 +825,15 @@ export default function Sidebar(props: Props) {
             })}
           </div>
         </div>
+        {open && (
+          <div
+            className="sidebar__resize"
+            title="Drag to resize"
+            onPointerDown={onResizeDown}
+            onPointerMove={onResizeMove}
+            onPointerUp={onResizeUp}
+          />
+        )}
       </aside>
 
       {menu && (

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.67.1
+
+- The explorer is now **resizable** — drag its right edge. The width is clamped
+  (can't be dragged too narrow) and remembered across sessions.
+
 ## v0.67.0
 
 - **No duplicate media.** Adding the same file to a node again (re-upload or
