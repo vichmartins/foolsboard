@@ -3418,17 +3418,46 @@ button.media-name:hover {
   font-weight: 700;
   color: var(--accent);
 }
+.whatsnew__legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.whatsnew__key {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
 .whatsnew__list {
-  margin: 0;
-  padding-left: 18px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
+}
+.whatsnew__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
   font-size: 13px;
   line-height: 1.45;
   color: var(--text);
 }
-.whatsnew__list code {
+.whatsnew__icon {
+  flex: none;
+  display: inline-flex;
+  margin-top: 1px;
+}
+.whatsnew__icon svg {
+  width: 15px;
+  height: 15px;
+}
+.whatsnew__text {
+  min-width: 0;
+}
+.whatsnew__text code {
   font-size: 12px;
   background: var(--bg-elev-2);
   padding: 1px 5px;

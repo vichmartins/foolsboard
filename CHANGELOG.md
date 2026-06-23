@@ -2,74 +2,73 @@
 
 ## v0.73.0
 
-- **"What's New" dialog.** After an update, the first time you open the app you
-  get a changelog popup of what changed, scrollable through the full history.
-  Dismiss with "Got it"; it won't show again until the next update.
+- feat: **"What's New" dialog** — after an update, the first time you open the app
+  you get a changelog of what changed, with icons for new features vs. fixes,
+  scrollable through the full history.
 
 ## v0.72.22
 
-- **Reliable media drag-and-drop onto the canvas** — from your computer's files,
-  the Gallery, an object's Media section, the media drawer, and an expanded
-  card's preview. Press Esc to cancel an in-progress drag.
-- Zoom the canvas out much further to take in a whole large board.
+- feat: **Drag media onto the canvas** from your computer's files, the Gallery, an
+  object's Media section, the media drawer, and an expanded card's preview.
+- feat: Press **Esc** to cancel an in-progress drag.
+- feat: Zoom the canvas out much further to take in a whole large board.
+- fix: Dragging a media tile started the browser's image drag instead of placing
+  it — tiles now drag correctly from the panel, drawer, and Gallery.
+- fix: Filesystem drops were silently rejected in Chromium (a dropEffect
+  mismatch); files now drop onto the canvas and into an object's Media reliably.
+- fix: The "Drop to place it on the canvas" overlay no longer sticks after a drop.
+- fix: The Gallery stays open when you cancel a drag instead of closing.
+
+## v0.72.9
+
+- improve: Cleaner **download** and **resize** icons that match the app's style.
 
 ## v0.72.6
 
-- **Download media** from anywhere it appears: a canvas media node, an object's
-  Media section, the drawer, the Gallery, and the node right-click menu.
+- feat: **Download media** from anywhere — a canvas node, an object's Media, the
+  drawer, the Gallery, and the node right-click menu.
 
 ## v0.72.5
 
-- **Resize media nodes** (images, video, audio) by dragging the corner grip; the
-  node frame grows with the media so it no longer overflows its box.
+- feat: **Resize** image/video/audio nodes by dragging the corner grip.
+- fix: A resized video no longer overflows its frame — the node grows with it.
+- fix: The media rename box is centered instead of stuck to the left.
 
 ## v0.72.3
 
-- Drop a media node onto an object to **file it into that object's Media** (it
-  vanishes from the canvas; duplicates are skipped).
-- Standalone media placed straight on a board now shows **which board it's on**
-  in the Gallery.
+- feat: Drop a media node onto an object to **file it into that object's Media**
+  (duplicates are skipped).
+- feat: Standalone media on a board shows **which board it's on** in the Gallery.
 
 ## v0.72.1
 
-- **Rename media** from the canvas and the Gallery (on top of the Media section
-  and drawer).
+- feat: **Rename media** from the canvas and the Gallery (on top of the Media
+  section and drawer).
 
 ## v0.72.0
 
-- **Pink Mode.** A third theme (alongside Dark and Light) with a vivid pink
-  accent (#F611FF) and a deep-magenta palette. The top-bar theme button now
-  cycles Dark → Light → Pink.
+- feat: **Pink Mode** — a third theme with a vivid pink accent (#F611FF); the
+  theme button now cycles Dark → Light → Pink.
 
 ## v0.71.3
 
-- Gallery object cards now wrap long unbroken filenames (e.g.
-  `Archmage_Sedridor_chathead.png`) within their 2-line clamp instead of
-  spilling past the card.
-- Gallery link cards have a guaranteed minimum height, so they can no longer
-  collapse into thin squished bars.
+- fix: Gallery object cards wrap long filenames instead of spilling past the card.
+- fix: Gallery link cards no longer collapse into thin squished bars.
 
 ## v0.71.2
 
-- Image nodes on the canvas are now transparent-aware: a PNG/WebP with
-  transparency shows the canvas through it instead of a filled card.
-- Gallery: long media filenames truncate with an ellipsis instead of spilling
-  past their tile.
-- Gallery: link preview cards use a fixed landscape thumbnail, so wide images
-  are no longer cropped to a thin squished slice.
+- fix: Transparent PNG/WebP image nodes show the canvas through them.
+- fix: Long media filenames in the Gallery truncate with an ellipsis.
+- fix: Wide link thumbnails are no longer cropped to a thin squished slice.
 
 ## v0.71.1
 
-- Multi-select now reads clearly on the **active board** too: a selected row
-  gets an accent ring, so Cmd/Ctrl-clicking the open board highlights it like
-  the rest of the selection instead of blending into the active tint.
+- improve: Multi-select highlight now shows clearly on the active board too.
 
 ## v0.71.0
 
-- **Multi-select in the explorer.** Cmd/Ctrl-click to add or remove items,
-  Shift-click to select a range, then drag the whole set at once to move them
-  into a category, folder, or the top level (a "N items" chip shows during the
-  drag). A plain click still opens/expands as before.
+- feat: **Multi-select in the explorer** — Cmd/Ctrl-click, Shift-click for a
+  range, then drag the whole set to move several boards/folders at once.
 
 ## v0.70.2
 
