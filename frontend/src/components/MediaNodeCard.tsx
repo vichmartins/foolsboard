@@ -5,10 +5,12 @@
 // Interactive bits (video/audio controls, the link/file anchors) are marked
 // `nodrag` so React Flow doesn't start a drag from them; the frame, caption, and
 // padding remain draggable so the node can still be moved.
-import { Fragment } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react'
+import * as api from '../api'
 import { safeHref, type StoryNode } from '../types'
 import { useAuth } from '../auth'
+import { useBoardId } from '../boardContext'
 import { collabColor } from '../collab'
 
 const SIDES: Position[] = [Position.Top, Position.Right, Position.Bottom, Position.Left]
@@ -30,10 +32,51 @@ function hostname(url: string): string {
 export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   const d = data as MediaNodeData
   const { user } = useAuth()
-  const { deleteElements } = useReactFlow()
+  const { deleteElements, getZoom } = useReactFlow()
+  const boardId = useBoardId()
   const selColor = user ? user.color ?? collabColor(user.id) : '#94a3b8'
   const content = (d.story?.content ?? {}) as Record<string, unknown>
   const str = (k: string) => (typeof content[k] === 'string' ? (content[k] as string) : '')
+
+  // Resize: a corner grip drives the media's width; height follows (aspect kept).
+  // Stored on node.width so it survives reloads.
+  const savedW =
+    typeof d.story?.width === 'number' && d.story.width > 0 ? d.story.width : undefined
+  const [width, setWidth] = useState<number | undefined>(savedW)
+  useEffect(() => setWidth(savedW), [savedW])
+  const mediaRef = useRef<HTMLElement | null>(null)
+  function startResize(e: React.PointerEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    const zoom = getZoom() || 1
+    const startX = e.clientX
+    const startW =
+      width ?? (mediaRef.current ? mediaRef.current.getBoundingClientRect().width / zoom : 240)
+    const onMove = (ev: PointerEvent) => {
+      setWidth(Math.max(60, Math.min(1600, startW + (ev.clientX - startX) / zoom)))
+    }
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      setWidth((w) => {
+        if (w) void api.updateNode(boardId, id, { width: Math.round(w) }).catch(() => {})
+        return w
+      })
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+  const sizeStyle = width
+    ? { width: `${width}px`, maxWidth: 'none' as const, maxHeight: 'none' as const }
+    : undefined
+  const resizeGrip = (
+    <div
+      className="media-node__resize nodrag"
+      title="Drag to resize"
+      onPointerDown={startResize}
+      onClick={(e) => e.stopPropagation()}
+    />
+  )
 
   const ring = {
     borderColor: selected ? selColor : 'transparent',
@@ -119,15 +162,30 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
 
   let body
   if (mk === 'image') {
-    body = <img className="media-node__img" src={url} alt={filename} draggable={false} />
+    body = (
+      <img
+        ref={(el) => {
+          mediaRef.current = el
+        }}
+        className="media-node__img"
+        src={url}
+        alt={filename}
+        draggable={false}
+        style={sizeStyle}
+      />
+    )
   } else if (mk === 'video') {
     body = (
       <video
+        ref={(el) => {
+          mediaRef.current = el
+        }}
         className="media-node__video nodrag"
         src={url}
         poster={thumb || undefined}
         controls
         preload="metadata"
+        style={sizeStyle}
       />
     )
   } else if (mk === 'audio') {
@@ -160,6 +218,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
       {handles}
       <div className="media-node__body">{body}</div>
       {mk !== 'file' && <span className="media-node__caption">{filename}</span>}
+      {(mk === 'image' || mk === 'video') && resizeGrip}
     </div>
   )
 }
