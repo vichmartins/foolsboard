@@ -1443,6 +1443,18 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.media-node__caption--edit {
+  max-width: 220px;
+  padding: 1px 5px;
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  text-align: center;
+  outline: none;
+}
 .media-node__file {
   display: flex;
   align-items: center;
@@ -5182,6 +5194,18 @@ button.merge-tree__chev {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.gallery-media__name--edit {
+  width: 100%;
+  padding: 2px 5px;
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  background: var(--bg-elev);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
 }
 .gallery-media__owner {
   display: flex;

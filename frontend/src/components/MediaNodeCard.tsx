@@ -32,11 +32,12 @@ function hostname(url: string): string {
 export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   const d = data as MediaNodeData
   const { user } = useAuth()
-  const { deleteElements, getZoom } = useReactFlow()
+  const { deleteElements, getZoom, setNodes } = useReactFlow()
   const boardId = useBoardId()
   const selColor = user ? user.color ?? collabColor(user.id) : '#94a3b8'
   const content = (d.story?.content ?? {}) as Record<string, unknown>
   const str = (k: string) => (typeof content[k] === 'string' ? (content[k] as string) : '')
+  const assetId = str('assetId')
 
   // Resize: a corner grip drives the media's width; height follows (aspect kept).
   // Stored on node.width so it survives reloads.
@@ -77,6 +78,73 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
       onClick={(e) => e.stopPropagation()}
     />
   )
+
+  // Rename: double-click the caption to edit the filename (extension stays
+  // locked, like the panel). Updates the asset + the node's cached title.
+  const filename = str('filename') || d.title || 'file'
+  const [editing, setEditing] = useState(false)
+  const [nameVal, setNameVal] = useState('')
+  function startRename() {
+    const dot = filename.lastIndexOf('.')
+    setNameVal(dot > 0 ? filename.slice(0, dot) : filename)
+    setEditing(true)
+  }
+  async function submitRename() {
+    setEditing(false)
+    const v = nameVal.trim()
+    if (!v || !assetId) return
+    try {
+      const updated = await api.renameAsset(id, assetId, v)
+      const newContent = { ...content, filename: updated.filename }
+      await api.updateNode(boardId, id, { content: newContent, title: updated.filename })
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === id
+            ? {
+                ...n,
+                data: {
+                  ...n.data,
+                  title: updated.filename,
+                  story: {
+                    ...(n.data.story as StoryNode),
+                    title: updated.filename,
+                    content: newContent,
+                  },
+                },
+              }
+            : n,
+        ),
+      )
+    } catch {
+      /* ignore */
+    }
+  }
+  const caption =
+    editing ? (
+      <input
+        className="media-node__caption media-node__caption--edit nodrag"
+        autoFocus
+        value={nameVal}
+        onChange={(e) => setNameVal(e.target.value)}
+        onPointerDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') void submitRename()
+          if (e.key === 'Escape') setEditing(false)
+        }}
+        onBlur={() => void submitRename()}
+      />
+    ) : (
+      <span
+        className="media-node__caption"
+        title="Double-click to rename"
+        onDoubleClick={(e) => {
+          e.stopPropagation()
+          startRename()
+        }}
+      >
+        {filename}
+      </span>
+    )
 
   const ring = {
     borderColor: selected ? selColor : 'transparent',
@@ -147,7 +215,6 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   // --- File-based media (image / video / audio / file) -------------------
   const mk = str('mediaKind') || 'file'
   const url = str('url')
-  const filename = str('filename') || d.title || 'file'
   const thumb = str('thumbnailUrl')
 
   // Created node before its upload finished: show a placeholder.
@@ -217,7 +284,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
     <div className={'media-node media-node--' + mk} style={ring}>
       {handles}
       <div className="media-node__body">{body}</div>
-      {mk !== 'file' && <span className="media-node__caption">{filename}</span>}
+      {mk !== 'file' && caption}
       {(mk === 'image' || mk === 'video') && resizeGrip}
     </div>
   )

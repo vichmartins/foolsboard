@@ -82,6 +82,29 @@ export default function NodeGallery({
   // While dragging a media tile to the canvas, fade the gallery and let pointers
   // through so the drop lands on the board behind it.
   const [dragging, setDragging] = useState(false)
+  // Inline rename of a media tile. `renames` overrides the shown filename so we
+  // don't have to refetch the whole gallery after renaming one asset.
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameVal, setRenameVal] = useState('')
+  const [renames, setRenames] = useState<Record<string, string>>({})
+  const displayName = (a: Asset) => renames[a.id] ?? a.filename
+  function startRename(a: Asset) {
+    const name = displayName(a)
+    const dot = name.lastIndexOf('.')
+    setRenameVal(dot > 0 ? name.slice(0, dot) : name)
+    setRenamingId(a.id)
+  }
+  async function submitRename(a: Asset) {
+    const v = renameVal.trim()
+    setRenamingId(null)
+    if (!v) return
+    try {
+      const updated = await api.renameAsset(a.node_id, a.id, v)
+      setRenames((r) => ({ ...r, [a.id]: updated.filename }))
+    } catch {
+      /* ignore */
+    }
+  }
 
   // Load every accessible board's contents once.
   useEffect(() => {
@@ -221,7 +244,9 @@ export default function NodeGallery({
         : cat === 'links'
           ? shownLinks.length
           : shownConns.length
-  const mediaAssets = shownMedia.map((m) => m.a)
+  const mediaAssets = shownMedia.map((m) =>
+    renames[m.a.id] ? { ...m.a, filename: renames[m.a.id] } : m.a,
+  )
 
   // Jump within the current board; otherwise open the item's board, targeting
   // the picked node (the source node, for a connection) so it pans there.
@@ -381,8 +406,28 @@ export default function NodeGallery({
                         )}
                         <span className="gallery-media__kind">{kind}</span>
                       </span>
-                      <span className="gallery-media__name">{a.filename}</span>
                     </button>
+                    {renamingId === a.id ? (
+                      <input
+                        className="gallery-media__name gallery-media__name--edit"
+                        autoFocus
+                        value={renameVal}
+                        onChange={(e) => setRenameVal(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void submitRename(a)
+                          if (e.key === 'Escape') setRenamingId(null)
+                        }}
+                        onBlur={() => void submitRename(a)}
+                      />
+                    ) : (
+                      <span
+                        className="gallery-media__name"
+                        title="Double-click to rename"
+                        onDoubleClick={() => startRename(a)}
+                      >
+                        {displayName(a)}
+                      </span>
+                    )}
                     {isMediaNodeType(nodeById.get(a.node_id)?.type) ? (
                       // Standalone media placed straight on a board (not inside an
                       // object): show which board it lives on.
