@@ -1,16 +1,10 @@
 # Changelog
 
-## v0.73.4
+## v0.73.5
 
-- fix: Media/link nodes now show as purple in the minimap too (they were still
-  drawn grey there).
-
-
-## v0.73.3
-
-- improve: Media nodes on the canvas (video/audio/file/link) now use a dark
-  purple card by default instead of grey.
-
+- improve: Media and link nodes carry a **purple accent** in the gallery (the
+  card's side stripe) and the minimap; their card on the canvas stays neutral
+  like every other node.
 
 ## v0.73.2
 

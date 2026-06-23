@@ -344,6 +344,10 @@ export const KIND_COLORS: Record<string, string> = {
   dialog: '#f59e0b',
   event: '#ef4444',
   note: '#64748b',
+  // Media + link nodes get a purple accent (gallery left-border, minimap dot).
+  // The node's own card on the canvas stays neutral like every other node.
+  media: '#8b5cf6',
+  link: '#8b5cf6',
 }
 
 // Neutral tag color for an untyped ("Object") node -- a lighter gray, distinct

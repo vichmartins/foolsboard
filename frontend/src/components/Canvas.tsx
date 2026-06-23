@@ -1545,11 +1545,7 @@ function CanvasInner({
           zoomable
           onClick={onMinimapClick}
           nodeColor={(n) =>
-            n.selected
-              ? myColor
-              : isMediaNodeType((n.data?.kind as string) ?? '')
-                ? '#7c5cff'
-                : KIND_COLORS[(n.data?.kind as string) ?? 'note'] ?? OBJECT_COLOR
+            n.selected ? myColor : KIND_COLORS[(n.data?.kind as string) ?? 'note'] ?? OBJECT_COLOR
           }
           nodeStrokeColor={(n) => (n.selected ? myColor : 'transparent')}
           nodeStrokeWidth={4}
