@@ -12,6 +12,7 @@ import { safeHref, type StoryNode } from '../types'
 import { useAuth } from '../auth'
 import { useBoardId } from '../boardContext'
 import { collabColor } from '../collab'
+import { DownloadIcon, ResizeGripIcon } from './icons'
 
 const SIDES: Position[] = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
@@ -76,7 +77,9 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
       title="Drag to resize"
       onPointerDown={startResize}
       onClick={(e) => e.stopPropagation()}
-    />
+    >
+      <ResizeGripIcon />
+    </div>
   )
 
   // Rename: double-click the caption to edit the filename (extension stays
@@ -225,7 +228,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
       aria-label="Download"
       onClick={(e) => e.stopPropagation()}
     >
-      ⬇
+      <DownloadIcon />
     </a>
   ) : null
 

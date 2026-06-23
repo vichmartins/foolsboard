@@ -34,6 +34,7 @@ import Gallery from './Gallery'
 import NearbyNodes from './NearbyNodes'
 import ReferencesField from './ReferencesField'
 import TimestampsField from './TimestampsField'
+import { DownloadIcon } from './icons'
 import Select from './Select'
 
 interface Props {
@@ -456,7 +457,7 @@ export default function ContextPanel({
                         downloadAsset(a)
                       }}
                     >
-                      ⬇
+                      <DownloadIcon />
                     </span>
                   )}
                   <span

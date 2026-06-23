@@ -1589,37 +1589,45 @@
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
-  font-size: 11px;
   text-decoration: none;
   opacity: 0;
   transition: opacity 0.12s ease;
+}
+.media-node__dl svg {
+  width: 12px;
+  height: 12px;
 }
 .media-node:hover .media-node__dl,
 .media-node__dl:focus-visible {
   opacity: 1;
 }
-/* Corner grip to resize image/video nodes (drag = wider, aspect preserved). */
+/* Corner grip to resize image/video/audio nodes (drag = wider, aspect kept). */
 .media-node__resize {
   position: absolute;
-  right: -3px;
-  bottom: -3px;
+  right: 2px;
+  bottom: 2px;
   z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 16px;
   height: 16px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--bg-elev) 78%, transparent);
+  color: var(--text-dim);
   cursor: nwse-resize;
-  border-radius: 0 0 8px 0;
-  background: linear-gradient(
-    135deg,
-    transparent 42%,
-    var(--accent) 42%,
-    var(--accent) 72%,
-    transparent 72%
-  );
   opacity: 0;
-  transition: opacity 0.12s ease;
+  transition: opacity 0.12s ease, color 0.12s ease;
+}
+.media-node__resize svg {
+  width: 11px;
+  height: 11px;
 }
 .media-node:hover .media-node__resize {
-  opacity: 0.95;
+  opacity: 1;
+}
+.media-node__resize:hover {
+  color: var(--accent);
 }
 
 .story-node {
@@ -3009,6 +3017,10 @@ button.media-name:hover {
 }
 .media-tile__download:hover {
   background: var(--accent);
+}
+.media-tile__download svg {
+  width: 12px;
+  height: 12px;
 }
 
 /* Floating enlarged preview shown on image hover, left of the panel */
@@ -5205,6 +5217,10 @@ button.merge-tree__chev {
 }
 .gallery-media__dl:hover {
   background: var(--accent);
+}
+.gallery-media__dl svg {
+  width: 13px;
+  height: 13px;
 }
 .gallery-media:hover {
   background: var(--bg-hover);

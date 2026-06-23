@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import * as api from '../api'
 import Gallery from './Gallery'
 import Select from './Select'
+import { DownloadIcon } from './icons'
 import {
   fileExt,
   KIND_COLORS,
@@ -392,7 +393,7 @@ export default function NodeGallery({
                         aria-label="Download"
                         onClick={() => downloadAsset({ url: a.url, filename: displayName(a) })}
                       >
-                        ⬇
+                        <DownloadIcon />
                       </button>
                     )}
                     <button

@@ -13,6 +13,17 @@ export function BoardIcon() {
   )
 }
 
+// Two diagonal strokes -- the conventional corner resize grip.
+export function ResizeGripIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+      strokeLinecap="round">
+      <path d="M21 9 L9 21" />
+      <path d="M21 15 L15 21" />
+    </svg>
+  )
+}
+
 export function PencilIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
