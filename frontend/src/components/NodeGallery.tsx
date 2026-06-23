@@ -14,6 +14,7 @@ import {
   nodePreview,
   OBJECT_COLOR,
   safeHref,
+  setAssetDragData,
   typeLabel,
   type Asset,
   type Board,
@@ -357,7 +358,13 @@ export default function NodeGallery({
                       type="button"
                       className="gallery-media__open"
                       onClick={() => setLightbox(i)}
-                      title={`View ${a.filename}`}
+                      draggable
+                      onDragStart={(e) => {
+                        setAssetDragData(e.dataTransfer, a)
+                        // Close the gallery so the drop lands on the canvas behind it.
+                        onClose()
+                      }}
+                      title={`View ${a.filename} · drag onto the canvas to place it`}
                     >
                       <span className="gallery-media__thumb">
                         {thumb ? (

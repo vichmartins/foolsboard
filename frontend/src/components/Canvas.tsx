@@ -34,12 +34,16 @@ import { clipboardHasContent, readClipboard, writeClipboard } from '../clipboard
 import { findNodeAt, nodeSize, snapToBorder } from '../edgeGeometry'
 import { toRFEdge } from '../rfMappers'
 import {
+  ASSET_DRAG_MIME,
   isMediaNodeType,
   KIND_COLORS,
   mediaKind,
   nodePreview,
   OBJECT_COLOR,
+  readAssetDragData,
   uploadSizeError,
+  type Asset,
+  type AssetDragPayload,
   type Board,
   type Category,
   type Folder,
@@ -843,11 +847,61 @@ function CanvasInner({
     [boardId, screenToFlowPosition, markDirty],
   )
 
+  // Drag an existing media tile (panel or gallery) onto the canvas -> a node
+  // referencing that asset (shared storage, no re-upload) at the drop point.
+  const createMediaNodeFromAsset = useCallback(
+    async (payload: AssetDragPayload, clientX: number, clientY: number) => {
+      const pos = screenToFlowPosition({ x: clientX, y: clientY })
+      let nodeId: string | null = null
+      try {
+        const node = await api.createNode(boardId, {
+          type: 'media',
+          title: payload.filename,
+          x: pos.x,
+          y: pos.y,
+        })
+        nodeId = node.id
+        setNodes((nds) => [...nds, toRFNode(node)])
+        setSelectedId(node.id)
+        // Give the node its own asset row sharing the file; fall back to the
+        // dragged asset's fields if referencing fails (the url is still valid).
+        let a: AssetDragPayload = payload
+        try {
+          const refs = await api.referenceAssets(node.id, [payload.id])
+          if (refs[0]) a = refs[0]
+        } catch {
+          // keep the dragged payload
+        }
+        const updated = await api.updateNode(boardId, node.id, {
+          content: {
+            assetId: a.id,
+            mediaKind: mediaKind(a as Asset),
+            url: a.url,
+            thumbnailUrl: a.thumbnail_url,
+            filename: a.filename,
+            contentType: a.content_type,
+          },
+        })
+        setNodes((nds) => nds.map((n) => (n.id === updated.id ? toRFNode(updated) : n)))
+        markDirty()
+      } catch {
+        if (nodeId) {
+          const dead = nodeId
+          setNodes((nds) => nds.filter((n) => n.id !== dead))
+          void api.deleteNode(boardId, dead).catch(() => {})
+        }
+      }
+    },
+    [boardId, screenToFlowPosition, markDirty],
+  )
+
   // The drag listeners are mounted once; read the latest creators via refs.
   const createMediaNodesAtRef = useRef(createMediaNodesAt)
   createMediaNodesAtRef.current = createMediaNodesAt
   const createLinkNodeAtRef = useRef(createLinkNodeAt)
   createLinkNodeAtRef.current = createLinkNodeAt
+  const createMediaNodeFromAssetRef = useRef(createMediaNodeFromAsset)
+  createMediaNodeFromAssetRef.current = createMediaNodeFromAsset
 
   // Gate every deletion (objects and/or connections) behind a confirm dialog.
   const onBeforeDelete = useCallback(
@@ -1171,36 +1225,41 @@ function CanvasInner({
     // 'Files' even for an <img> being dragged, so without this flag dragging an
     // existing media item would wrongly pop the "drop to add media" overlay.
     let internalDrag = false
+    // Existing media dragged from the panel/gallery carries our asset MIME; it's
+    // an internal drag, so it's allowed even though internalDrag is set.
+    const assetDrag = (e: DragEvent) =>
+      Array.from(e.dataTransfer?.types ?? []).includes(ASSET_DRAG_MIME)
     const externalDrag = (e: DragEvent) => {
       if (internalDrag) return false
       const types = Array.from(e.dataTransfer?.types ?? [])
       return types.includes('Files') || types.includes('text/uri-list')
     }
+    // A modal (e.g. the import dialog) handles its own drops -- don't hijack them.
+    const modalOpen = () => document.querySelector('.overlay') !== null
+    const droppable = (e: DragEvent) => !modalOpen() && (assetDrag(e) || externalDrag(e))
     const onDragStart = () => {
       internalDrag = true
     }
     const onDragEnd = () => {
       internalDrag = false
     }
-    // A modal (e.g. the import dialog) handles its own drops -- don't hijack them.
-    const modalOpen = () => document.querySelector('.overlay') !== null
     let depth = 0
     const onEnter = (e: DragEvent) => {
-      if (!externalDrag(e) || modalOpen()) return
+      if (!droppable(e)) return
       e.preventDefault()
       depth += 1
       setDragKind('ready')
     }
     const onOver = (e: DragEvent) => {
-      if (externalDrag(e) && !modalOpen()) e.preventDefault() // required to allow a drop
+      if (droppable(e)) e.preventDefault() // required to allow a drop
     }
     const onLeave = (e: DragEvent) => {
-      if (!externalDrag(e)) return
+      if (!droppable(e)) return
       depth = Math.max(0, depth - 1)
       if (depth === 0) setDragKind('none')
     }
     const onDrop = (e: DragEvent) => {
-      if (!externalDrag(e) || modalOpen()) return
+      if (!droppable(e)) return
       e.preventDefault() // stop the browser from opening the file
       depth = 0
       setDragKind('none')
@@ -1209,6 +1268,11 @@ function CanvasInner({
       // Dropping on the open object's panel attaches there; anywhere else on the
       // canvas places a standalone media/link node at the drop point.
       const onPanel = !!(e.target as Element | null)?.closest?.('.panel')
+      const asset = readAssetDragData(dt)
+      if (asset) {
+        if (!onPanel) void createMediaNodeFromAssetRef.current(asset, e.clientX, e.clientY)
+        return
+      }
       const files = Array.from(dt.files)
       if (files.length) {
         if (onPanel && hasPanelRef.current) setDroppedFiles(files)

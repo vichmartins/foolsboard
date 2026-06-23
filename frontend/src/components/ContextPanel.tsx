@@ -17,6 +17,7 @@ import {
   mediaKind,
   NODE_TYPES,
   OBJECT_COLOR,
+  setAssetDragData,
   TYPE_FIELDS,
   typeLabel,
   uploadSizeError,
@@ -393,6 +394,8 @@ export default function ContextPanel({
                   type="button"
                   className={`media-tile media-tile--${k}`}
                   onClick={() => setGalleryIndex(i)}
+                  draggable
+                  onDragStart={(e) => setAssetDragData(e.dataTransfer, a)}
                   title={a.filename}
                 >
                   {k === 'image' && (

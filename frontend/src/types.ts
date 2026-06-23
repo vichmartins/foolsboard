@@ -195,6 +195,40 @@ export interface MediaNodeContent {
   contentType?: string
 }
 
+// Dragging an existing media tile (from the panel or the gallery) onto the
+// canvas carries the asset under this MIME type; the canvas drop handler turns
+// it into a media node referencing that asset.
+export const ASSET_DRAG_MIME = 'application/x-foolsboard-asset'
+
+export interface AssetDragPayload {
+  id: string
+  filename: string
+  content_type: string
+  url: string | null
+  thumbnail_url: string | null
+}
+
+export function setAssetDragData(dt: DataTransfer, a: Asset): void {
+  const payload: AssetDragPayload = {
+    id: a.id,
+    filename: a.filename,
+    content_type: a.content_type,
+    url: a.url,
+    thumbnail_url: a.thumbnail_url,
+  }
+  dt.setData(ASSET_DRAG_MIME, JSON.stringify(payload))
+  dt.effectAllowed = 'copy'
+}
+
+export function readAssetDragData(dt: DataTransfer): AssetDragPayload | null {
+  try {
+    const raw = dt.getData(ASSET_DRAG_MIME)
+    return raw ? (JSON.parse(raw) as AssetDragPayload) : null
+  } catch {
+    return null
+  }
+}
+
 // A unique id. Prefers crypto.randomUUID, but falls back for insecure contexts
 // (plain-HTTP over LAN), where crypto.randomUUID is undefined and would throw.
 export function genId(): string {

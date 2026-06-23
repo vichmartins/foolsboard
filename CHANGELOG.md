@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.70.1
+
+- You can now **drag existing media onto the canvas** to place it as a node —
+  from an object's Media section or from the Gallery (which closes as you drag
+  so you can drop it where you want). The node references the same file (no
+  re-upload).
+
 ## v0.70.0
 
 - **Media on the canvas.** Drop an image, video, audio clip, or any file onto an
