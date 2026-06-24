@@ -4762,6 +4762,47 @@ button.merge-tree__chev {
 }
 
 /* Storage tab */
+.admin-storage__section {
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.admin-storage__section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.admin-storage__title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.admin-storage__retention {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+}
+.admin-storage__retention label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+}
+.admin-storage__retention input {
+  width: 80px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev-2);
+  color: var(--text);
+  font-size: 13px;
+}
+.admin-storage__daysmsg {
+  font-size: 12px;
+  color: var(--text-dim);
+}
 .admin-storage__intro {
   margin: 0 0 14px;
   font-size: 13px;

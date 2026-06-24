@@ -64,6 +64,14 @@ class Settings(BaseSettings):
     # 0 disables pruning.
     request_log_retention_days: int = 30
 
+    # --- Orphaned media retention ---
+    # Default grace period before the startup auto-sweep deletes an orphaned
+    # storage file (one no asset/thumbnail/avatar references). This is only the
+    # fallback default; admins can override it at runtime in the Admin panel
+    # (stored in app_settings). 0 disables the automatic sweep. The manual GC in
+    # the Admin panel ignores this and removes all orphans on demand.
+    orphan_retention_days: int = 90
+
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.startswith("sqlite")

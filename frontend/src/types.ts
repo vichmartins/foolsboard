@@ -155,7 +155,6 @@ export interface Asset {
   filename: string
   content_type: string
   size: number
-  storage_key: string
   url: string | null
   thumbnail_url: string | null
   processing: boolean

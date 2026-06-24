@@ -3,6 +3,7 @@
 Alembic's autogenerate and `create_all` both rely on the models being
 imported; this single import point guarantees that.
 """
+from .appsetting import AppSetting
 from .asset import Asset
 from .board import Board
 from .edge import Edge
@@ -15,6 +16,7 @@ from .user import User
 
 __all__ = [
     "ActivityLog",
+    "AppSetting",
     "Asset",
     "Board",
     "Edge",

@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.75.0
+
+- feat: Admin → Storage now has an **auto-cleanup** setting — orphaned media is
+  removed automatically once it has been unreferenced for a configurable grace
+  period (default **90 days**; set 0 to disable). The manual cleanup still
+  removes orphans of any age on demand.
+- improve: API responses are now **gzip-compressed**, so opening boards, the
+  gallery, and lists transfers far less data and loads noticeably faster —
+  especially over the internet. (Media is left uncompressed so video seeking
+  keeps working.)
+- improve: App code bundles are cached by the browser as immutable, removing a
+  revalidation round-trip per file on every load.
+- improve: Trimmed an unused field from media responses and stopped redundant
+  update-checks during reconnects.
+
+
 ## v0.74.3
 
 - feat: The "What's New" changelog is now available any time — open it from the

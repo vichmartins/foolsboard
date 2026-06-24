@@ -1,7 +1,7 @@
 // Admin > Storage: reclaim orphaned media — files left in storage that no
 // object, thumbnail, or avatar references anymore (e.g. from deletes before the
 // cleanup landed). Scanning is a safe read-only dry run; deletion is explicit.
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { apiError } from '../api'
 import * as api from '../api'
 import type { StorageGcResult } from '../api'
@@ -25,6 +25,42 @@ export default function AdminStorage() {
   const [error, setError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState(false)
   const [done, setDone] = useState<string | null>(null)
+
+  // Automatic-cleanup grace period (days). '' while loading.
+  const [days, setDays] = useState<string>('')
+  const [savedDays, setSavedDays] = useState<number | null>(null)
+  const [savingDays, setSavingDays] = useState(false)
+  const [daysMsg, setDaysMsg] = useState<string | null>(null)
+
+  useEffect(() => {
+    api
+      .getAdminSettings()
+      .then((s) => {
+        setDays(String(s.orphan_retention_days))
+        setSavedDays(s.orphan_retention_days)
+      })
+      .catch(() => {})
+  }, [])
+
+  async function saveDays() {
+    const n = Number(days)
+    if (!Number.isInteger(n) || n < 0 || n > 3650) {
+      setDaysMsg('Enter a whole number of days between 0 and 3650 (0 disables).')
+      return
+    }
+    setSavingDays(true)
+    setDaysMsg(null)
+    try {
+      const s = await api.updateAdminSettings({ orphan_retention_days: n })
+      setSavedDays(s.orphan_retention_days)
+      setDays(String(s.orphan_retention_days))
+      setDaysMsg('Saved.')
+    } catch (e) {
+      setDaysMsg(apiError(e, 'Could not save the setting'))
+    } finally {
+      setSavingDays(false)
+    }
+  }
 
   async function scan() {
     setBusy(true)
@@ -54,15 +90,51 @@ export default function AdminStorage() {
     }
   }
 
+  const dirtyDays = savedDays !== null && days !== '' && Number(days) !== savedDays
+
   return (
     <div className="admin-storage">
       {error && <div className="auth-error">{error}</div>}
       {done && <div className="admin-notice">{done}</div>}
-      <p className="admin-storage__intro">
-        Find and remove <strong>orphaned media</strong> — files still on disk that no object,
-        thumbnail, or avatar references anymore. Scanning is read-only; nothing is deleted until
-        you confirm.
-      </p>
+
+      <section className="admin-storage__section">
+        <h3 className="admin-storage__title">Automatic cleanup</h3>
+        <p className="admin-storage__intro">
+          Orphaned files older than this many days are removed automatically when the server
+          starts. Set to <strong>0</strong> to turn the automatic sweep off. This grace period does
+          not affect the manual cleanup below, which removes orphans of any age.
+        </p>
+        <div className="admin-storage__retention">
+          <label>
+            Delete orphans after
+            <input
+              type="number"
+              min={0}
+              max={3650}
+              value={days}
+              disabled={savedDays === null || savingDays}
+              onChange={(e) => setDays(e.target.value)}
+            />
+            days
+          </label>
+          <button
+            className="btn btn--primary"
+            disabled={!dirtyDays || savingDays}
+            onClick={saveDays}
+          >
+            {savingDays ? 'Saving…' : 'Save'}
+          </button>
+          {daysMsg && <span className="admin-storage__daysmsg">{daysMsg}</span>}
+        </div>
+      </section>
+
+      <section className="admin-storage__section">
+        <h3 className="admin-storage__title">Manual cleanup</h3>
+        <p className="admin-storage__intro">
+          Find and remove <strong>orphaned media</strong> — files still on disk that no object,
+          thumbnail, or avatar references anymore. Scanning is read-only; nothing is deleted until
+          you confirm.
+        </p>
       <div className="admin-storage__actions">
         <button className="btn btn--primary" disabled={busy} onClick={scan}>
           {busy && !confirm ? 'Scanning…' : 'Scan for orphans'}
@@ -104,6 +176,7 @@ export default function AdminStorage() {
           )}
         </div>
       )}
+      </section>
 
       {confirm && result && (
         <ConfirmDialog

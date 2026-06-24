@@ -182,11 +182,12 @@ class AssetOut(ORMModel):
     filename: str
     content_type: str
     size: int
-    storage_key: str
     processing: bool
     created_at: datetime
 
     # Computed browser URLs (filled in by the router via the storage backend).
+    # The raw storage_key is intentionally NOT exposed -- the client only needs
+    # the URL, and the key is an internal detail (and dead weight on the wire).
     url: str | None = None
     thumbnail_url: str | None = None
 

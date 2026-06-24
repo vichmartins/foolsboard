@@ -14,6 +14,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 from sqlalchemy import delete, select, update
 from starlette.concurrency import run_in_threadpool
 
@@ -71,6 +73,25 @@ _RISKY_MEDIA_TYPES = {
 }
 
 
+class ConditionalGZip:
+    """Gzip responses (big JSON: board graph, gallery, lists; JS/CSS bundles)
+    while leaving the static media mount untouched. Media is already-compressed
+    and, crucially, served with HTTP Range support for video seeking -- gzip
+    would buffer/compress the whole body and break 206 partial responses."""
+
+    def __init__(self, app: ASGIApp, *, minimum_size: int = 500) -> None:
+        self.app = app
+        self._gzip = GZipMiddleware(app, minimum_size=minimum_size)
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and not scope.get("path", "").startswith(
+            settings.storage_public_url
+        ):
+            await self._gzip(scope, receive, send)
+        else:
+            await self.app(scope, receive, send)
+
+
 @app.middleware("http")
 async def _security_headers(request: Request, call_next):
     response = await call_next(request)
@@ -88,6 +109,11 @@ async def _security_headers(request: Request, call_next):
         # Let the browser cache them hard and skip per-load revalidation.
         if response.status_code < 400:
             h.setdefault("Cache-Control", "public, max-age=31536000, immutable")
+    elif request.url.path.startswith("/assets/") and response.status_code < 400:
+        # Vite emits content-hashed bundle filenames under /assets -- immutable by
+        # construction, so cache them for a year instead of revalidating each load.
+        # (index.html / the SPA fallback is intentionally left revalidated.)
+        h.setdefault("Cache-Control", "public, max-age=31536000, immutable")
     return response
 
 
@@ -233,6 +259,31 @@ def _prune_old_logs() -> None:
     finally:
         db.close()
 
+
+@app.on_event("startup")
+def _auto_gc_orphans() -> None:
+    """Automatically reclaim orphaned media files older than the configured
+    grace period (admin-tunable; default 90 days). 0 disables it. The manual
+    Admin > Storage action removes orphans of any age on demand."""
+    if settings.storage_backend != "local":
+        return
+    from .appsettings import ORPHAN_RETENTION_DAYS, get_int
+    from .storage_gc import gc_orphans
+
+    db = SessionLocal()
+    try:
+        days = get_int(db, ORPHAN_RETENTION_DAYS, settings.orphan_retention_days)
+        if days <= 0:
+            return
+        result = gc_orphans(db, dry_run=False, min_age_days=days)
+        if result["orphans"]:
+            print(f"[startup] auto-GC removed {result['orphans']} orphaned file(s) "
+                  f"(>{days}d old)", flush=True)
+    except Exception:
+        pass
+    finally:
+        db.close()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -240,6 +291,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Compress large JSON / bundle responses (skips /media -- see ConditionalGZip).
+app.add_middleware(ConditionalGZip, minimum_size=500)
 
 # Serve locally-stored media. (A cloud backend would serve its own URLs.)
 if settings.storage_backend == "local":

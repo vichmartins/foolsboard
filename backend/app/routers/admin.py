@@ -3,17 +3,19 @@ the activity and request logs. New accounts are created via invite codes, not
 here."""
 from __future__ import annotations
 
-from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from ..appsettings import ORPHAN_RETENTION_DAYS, get_int, set_value
 from ..audit import log_event
 from ..config import settings
 from ..database import get_db
 from ..deps import get_current_admin
+from ..storage_gc import gc_orphans
 from ..models import ActivityLog, Asset, Board, ErrorLog, Node, RequestLog, User
 from ..schemas import (
     ActivityLogOut,
@@ -115,34 +117,49 @@ def storage_gc(
     """Reclaim orphaned media: files in the storage directory that no asset
     thumbnail or avatar references anymore (e.g. leaked by deletes from before
     the cleanup landed). Defaults to a dry run that only reports; pass
-    dry_run=false to actually delete. Local storage backend only."""
+    dry_run=false to actually delete. A manual run removes ALL orphans regardless
+    of age -- the age grace period only applies to the automatic startup sweep.
+    Local storage backend only."""
     if settings.storage_backend != "local":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "GC only supports local storage")
-    referenced: set[str] = set()
-    for col in (Asset.storage_key, Asset.thumbnail_key, User.avatar_key):
-        referenced.update(k for (k,) in db.execute(select(col)).all() if k)
-
-    root = Path(settings.storage_local_dir)
-    removed = 0
-    freed = 0
-    sample: list[str] = []
-    for p in root.iterdir():
-        if not p.is_file() or p.name in referenced:
-            continue
-        try:
-            freed += p.stat().st_size
-        except OSError:
-            pass
-        if len(sample) < 20:
-            sample.append(p.name)
-        if not dry_run:
-            p.unlink(missing_ok=True)
-        removed += 1
-
-    if not dry_run and removed:
+    result = gc_orphans(db, dry_run=dry_run, min_age_days=0)
+    if not dry_run and result["orphans"]:
         log_event(db, user=admin, action="admin.storage.gc",
-                  summary=f"reclaimed {removed} orphaned file(s)")
-    return {"dry_run": dry_run, "orphans": removed, "freed_bytes": freed, "sample": sample}
+                  summary=f"reclaimed {result['orphans']} orphaned file(s)")
+    return result
+
+
+class AdminSettings(BaseModel):
+    orphan_retention_days: int
+
+
+@router.get("/settings", response_model=AdminSettings)
+def get_admin_settings(
+    _: User = Depends(get_current_admin), db: Session = Depends(get_db)
+) -> AdminSettings:
+    """Admin-tunable runtime settings (falls back to env config defaults)."""
+    return AdminSettings(
+        orphan_retention_days=get_int(db, ORPHAN_RETENTION_DAYS, settings.orphan_retention_days)
+    )
+
+
+@router.patch("/settings", response_model=AdminSettings)
+def update_admin_settings(
+    payload: AdminSettings,
+    admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> AdminSettings:
+    days = payload.orphan_retention_days
+    if days < 0 or days > 3650:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Retention must be 0–3650 days (0 disables the automatic sweep)",
+        )
+    set_value(db, ORPHAN_RETENTION_DAYS, str(days))
+    db.commit()
+    log_event(db, user=admin, action="admin.settings.update",
+              summary=f"orphan auto-removal grace set to {days} day(s)")
+    return AdminSettings(orphan_retention_days=days)
 
 
 @router.get("/logs/events", response_model=list[ActivityLogOut])

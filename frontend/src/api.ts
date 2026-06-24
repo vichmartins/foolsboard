@@ -188,6 +188,16 @@ export async function storageGc(dryRun: boolean): Promise<StorageGcResult> {
   return (await http.post('/admin/storage/gc', null, { params: { dry_run: dryRun } })).data
 }
 
+export interface AdminSettings {
+  orphan_retention_days: number
+}
+export async function getAdminSettings(): Promise<AdminSettings> {
+  return (await http.get('/admin/settings')).data
+}
+export async function updateAdminSettings(patch: AdminSettings): Promise<AdminSettings> {
+  return (await http.patch('/admin/settings', patch)).data
+}
+
 // --- Links -----------------------------------------------------------------
 // Fetch Open Graph / meta preview for a URL (server-side, to dodge CORS).
 export async function fetchLinkPreview(url: string): Promise<LinkRef> {

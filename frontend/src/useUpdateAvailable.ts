@@ -25,8 +25,13 @@ export function useUpdateAvailable(): boolean {
   useEffect(() => {
     if (!import.meta.env.PROD || available) return
     let alive = true
+    // Coalesce checks: socket reconnects fire rapidly while the server is
+    // restarting during a deploy (the worst moment for a fetch storm), and that
+    // overlaps with focus + interval. Skip if we checked in the last 10s.
+    let lastCheck = 0
     const check = async () => {
-      if (!alive) return
+      if (!alive || Date.now() - lastCheck < 10_000) return
+      lastCheck = Date.now()
       const deployed = await fetchDeployedVersion()
       if (alive && deployed && deployed !== __APP_VERSION__) setAvailable(true)
     }
