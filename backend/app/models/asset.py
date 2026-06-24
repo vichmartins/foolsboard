@@ -34,12 +34,14 @@ class Asset(UUIDMixin, TimestampMixin, Base):
     content_type: Mapped[str] = mapped_column(String(150), nullable=False)
     size: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
 
-    # Opaque key understood by the active storage backend.
-    storage_key: Mapped[str] = mapped_column(String(500), nullable=False)
+    # Opaque key understood by the active storage backend. Indexed: every media
+    # delete checks "is this the last asset referencing this key?" before
+    # removing the file -- without an index that's a full table scan each time.
+    storage_key: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
 
     # Optional generated preview image (video frame / audio cover art),
     # addressed by its own storage key. Null when none could be produced.
-    thumbnail_key: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    thumbnail_key: Mapped[str | None] = mapped_column(String(500), nullable=True, index=True)
 
     # True while a background compression pass is still running (the original is
     # already usable; the optimized version swaps in when done).

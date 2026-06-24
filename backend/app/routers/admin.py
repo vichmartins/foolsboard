@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_admin
-from ..models import ActivityLog, ErrorLog, RequestLog, User
+from ..models import ActivityLog, Asset, Board, ErrorLog, Node, RequestLog, User
 from ..schemas import (
     ActivityLogOut,
     AdminUserOut,
@@ -20,6 +20,7 @@ from ..schemas import (
     ErrorLogOut,
     RequestLogOut,
 )
+from .assets import gc_orphan_files
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -83,8 +84,21 @@ def delete_user(
     if target.id == admin.id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "You can't delete your own account")
     name = target.username
+    # Collect every media key under the user's owned boards before the cascade
+    # deletes the asset rows, then GC files no longer referenced (dedup-safe:
+    # a file shared with another user's asset is kept).
+    board_ids = list(db.scalars(select(Board.id).where(Board.owner_id == target.id)))
+    keys: set[tuple[str, str | None]] = set()
+    if board_ids:
+        node_ids = list(db.scalars(select(Node.id).where(Node.board_id.in_(board_ids))))
+        if node_ids:
+            keys = {
+                (a.storage_key, a.thumbnail_key)
+                for a in db.scalars(select(Asset).where(Asset.node_id.in_(node_ids)))
+            }
     db.delete(target)  # cascades the user's boards and their nodes/edges/assets
     db.commit()
+    gc_orphan_files(db, keys)
     log_event(
         db, user=admin, action="admin.user.delete", entity_type="user", summary=f"deleted {name}"
     )

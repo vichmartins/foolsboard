@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.74.0
+
+- improve: Deleting a board, object, or media file now also removes the
+  underlying stored files. Previously those files were orphaned on disk and
+  storage grew forever; cleanup is dedup-aware so a file shared by other items
+  is kept until its last reference is gone.
+- improve: The cross-board Gallery loads in a constant 3 database queries
+  instead of 3 per board, so it stays fast for large workspaces.
+- improve: Media files are now cached by the browser (immutable content), so
+  repeat views load instantly and use less bandwidth.
+- improve: Added database indexes (media keys, log timestamps) so media deletes
+  and the admin log views stay fast as the data grows.
+
+
 ## v0.73.5
 
 - improve: Media and link nodes carry a **purple accent** in the gallery (the

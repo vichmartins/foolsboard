@@ -24,6 +24,7 @@ from ..schemas import (
     GalleryOut,
 )
 from ..storage import storage
+from .assets import gc_orphan_files
 
 router = APIRouter(prefix="/api/boards", tags=["boards"])
 
@@ -185,28 +186,50 @@ def board_gallery(
     db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> GalleryOut:
     """Every accessible board with its nodes, edges, and assets -- powers the
-    workspace-wide Gallery (browse/search across boards without switching)."""
-    out: list[GalleryBoardOut] = []
-    for board in _accessible_boards(db, user):
-        nodes = list(db.scalars(select(Node).where(Node.board_id == board.id)))
-        edges = list(db.scalars(select(Edge).where(Edge.board_id == board.id)))
-        node_ids = [n.id for n in nodes]
-        assets_out: list[AssetOut] = []
-        if node_ids:
-            for a in db.scalars(
-                select(Asset).where(Asset.node_id.in_(node_ids)).order_by(Asset.created_at.desc())
-            ):
-                item = AssetOut.model_validate(a)
-                item.url = storage.url_for(a.storage_key)
-                if a.thumbnail_key:
-                    item.thumbnail_url = storage.url_for(a.thumbnail_key)
-                assets_out.append(item)
-        out.append(
-            GalleryBoardOut(
-                id=board.id, name=board.name, folder_id=board.folder_id,
-                nodes=nodes, edges=edges, assets=assets_out,
-            )
+    workspace-wide Gallery (browse/search across boards without switching).
+
+    Fetched in a constant 3 queries (nodes, edges, assets) across all accessible
+    boards and grouped in Python -- not 3 queries per board, which scaled with
+    the user's entire workspace."""
+    boards = _accessible_boards(db, user)
+    board_ids = [b.id for b in boards]
+    if not board_ids:
+        return GalleryOut(boards=[])
+
+    nodes_by_board: dict[UUID, list[Node]] = {bid: [] for bid in board_ids}
+    for n in db.scalars(select(Node).where(Node.board_id.in_(board_ids))):
+        nodes_by_board[n.board_id].append(n)
+
+    edges_by_board: dict[UUID, list[Edge]] = {bid: [] for bid in board_ids}
+    for e in db.scalars(select(Edge).where(Edge.board_id.in_(board_ids))):
+        edges_by_board[e.board_id].append(e)
+
+    # Map node -> board so assets (queried by node_id) can be grouped per board.
+    node_board = {n.id: n.board_id for ns in nodes_by_board.values() for n in ns}
+    assets_by_board: dict[UUID, list[AssetOut]] = {bid: [] for bid in board_ids}
+    if node_board:
+        for a in db.scalars(
+            select(Asset)
+            .where(Asset.node_id.in_(list(node_board)))
+            .order_by(Asset.created_at.desc())
+        ):
+            bid = node_board.get(a.node_id)
+            if bid is None:
+                continue
+            item = AssetOut.model_validate(a)
+            item.url = storage.url_for(a.storage_key)
+            if a.thumbnail_key:
+                item.thumbnail_url = storage.url_for(a.thumbnail_key)
+            assets_by_board[bid].append(item)
+
+    out = [
+        GalleryBoardOut(
+            id=b.id, name=b.name, folder_id=b.folder_id,
+            nodes=nodes_by_board[b.id], edges=edges_by_board[b.id],
+            assets=assets_by_board[b.id],
         )
+        for b in boards
+    ]
     return GalleryOut(boards=out)
 
 
@@ -444,8 +467,20 @@ def delete_board(
     board = _get_board(board_id, db, user)
     name = board.name
     bid = board.id
+    # Collect the board's media keys before the cascade wipes the asset rows,
+    # then GC any file no longer referenced (dedup-safe -- see gc_orphan_files).
+    node_ids = list(db.scalars(select(Node.id).where(Node.board_id == board.id)))
+    keys = (
+        {
+            (a.storage_key, a.thumbnail_key)
+            for a in db.scalars(select(Asset).where(Asset.node_id.in_(node_ids)))
+        }
+        if node_ids
+        else set()
+    )
     db.delete(board)
     db.commit()
+    gc_orphan_files(db, keys)
     log_event(
         db, user=user, action="board.delete", entity_type="board",
         entity_id=bid, summary=f"deleted board “{name}”",

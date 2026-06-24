@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, Integer, String, Text, Uuid
+from sqlalchemy import ForeignKey, Index, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -19,6 +19,9 @@ from .base import TimestampMixin, UUIDMixin
 
 class ActivityLog(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "activity_logs"
+    # The admin log views all sort by created_at DESC; index it so the sort
+    # doesn't scan the whole (ever-growing) table.
+    __table_args__ = (Index("ix_activity_logs_created_at", "created_at"),)
 
     user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
@@ -32,6 +35,9 @@ class ActivityLog(UUIDMixin, TimestampMixin, Base):
 
 class RequestLog(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "request_logs"
+    # Written on every API request -- the fastest-growing table -- and read by
+    # the admin view ordered by created_at DESC. Index keeps that query fast.
+    __table_args__ = (Index("ix_request_logs_created_at", "created_at"),)
 
     user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
@@ -47,6 +53,7 @@ class ErrorLog(UUIDMixin, TimestampMixin, Base):
     """An unhandled server exception, captured with its stack trace."""
 
     __tablename__ = "error_logs"
+    __table_args__ = (Index("ix_error_logs_created_at", "created_at"),)
 
     user_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True

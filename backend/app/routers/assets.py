@@ -124,6 +124,26 @@ def _hash_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def gc_orphan_files(db: Session, keys: set[tuple[str, str | None]]) -> None:
+    """Delete stored files (and thumbnails) that no Asset row references anymore.
+
+    `keys` is a set of (storage_key, thumbnail_key) pairs captured *before* the
+    owning asset rows were deleted; call this *after* the delete is committed so
+    the reference check sees the post-delete state. Dedup-safe: a file shared by
+    several assets (same content_hash) is only removed once its last reference is
+    gone. This is the shared cleanup used by every delete path -- deleting an
+    asset, a node, a board, or a user -- so storage doesn't leak orphaned files.
+    """
+    storage_keys = {k for k, _ in keys if k}
+    thumb_keys = {t for _, t in keys if t}
+    for key in storage_keys:
+        if db.scalars(select(Asset.id).where(Asset.storage_key == key)).first() is None:
+            storage.delete(key)
+    for thumb in thumb_keys:
+        if db.scalars(select(Asset.id).where(Asset.thumbnail_key == thumb)).first() is None:
+            storage.delete(thumb)
+
+
 def _process_compression(asset_id: UUID) -> None:
     """Background pass: recompress an asset's stored file and swap it in when
     smaller. Runs in its own DB session after the upload response was sent."""
@@ -366,10 +386,6 @@ def delete_asset(
     key, thumb, name = asset.storage_key, asset.thumbnail_key, asset.filename
     db.delete(asset)
     db.commit()
-    # Files may be shared with other nodes via dedup -- only remove the last ref.
-    if db.scalars(select(Asset.id).where(Asset.storage_key == key)).first() is None:
-        storage.delete(key)
-    if thumb and db.scalars(select(Asset.id).where(Asset.thumbnail_key == thumb)).first() is None:
-        storage.delete(thumb)
+    gc_orphan_files(db, {(key, thumb)})
     log_event(db, user=user, action="media.delete", entity_type="media", entity_id=asset_id,
               summary=f"removed “{name}”")

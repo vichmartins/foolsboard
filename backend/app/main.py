@@ -83,6 +83,11 @@ async def _security_headers(request: Request, call_next):
         ct = h.get("content-type", "").split(";", 1)[0].strip().lower()
         if ct in _RISKY_MEDIA_TYPES:
             h["Content-Disposition"] = "attachment"
+        # Stored keys are content-addressed and never mutated in place (a
+        # recompress writes a brand-new key), so media bytes are immutable.
+        # Let the browser cache them hard and skip per-load revalidation.
+        if response.status_code < 400:
+            h.setdefault("Cache-Control", "public, max-age=31536000, immutable")
     return response
 
 

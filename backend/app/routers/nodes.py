@@ -10,8 +10,9 @@ from sqlalchemy.orm import Session
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user, get_owned_board
-from ..models import Board, Node, User
+from ..models import Asset, Board, Node, User
 from ..schemas import NodeCreate, NodeOut, NodeUpdate
+from .assets import gc_orphan_files
 
 router = APIRouter(prefix="/api/boards/{board_id}/nodes", tags=["nodes"])
 
@@ -76,7 +77,14 @@ def delete_node(
     db: Session = Depends(get_db),
 ) -> None:
     node = _get_node(board.id, node_id, db)
+    # Capture the node's media keys before the cascade removes the asset rows,
+    # then garbage-collect any file no longer referenced (dedup-safe).
+    keys = {
+        (a.storage_key, a.thumbnail_key)
+        for a in db.scalars(select(Asset).where(Asset.node_id == node.id))
+    }
     db.delete(node)
     db.commit()
+    gc_orphan_files(db, keys)
     log_event(db, user=user, action="object.delete", entity_type="object", entity_id=node_id,
               summary=f"deleted an object from “{board.name}”")
