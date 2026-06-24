@@ -198,6 +198,24 @@ export async function updateAdminSettings(patch: AdminSettings): Promise<AdminSe
   return (await http.patch('/admin/settings', patch)).data
 }
 
+export interface SystemStats {
+  cpu: {
+    count: number | null
+    percent: number | null
+    load: { '1': number; '5': number; '15': number } | null
+  }
+  memory: { total: number; used: number; available: number; percent: number } | null
+  disk: { total: number; used: number; free: number; percent: number } | null
+  storage: { bytes: number; files: number } | null
+  db_bytes: number | null
+  uptime: { system: number | null; process: number }
+  app: { users: number; boards: number; nodes: number; assets: number }
+  host: { hostname: string; python: string; platform: string } | null
+}
+export async function getSystemStats(): Promise<SystemStats> {
+  return (await http.get('/admin/stats')).data
+}
+
 // --- Links -----------------------------------------------------------------
 // Fetch Open Graph / meta preview for a URL (server-side, to dodge CORS).
 export async function fetchLinkPreview(url: string): Promise<LinkRef> {

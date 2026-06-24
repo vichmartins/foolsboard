@@ -4761,6 +4761,81 @@ button.merge-tree__chev {
   animation: auth-error-in 0.2s ease;
 }
 
+/* System tab */
+.sys-loading {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.sys-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.sys-card {
+  padding: 12px 14px;
+  border-radius: 11px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+}
+.sys-card__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+.sys-card__big {
+  margin: 4px 0 8px;
+  font-size: 24px;
+  font-weight: 600;
+}
+.sys-card__sub {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.sys-card__na {
+  margin: 8px 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.sys-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--bg);
+  overflow: hidden;
+}
+.sys-bar__fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent, #8b5cf6);
+  transition: width 0.4s ease;
+}
+.sys-bar__fill--hot {
+  background: #ef4444;
+}
+.sys-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.sys-counts strong {
+  color: var(--text);
+  font-size: 15px;
+}
+.sys-host {
+  margin-top: 14px;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}
+
 /* Storage tab */
 .admin-storage__section {
   padding-bottom: 18px;
