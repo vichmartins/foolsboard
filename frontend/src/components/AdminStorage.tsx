@@ -26,20 +26,33 @@ export default function AdminStorage() {
   const [confirm, setConfirm] = useState(false)
   const [done, setDone] = useState<string | null>(null)
 
-  // Automatic-cleanup grace period (days). '' while loading.
+  // Automatic-cleanup grace period (days).
   const [days, setDays] = useState<string>('')
   const [savedDays, setSavedDays] = useState<number | null>(null)
+  const [loadedDays, setLoadedDays] = useState(false) // settled (ok OR failed)
   const [savingDays, setSavingDays] = useState(false)
   const [daysMsg, setDaysMsg] = useState<string | null>(null)
 
   useEffect(() => {
+    let alive = true
     api
       .getAdminSettings()
       .then((s) => {
+        if (!alive) return
         setDays(String(s.orphan_retention_days))
         setSavedDays(s.orphan_retention_days)
       })
-      .catch(() => {})
+      .catch((e) => {
+        // Don't leave the control stuck disabled — surface the error and still
+        // let the admin set a value (the PATCH will report any real problem).
+        if (alive) setDaysMsg(apiError(e, 'Couldn’t load the current value'))
+      })
+      .finally(() => {
+        if (alive) setLoadedDays(true)
+      })
+    return () => {
+      alive = false
+    }
   }, [])
 
   async function saveDays() {
@@ -90,7 +103,7 @@ export default function AdminStorage() {
     }
   }
 
-  const dirtyDays = savedDays !== null && days !== '' && Number(days) !== savedDays
+  const dirtyDays = loadedDays && days !== '' && Number(days) !== savedDays
 
   return (
     <div className="admin-storage">
@@ -112,7 +125,8 @@ export default function AdminStorage() {
               min={0}
               max={3650}
               value={days}
-              disabled={savedDays === null || savingDays}
+              placeholder="90"
+              disabled={!loadedDays || savingDays}
               onChange={(e) => setDays(e.target.value)}
             />
             days

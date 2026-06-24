@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.75.1
+
+- fix: The Storage auto-cleanup field no longer stays disabled when the current
+  value fails to load — it now enables once the request settles and shows an
+  error instead of silently locking.
+
+
 ## v0.75.0
 
 - feat: Admin → Storage now has an **auto-cleanup** setting — orphaned media is
