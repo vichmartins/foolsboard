@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.74.3
+
+- feat: The "What's New" changelog is now available any time — open it from the
+  logo menu (next to Keyboard Shortcuts), not just after an update.
+
+
 ## v0.74.2
 
 - feat: Admin Panel now has a **Storage** tab — scan for orphaned media files

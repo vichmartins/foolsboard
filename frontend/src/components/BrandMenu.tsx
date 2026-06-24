@@ -1,12 +1,14 @@
-// Clickable logo that opens a dropdown: app actions (shortcuts reference) with
-// the current app version pinned to the bottom.
+// Clickable logo that opens a dropdown: app actions (shortcuts reference,
+// what's new) with the current app version pinned to the bottom.
 import { useEffect, useRef, useState } from 'react'
 import { APP_VERSION } from '../version'
 import ShortcutsDialog from './ShortcutsDialog'
+import WhatsNewDialog from './WhatsNewDialog'
 
 export default function BrandMenu() {
   const [open, setOpen] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [showWhatsNew, setShowWhatsNew] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -56,10 +58,31 @@ export default function BrandMenu() {
         >
           Keyboard Shortcuts
         </button>
+        <button
+          className="brand-dropdown__item"
+          role="menuitem"
+          tabIndex={open ? 0 : -1}
+          onClick={() => {
+            setShowWhatsNew(true)
+            setOpen(false)
+          }}
+        >
+          What's New
+        </button>
         <div className="brand-dropdown__footer">v{APP_VERSION}</div>
       </div>
 
       {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
+      {showWhatsNew && (
+        <WhatsNewDialog
+          onClose={() => {
+            // Opening it manually also marks this version seen, so the
+            // auto-popup won't reappear for the current release.
+            localStorage.setItem('foolsboard:changelogSeen', APP_VERSION)
+            setShowWhatsNew(false)
+          }}
+        />
+      )}
     </div>
   )
 }
