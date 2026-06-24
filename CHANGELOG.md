@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.76.1
+
+- improve: System tab CPU, memory, and uptime now also report on Windows hosts
+  (via the native API), not only Linux — so the dev preview is fully populated
+  too.
+
+
 ## v0.76.0
 
 - feat: New Admin → **System** tab with live server vitals — CPU, memory, disk,
