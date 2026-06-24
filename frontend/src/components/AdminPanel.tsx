@@ -3,14 +3,16 @@ import { useState } from 'react'
 import AdminInvites from './AdminInvites'
 import AdminLogs from './AdminLogs'
 import AdminStorage from './AdminStorage'
+import AdminSystem from './AdminSystem'
 import AdminUsers from './AdminUsers'
 
-type Tab = 'users' | 'invites' | 'logs' | 'storage'
+type Tab = 'users' | 'invites' | 'logs' | 'storage' | 'system'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'users', label: 'Users' },
   { id: 'invites', label: 'Invites' },
   { id: 'logs', label: 'Logs' },
   { id: 'storage', label: 'Storage' },
+  { id: 'system', label: 'System' },
 ]
 
 export default function AdminPanel({ onClose }: { onClose: () => void }) {
@@ -45,6 +47,7 @@ export default function AdminPanel({ onClose }: { onClose: () => void }) {
             {tab === 'invites' && <AdminInvites />}
             {tab === 'logs' && <AdminLogs />}
             {tab === 'storage' && <AdminStorage />}
+            {tab === 'system' && <AdminSystem />}
           </div>
         </div>
       </div>

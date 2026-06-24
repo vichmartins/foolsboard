@@ -16,6 +16,7 @@ from ..config import settings
 from ..database import get_db
 from ..deps import get_current_admin
 from ..storage_gc import gc_orphans
+from ..sysstats import collect as collect_sysstats
 from ..models import ActivityLog, Asset, Board, ErrorLog, Node, RequestLog, User
 from ..schemas import (
     ActivityLogOut,
@@ -106,6 +107,15 @@ def delete_user(
     log_event(
         db, user=admin, action="admin.user.delete", entity_type="user", summary=f"deleted {name}"
     )
+
+
+@router.get("/stats")
+def system_stats(
+    _: User = Depends(get_current_admin), db: Session = Depends(get_db)
+) -> dict:
+    """Server vitals (CPU/memory/disk/storage/DB + app counts) for the admin
+    System tab. Best-effort: fields unavailable on the host come back null."""
+    return collect_sysstats(db)
 
 
 @router.post("/storage/gc")

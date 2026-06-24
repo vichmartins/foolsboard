@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.76.1
+
+- improve: System tab CPU, memory, and uptime now also report on Windows hosts
+  (via the native API), not only Linux — so the dev preview is fully populated
+  too.
+
+
+## v0.76.0
+
+- feat: New Admin → **System** tab with live server vitals — CPU, memory, disk,
+  media-storage size, database size, and uptime — plus workspace counts (users,
+  boards, objects, media). Auto-refreshes every few seconds. (CPU/memory show on
+  the Linux server; values a host cannot provide show as “—”.)
+
+
 ## v0.75.1
 
 - fix: The Storage auto-cleanup field no longer stays disabled when the current
