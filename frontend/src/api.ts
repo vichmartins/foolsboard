@@ -177,6 +177,17 @@ export async function listErrorLogs(params: {
   return (await http.get('/admin/logs/errors', { params })).data
 }
 
+export interface StorageGcResult {
+  dry_run: boolean
+  orphans: number
+  freed_bytes: number
+  sample: string[]
+}
+// Reclaim orphaned media files. dryRun=true only reports; false deletes.
+export async function storageGc(dryRun: boolean): Promise<StorageGcResult> {
+  return (await http.post('/admin/storage/gc', null, { params: { dry_run: dryRun } })).data
+}
+
 // --- Links -----------------------------------------------------------------
 // Fetch Open Graph / meta preview for a URL (server-side, to dodge CORS).
 export async function fetchLinkPreview(url: string): Promise<LinkRef> {

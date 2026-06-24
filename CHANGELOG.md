@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.74.2
+
+- feat: Admin Panel now has a **Storage** tab — scan for orphaned media files
+  (no longer referenced by any object, thumbnail, or avatar) and reclaim the
+  space. Scanning is read-only; deletion is confirmed.
+
+
 ## v0.74.1
 
 - improve: Large media uses far less server memory — recompressed video/audio
