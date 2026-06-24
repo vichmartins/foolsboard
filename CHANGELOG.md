@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.74.1
+
+- improve: Large media uses far less server memory — recompressed video/audio
+  and uploaded import bundles now stream to/from disk instead of being held
+  whole in RAM, so big files no longer risk exhausting memory.
+- improve: Sharing lists and board copies run in a few database queries instead
+  of one-per-item.
+- improve: Admins can reclaim orphaned media files (a Storage GC action), and
+  old raw request logs are pruned automatically so the database stays lean.
+- improve: Uploaded/avatar images are guarded against malicious "decompression
+  bomb" files that would otherwise spike memory.
+
+
 ## v0.74.0
 
 - improve: Deleting a board, object, or media file now also removes the

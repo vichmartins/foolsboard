@@ -223,11 +223,13 @@ def upload_avatar(
     from PIL import Image, UnidentifiedImageError
 
     try:
+        # MAX_IMAGE_PIXELS is set process-wide in compression.py, so an oversized
+        # "decompression bomb" raises here instead of exhausting memory.
         img = Image.open(file.file).convert("RGB")
         img.thumbnail((256, 256))
         buf = io.BytesIO()
         img.save(buf, format="WEBP", quality=82)
-    except (UnidentifiedImageError, OSError):
+    except (UnidentifiedImageError, Image.DecompressionBombError, OSError):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "That image could not be read")
     buf.seek(0)
 

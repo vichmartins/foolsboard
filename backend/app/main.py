@@ -14,7 +14,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from starlette.concurrency import run_in_threadpool
 
 from .config import settings
@@ -209,6 +209,27 @@ def _backfill_user_colors() -> None:
             changed = True
         if changed:
             db.commit()
+    finally:
+        db.close()
+
+
+@app.on_event("startup")
+def _prune_old_logs() -> None:
+    """Keep the high-volume raw request/error logs bounded: drop rows older than
+    the configured retention window. The curated activity log is left intact."""
+    from datetime import datetime, timedelta, timezone
+
+    days = settings.request_log_retention_days
+    if days <= 0:
+        return
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    db = SessionLocal()
+    try:
+        db.execute(delete(RequestLog).where(RequestLog.created_at < cutoff))
+        db.execute(delete(ErrorLog).where(ErrorLog.created_at < cutoff))
+        db.commit()
+    except Exception:
+        db.rollback()
     finally:
         db.close()
 

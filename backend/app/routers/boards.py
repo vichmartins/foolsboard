@@ -332,8 +332,16 @@ def copy_board(
     )
     db.add(new)
     db.flush()
+    src_nodes = list(db.scalars(select(Node).where(Node.board_id == src.id)))
+    # Fetch all source assets in one query and group by node, instead of a query
+    # per node (N+1) while copying.
+    assets_by_node: dict[UUID, list[Asset]] = {}
+    src_node_ids = [n.id for n in src_nodes]
+    if src_node_ids:
+        for a in db.scalars(select(Asset).where(Asset.node_id.in_(src_node_ids))):
+            assets_by_node.setdefault(a.node_id, []).append(a)
     id_map: dict = {}
-    for n in db.scalars(select(Node).where(Node.board_id == src.id)):
+    for n in src_nodes:
         nn = Node(
             board_id=new.id, type=n.type, title=n.title, content=n.content,
             x=n.x, y=n.y, width=n.width, height=n.height, color=n.color,
@@ -342,7 +350,7 @@ def copy_board(
         db.flush()
         id_map[n.id] = nn.id
         # Reference the same stored files (dedup-safe) on the copied node.
-        for a in db.scalars(select(Asset).where(Asset.node_id == n.id)):
+        for a in assets_by_node.get(n.id, []):
             db.add(Asset(
                 node_id=nn.id, kind=a.kind, filename=a.filename, content_type=a.content_type,
                 size=a.size, storage_key=a.storage_key, thumbnail_key=a.thumbnail_key,

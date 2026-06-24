@@ -3,6 +3,7 @@ the activity and request logs. New accounts are created via invite codes, not
 here."""
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -10,6 +11,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..audit import log_event
+from ..config import settings
 from ..database import get_db
 from ..deps import get_current_admin
 from ..models import ActivityLog, Asset, Board, ErrorLog, Node, RequestLog, User
@@ -102,6 +104,45 @@ def delete_user(
     log_event(
         db, user=admin, action="admin.user.delete", entity_type="user", summary=f"deleted {name}"
     )
+
+
+@router.post("/storage/gc")
+def storage_gc(
+    dry_run: bool = Query(default=True),
+    admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Reclaim orphaned media: files in the storage directory that no asset
+    thumbnail or avatar references anymore (e.g. leaked by deletes from before
+    the cleanup landed). Defaults to a dry run that only reports; pass
+    dry_run=false to actually delete. Local storage backend only."""
+    if settings.storage_backend != "local":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "GC only supports local storage")
+    referenced: set[str] = set()
+    for col in (Asset.storage_key, Asset.thumbnail_key, User.avatar_key):
+        referenced.update(k for (k,) in db.execute(select(col)).all() if k)
+
+    root = Path(settings.storage_local_dir)
+    removed = 0
+    freed = 0
+    sample: list[str] = []
+    for p in root.iterdir():
+        if not p.is_file() or p.name in referenced:
+            continue
+        try:
+            freed += p.stat().st_size
+        except OSError:
+            pass
+        if len(sample) < 20:
+            sample.append(p.name)
+        if not dry_run:
+            p.unlink(missing_ok=True)
+        removed += 1
+
+    if not dry_run and removed:
+        log_event(db, user=admin, action="admin.storage.gc",
+                  summary=f"reclaimed {removed} orphaned file(s)")
+    return {"dry_run": dry_run, "orphans": removed, "freed_bytes": freed, "sample": sample}
 
 
 @router.get("/logs/events", response_model=list[ActivityLogOut])

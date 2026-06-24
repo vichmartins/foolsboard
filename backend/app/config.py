@@ -53,6 +53,16 @@ class Settings(BaseSettings):
     # bitrates (avoids wasted work and needless quality loss). 0 disables skip.
     video_skip_bitrate: int = 4_000_000   # ~4 Mbps
     audio_skip_bitrate: int = 160_000     # 160 kbps
+    # Cap on decoded image area (width*height) when opening an uploaded image.
+    # Bounds decoder memory and refuses "decompression bomb" images (a tiny file
+    # that expands to an enormous canvas). 0 disables the cap.
+    max_image_pixels: int = 64_000_000    # 64 MP
+
+    # --- Log retention ---
+    # On startup, delete raw request/error log rows older than this many days so
+    # those high-volume tables stay bounded. The curated activity log is kept.
+    # 0 disables pruning.
+    request_log_retention_days: int = 30
 
     @property
     def is_sqlite(self) -> bool:

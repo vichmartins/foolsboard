@@ -59,6 +59,41 @@ def _to_out(share: Share, db: Session) -> ShareOut:
     )
 
 
+def _to_out_batch(shares: list[Share], db: Session) -> list[ShareOut]:
+    """Serialize a list of shares without the per-share N+1 lookups: the resource
+    names and the owner/recipient users are fetched in one query each."""
+    board_ids = {s.board_id for s in shares if s.board_id}
+    folder_ids = {s.folder_id for s in shares if s.folder_id}
+    user_ids = {s.owner_id for s in shares} | {s.shared_with_id for s in shares}
+    boards = (
+        dict(db.execute(select(Board.id, Board.name).where(Board.id.in_(board_ids))).all())
+        if board_ids else {}
+    )
+    folders = (
+        dict(db.execute(select(Folder.id, Folder.name).where(Folder.id.in_(folder_ids))).all())
+        if folder_ids else {}
+    )
+    users = (
+        {u.id: u for u in db.scalars(select(User).where(User.id.in_(user_ids)))}
+        if user_ids else {}
+    )
+    return [
+        ShareOut(
+            id=s.id,
+            resource_type="board" if s.board_id else "folder",
+            board_id=s.board_id,
+            folder_id=s.folder_id,
+            resource_name=boards.get(s.board_id) if s.board_id else folders.get(s.folder_id),
+            status=s.status,
+            permission=s.permission,
+            owner=_user_out(users.get(s.owner_id)),
+            shared_with=_user_out(users.get(s.shared_with_id)),
+            created_at=s.created_at,
+        )
+        for s in shares
+    ]
+
+
 @router.post("", response_model=ShareOut, status_code=status.HTTP_201_CREATED)
 def create_share(
     payload: ShareCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)
@@ -131,7 +166,7 @@ def list_incoming(
     if state:
         q = q.where(Share.status == state)
     shares = list(db.scalars(q.order_by(Share.created_at.desc())))
-    return [_to_out(s, db) for s in shares]
+    return _to_out_batch(shares, db)
 
 
 @router.get("/outgoing", response_model=list[ShareOut])
@@ -141,7 +176,7 @@ def list_outgoing(
     shares = list(
         db.scalars(select(Share).where(Share.owner_id == user.id).order_by(Share.created_at.desc()))
     )
-    return [_to_out(s, db) for s in shares]
+    return _to_out_batch(shares, db)
 
 
 @router.post("/{share_id}/accept", response_model=ShareOut)

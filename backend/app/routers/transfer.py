@@ -7,9 +7,9 @@ workspaces. Media bytes flow through the active storage backend on both ends.
 """
 from __future__ import annotations
 
-import io
 import json
 import re
+import tempfile
 import zipfile
 from uuid import UUID, uuid4
 
@@ -292,8 +292,8 @@ def _restore_file(
         return None
     if arc in key_map:  # shared file already restored this import
         return key_map[arc]
-    data = zf.read(arc)
-    key = storage.save(io.BytesIO(data), fallback_name)
+    with zf.open(arc) as src:  # streamed to storage in chunks, not read into RAM
+        key = storage.save(src, fallback_name)
     key_map[arc] = key
     return key
 
@@ -304,14 +304,28 @@ def import_boards(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> list[Board]:
-    raw = file.file.read(MAX_IMPORT_BYTES + 1)
-    if len(raw) > MAX_IMPORT_BYTES:
-        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Bundle is too large")
-    try:
-        zf = zipfile.ZipFile(io.BytesIO(raw))
-    except zipfile.BadZipFile:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That file isn’t a valid .zip bundle")
+    # Spool the upload to a temp file rather than reading the whole bundle into
+    # RAM -- a large import no longer risks an OOM. TemporaryFile is always
+    # seekable (zipfile needs that) and auto-deletes on close.
+    with tempfile.TemporaryFile(suffix=".zip") as spool:
+        total = 0
+        while chunk := file.file.read(1024 * 1024):
+            total += len(chunk)
+            if total > MAX_IMPORT_BYTES:
+                raise HTTPException(
+                    status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Bundle is too large"
+                )
+            spool.write(chunk)
+        spool.seek(0)
+        try:
+            zf = zipfile.ZipFile(spool)
+        except zipfile.BadZipFile:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "That file isn’t a valid .zip bundle")
+        with zf:
+            return _do_import(zf, db, user)
 
+
+def _do_import(zf: zipfile.ZipFile, db: Session, user: User) -> list[Board]:
     try:
         manifest = json.loads(zf.read(MANIFEST_NAME))
     except KeyError:

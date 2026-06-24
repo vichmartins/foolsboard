@@ -163,15 +163,20 @@ def _process_compression(asset_id: UUID) -> None:
         except Exception:
             result = None
         if result is not None:
-            data, cname, cct = result
-            if src.exists() and len(data) < src.stat().st_size:
-                old_key = asset.storage_key
-                asset.storage_key = storage.save(io.BytesIO(data), cname)
-                asset.filename = cname
-                asset.content_type = cct
-                asset.kind = _kind_from_content_type(cct)
-                asset.size = len(data)
-                storage.delete(old_key)
+            out_path, cname, cct = result
+            try:
+                new_size = out_path.stat().st_size
+                if src.exists() and new_size < src.stat().st_size:
+                    old_key = asset.storage_key
+                    with out_path.open("rb") as f:  # streamed to storage in chunks
+                        asset.storage_key = storage.save(f, cname)
+                    asset.filename = cname
+                    asset.content_type = cct
+                    asset.kind = _kind_from_content_type(cct)
+                    asset.size = new_size
+                    storage.delete(old_key)
+            finally:
+                out_path.unlink(missing_ok=True)
         asset.processing = False
         db.commit()
     finally:
@@ -242,15 +247,16 @@ def upload_asset(
         processing = False
 
         if kind == "image":
-            # Images compress quickly -> do it inline.
+            # Images compress quickly -> do it inline. compress() returns a temp
+            # file; adopt it if smaller, otherwise discard it.
             result = compress(src_path, content_type, filename)
             if result is not None:
-                data, cname, cct = result
-                if len(data) < src_path.stat().st_size:
-                    comp_path = Path(td) / cname
-                    comp_path.write_bytes(data)
-                    store_path, store_name, store_ct = comp_path, cname, cct
+                out_path, cname, cct = result
+                if out_path.stat().st_size < src_path.stat().st_size:
+                    store_path, store_name, store_ct = out_path, cname, cct
                     store_kind = _kind_from_content_type(cct)
+                else:
+                    out_path.unlink(missing_ok=True)
         elif kind in {"video", "audio"}:
             # Slow to encode -> store the original now, optimize in the background.
             processing = True
@@ -281,6 +287,12 @@ def upload_asset(
         db.refresh(asset)
         asset_id = asset.id
         out = _to_out(asset)
+
+        # An inline-compressed image lived in a temp file outside the staging
+        # dir; remove it now it's stored (store_path is the staged src_path
+        # otherwise, which the TemporaryDirectory cleans up).
+        if store_path is not src_path:
+            store_path.unlink(missing_ok=True)
 
     log_event(db, user=user, action="media.upload", entity_type="media", entity_id=asset_id,
               summary=f"uploaded “{store_name}”")
