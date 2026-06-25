@@ -129,11 +129,11 @@ export default function NodeGallery({
   }, [data])
   const ownerName = (id: string) => nodeById.get(id)?.title || 'Untitled'
 
-  // Board ids that match the category + folder narrowing (the pool the board
-  // picker chooses from). With neither filter set we keep the pool to just the
-  // active board, so the picker isn't a dump of every board in the workspace.
+  // Board ids that match the category + folder narrowing -- the pool both the
+  // board picker and "All boards" draw from. With neither filter set this is
+  // EVERY accessible board, so "All boards" really means all (including boards
+  // not filed in any folder or category). A category/folder scope narrows it.
   const filterBoardIds = useMemo(() => {
-    if (!catScope && !folderScope) return new Set([boardId])
     let bs = boards
     if (catScope) {
       const cat = categories.find((c) => c.id === catScope)
@@ -148,7 +148,7 @@ export default function NodeGallery({
     }
     if (folderScope) bs = bs.filter((b) => b.folder_id === folderScope)
     return new Set(bs.map((b) => b.id))
-  }, [boards, folders, categories, catScope, folderScope, boardId])
+  }, [boards, folders, categories, catScope, folderScope])
 
   const scopedBoards = useMemo(
     () =>
