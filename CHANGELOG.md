@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.78.0
+
+- feat: **Undo now covers deletes and new objects.** Deleting objects or
+  connections can be reversed with Ctrl+Z (redo with Ctrl+Shift+Z or Ctrl+Y),
+  and adding an object is undoable too — on top of moves, copy, cut, paste, and
+  duplicate which were already undoable. (A deleted object’s attached media
+  files are still removed permanently.)
+
+
 ## v0.77.0
 
 - improve: Images now get a lightweight **preview thumbnail**. The gallery and
