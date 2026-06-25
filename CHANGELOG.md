@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.80.1
+
+- fix: The Gallery’s **All boards** view (and the board picker) now includes
+  every board — boards not filed in a folder or category were being left out.
+
+
 ## v0.80.0
 
 - feat: Admin → Logs can now be **filtered**. Pick a **user** to see just their
