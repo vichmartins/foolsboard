@@ -160,6 +160,7 @@ export async function listActivityLogs(params: {
   limit?: number
   offset?: number
   action?: string
+  user_id?: string
 }): Promise<ActivityLog[]> {
   return (await http.get('/admin/logs/events', { params })).data
 }
@@ -167,14 +168,20 @@ export async function listRequestLogs(params: {
   limit?: number
   offset?: number
   status_code?: number
+  status_class?: number
+  user_id?: string
 }): Promise<RequestLog[]> {
   return (await http.get('/admin/logs/requests', { params })).data
 }
 export async function listErrorLogs(params: {
   limit?: number
   offset?: number
+  user_id?: string
 }): Promise<ErrorLog[]> {
   return (await http.get('/admin/logs/errors', { params })).data
+}
+export async function listLogActions(): Promise<string[]> {
+  return (await http.get('/admin/logs/actions')).data
 }
 
 export interface StorageGcResult {

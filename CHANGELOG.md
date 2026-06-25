@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.80.0
+
+- feat: Admin → Logs can now be **filtered**. Pick a **user** to see just their
+  activity, requests, or errors; filter the Activity log by **action**; and the
+  Request log by **status** (2xx / 3xx / 4xx / 5xx). The quick text filter over
+  loaded rows still works on top of these.
+
+
 ## v0.79.2
 
 - fix: Boards (and folders) filed into a category no longer **fall out** when you

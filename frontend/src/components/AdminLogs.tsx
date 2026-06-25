@@ -1,9 +1,10 @@
 // Admin > Logs: the curated activity log, the raw request log, and captured
-// server errors (with expandable stack traces). Each has a quick text filter
-// (over loaded rows) and "load more" paging.
+// server errors (with expandable stack traces). Filter by user (all tabs), by
+// action (Activity) or status class (Requests), plus a quick text filter over
+// loaded rows and "load more" paging.
 import { useEffect, useState } from 'react'
 import * as api from '../api'
-import type { ActivityLog, ErrorLog, RequestLog } from '../types'
+import type { ActivityLog, AdminUser, ErrorLog, RequestLog } from '../types'
 import { makeMatcher } from '../search'
 
 type Tab = 'events' | 'requests' | 'errors'
@@ -29,19 +30,47 @@ export default function AdminLogs() {
   const [query, setQuery] = useState('')
   const [openError, setOpenError] = useState<string | null>(null)
 
+  // Server-side filters.
+  const [userId, setUserId] = useState('') // '' = all users
+  const [action, setAction] = useState('') // Activity tab
+  const [statusClass, setStatusClass] = useState('') // Requests tab (2/3/4/5)
+
+  // Filter option sources.
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [actions, setActions] = useState<string[]>([])
+  useEffect(() => {
+    api.listUsers().then(setUsers).catch(() => {})
+    api.listLogActions().then(setActions).catch(() => {})
+  }, [])
+
   async function load(reset: boolean) {
     setLoading(true)
+    const uid = userId || undefined
     try {
       if (tab === 'events') {
-        const batch = await api.listActivityLogs({ limit: PAGE, offset: reset ? 0 : events.length })
+        const batch = await api.listActivityLogs({
+          limit: PAGE,
+          offset: reset ? 0 : events.length,
+          action: action || undefined,
+          user_id: uid,
+        })
         setEvents((cur) => (reset ? batch : [...cur, ...batch]))
         setDone(batch.length < PAGE)
       } else if (tab === 'requests') {
-        const batch = await api.listRequestLogs({ limit: PAGE, offset: reset ? 0 : requests.length })
+        const batch = await api.listRequestLogs({
+          limit: PAGE,
+          offset: reset ? 0 : requests.length,
+          status_class: statusClass ? Number(statusClass) : undefined,
+          user_id: uid,
+        })
         setRequests((cur) => (reset ? batch : [...cur, ...batch]))
         setDone(batch.length < PAGE)
       } else {
-        const batch = await api.listErrorLogs({ limit: PAGE, offset: reset ? 0 : errors.length })
+        const batch = await api.listErrorLogs({
+          limit: PAGE,
+          offset: reset ? 0 : errors.length,
+          user_id: uid,
+        })
         setErrors((cur) => (reset ? batch : [...cur, ...batch]))
         setDone(batch.length < PAGE)
       }
@@ -50,12 +79,12 @@ export default function AdminLogs() {
     }
   }
 
+  // Reload from the top whenever the tab or any server-side filter changes.
   useEffect(() => {
-    setQuery('')
     setOpenError(null)
     void load(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab])
+  }, [tab, userId, action, statusClass])
 
   const trimmed = query.trim()
   const match = makeMatcher(trimmed)
@@ -86,6 +115,52 @@ export default function AdminLogs() {
             </button>
           ))}
         </div>
+
+        <select
+          className="admin-logs__select"
+          value={userId}
+          onChange={(e) => setUserId(e.target.value)}
+          title="Filter by user"
+        >
+          <option value="">All users</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.username}
+            </option>
+          ))}
+        </select>
+
+        {tab === 'events' && (
+          <select
+            className="admin-logs__select"
+            value={action}
+            onChange={(e) => setAction(e.target.value)}
+            title="Filter by action"
+          >
+            <option value="">All actions</option>
+            {actions.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {tab === 'requests' && (
+          <select
+            className="admin-logs__select"
+            value={statusClass}
+            onChange={(e) => setStatusClass(e.target.value)}
+            title="Filter by status"
+          >
+            <option value="">All statuses</option>
+            <option value="2">2xx — success</option>
+            <option value="3">3xx — redirect</option>
+            <option value="4">4xx — client error</option>
+            <option value="5">5xx — server error</option>
+          </select>
+        )}
+
         <input
           className="admin-logs__search"
           type="search"
@@ -96,8 +171,8 @@ export default function AdminLogs() {
         />
       </div>
 
-      {/* key={tab} replays the enter animation when the sub-tab changes. */}
-      <div className="admin-logs__table admin-tab-panel" key={tab}>
+      {/* key replays the enter animation when the tab or a filter changes. */}
+      <div className="admin-logs__table admin-tab-panel" key={`${tab}:${userId}:${action}:${statusClass}`}>
         {tab === 'events' &&
           shownEvents.map((e) => (
             <div className="log-row" key={e.id}>
