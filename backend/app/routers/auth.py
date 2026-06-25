@@ -21,6 +21,7 @@ from ..schemas import (
     CategoriesPayload,
     ColorsOut,
     ColorUpdate,
+    LastBoardIn,
     LoginIn,
     PasswordUpdate,
     ProfileUpdate,
@@ -152,6 +153,18 @@ def set_categories(
     user.categories = payload.model_dump_json()
     db.commit()
     return payload
+
+
+@router.put("/me/last-board", status_code=status.HTTP_204_NO_CONTENT)
+def set_last_board(
+    payload: LastBoardIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Remember the board the user last opened, so a new browser / cleared cache
+    reopens it instead of falling back to the first board."""
+    user.last_board_id = payload.board_id
+    db.commit()
 
 
 @router.get("/colors", response_model=ColorsOut)

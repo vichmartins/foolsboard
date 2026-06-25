@@ -3,7 +3,9 @@ accounts require a valid invite code (see InviteCode). Each user owns their own
 boards (Board.owner_id)."""
 from __future__ import annotations
 
-from sqlalchemy import Boolean, String, Text
+import uuid
+
+from sqlalchemy import Boolean, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -30,3 +32,8 @@ class User(UUIDMixin, TimestampMixin, Base):
     # The user's explorer layout: a JSON list of categories (id, name, ordered
     # member folder/board ids). Per-user, so shared boards can be filed too.
     categories: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # The board the user last had open, so a fresh browser / cleared cache
+    # reopens it (localStorage covers the same browser only). No FK -- a stale id
+    # just falls back to the first board when the client loads.
+    last_board_id: Mapped[uuid.UUID | None] = mapped_column(Uuid(as_uuid=True), nullable=True)

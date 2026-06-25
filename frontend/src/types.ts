@@ -59,6 +59,7 @@ export interface User {
   created_at: string
   avatar_url: string | null
   color: string | null
+  last_board_id: string | null
 }
 
 export interface AdminUser {

@@ -280,6 +280,11 @@ class UserOut(ORMModel):
     created_at: datetime
     avatar_url: str | None = None
     color: str | None = None
+    last_board_id: UUID | None = None
+
+
+class LastBoardIn(BaseModel):
+    board_id: UUID | None = None
 
 
 class AdminUserOut(ORMModel):

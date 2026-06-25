@@ -121,19 +121,21 @@ function Workspace() {
 
 
   // Load boards; bootstrap a first board if the workspace is empty. Restore the
-  // board the user last had open (falling back to the first).
+  // board the user last had open: the server-side last_board_id (survives a new
+  // browser / cleared cache) wins, then this browser's localStorage, then the
+  // first board.
   useEffect(() => {
-    // Start the last-opened board's graph fetch immediately, in parallel with
-    // the board list, so the canvas doesn't wait on a second round trip.
-    const saved = localStorage.getItem('foolsboard:activeBoard')
-    if (saved) api.prefetchGraph(saved)
+    const preferred = user?.last_board_id || localStorage.getItem('foolsboard:activeBoard')
+    // Start the preferred board's graph fetch immediately, in parallel with the
+    // board list, so the canvas doesn't wait on a second round trip.
+    if (preferred) api.prefetchGraph(preferred)
     api.listBoards().then(async (list) => {
       if (list.length === 0) {
         const first = await api.createBoard('My first storyboard')
         list = [first]
       }
       setBoards(list)
-      setActiveId(saved && list.some((b) => b.id === saved) ? saved : list[0].id)
+      setActiveId(preferred && list.some((b) => b.id === preferred) ? preferred : list[0].id)
     })
     api
       .listFolders()
@@ -141,11 +143,17 @@ function Workspace() {
         setFolders(fs)
       })
       .catch(() => {})
+    // Runs once on mount; user is present (the workspace only renders when
+    // authenticated), so reading user.last_board_id here is intentional.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Remember the active board so a refresh/restart reopens it.
+  // Remember the active board so a refresh/restart reopens it -- in this browser
+  // (localStorage) and server-side (so a new browser / cleared cache reopens it).
   useEffect(() => {
-    if (activeId) localStorage.setItem('foolsboard:activeBoard', activeId)
+    if (!activeId) return
+    localStorage.setItem('foolsboard:activeBoard', activeId)
+    void api.setLastBoard(activeId).catch(() => {})
   }, [activeId])
 
   // Open the realtime collaboration channel while signed in.

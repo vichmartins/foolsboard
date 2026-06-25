@@ -126,6 +126,10 @@ export async function getLayout(): Promise<Layout> {
 export async function saveLayout(layout: Layout): Promise<void> {
   await http.put('/auth/me/categories', layout)
 }
+// Remember the last-opened board server-side (so a new browser reopens it).
+export async function setLastBoard(boardId: string | null): Promise<void> {
+  await http.put('/auth/me/last-board', { board_id: boardId })
+}
 export async function logout(): Promise<void> {
   // Record the sign-out server-side (best effort), then drop the token.
   await http.post('/auth/logout').catch(() => {})
