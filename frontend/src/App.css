@@ -529,6 +529,10 @@
   background: var(--bg-elev);
   border-bottom: 1px solid var(--border);
   z-index: 5;
+  /* Wrap the controls onto a second row in a narrow window instead of
+     overflowing horizontally, so everything stays reachable. */
+  flex-wrap: wrap;
+  row-gap: 8px;
 }
 
 /* Clickable logo + dropdown menu */
@@ -1281,6 +1285,9 @@
   position: relative;
   flex: 1;
   min-height: 0;
+  /* Let the canvas area shrink to the available width instead of forcing the
+     workspace wider than the window (a flex item's default min-width is auto). */
+  min-width: 0;
 }
 .canvas-wrap {
   position: relative;

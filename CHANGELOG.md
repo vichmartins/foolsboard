@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.79.1
+
+- fix: The app now adapts to narrow / resized windows (e.g. the installed PWA
+  window). The top bar wraps its controls instead of overflowing, the canvas
+  area shrinks to fit, and the stray window-level horizontal scrollbar is gone.
+
+
 ## v0.79.0
 
 - feat: foolsboard is now an **installable app (PWA)**. Install it from your

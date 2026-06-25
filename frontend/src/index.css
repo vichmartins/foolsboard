@@ -59,6 +59,10 @@ body,
 #root {
   margin: 0;
   height: 100%;
+  /* No horizontal page scroll -- prevents a window-level horizontal scrollbar
+     when the window is narrow (e.g. the installed PWA). Vertical stays available
+     for full-page views like login on a short window. */
+  overflow-x: hidden;
 }
 
 body {
