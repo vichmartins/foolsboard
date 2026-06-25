@@ -15,3 +15,11 @@ createRoot(document.getElementById('root')!).render(
     </AuthProvider>
   </StrictMode>,
 )
+
+// Register the service worker in production only (instant repeat loads + an
+// offline app shell). Skipped in dev so it never fights Vite's HMR.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {})
+  })
+}
