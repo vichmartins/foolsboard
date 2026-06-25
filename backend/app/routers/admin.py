@@ -197,12 +197,18 @@ def list_requests(
     offset: int = Query(0, ge=0),
     user_id: UUID | None = None,
     status_code: int | None = None,
+    status_class: int | None = Query(None, ge=1, le=5),  # 2=2xx, 4=4xx, 5=5xx...
 ) -> list[RequestLog]:
     q = select(RequestLog).order_by(RequestLog.created_at.desc())
     if user_id:
         q = q.where(RequestLog.user_id == user_id)
     if status_code:
         q = q.where(RequestLog.status_code == status_code)
+    if status_class:
+        q = q.where(
+            RequestLog.status_code >= status_class * 100,
+            RequestLog.status_code < (status_class + 1) * 100,
+        )
     return list(db.scalars(q.limit(limit).offset(offset)))
 
 
@@ -212,6 +218,18 @@ def list_errors(
     db: Session = Depends(get_db),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
+    user_id: UUID | None = None,
 ) -> list[ErrorLog]:
     q = select(ErrorLog).order_by(ErrorLog.created_at.desc())
+    if user_id:
+        q = q.where(ErrorLog.user_id == user_id)
     return list(db.scalars(q.limit(limit).offset(offset)))
+
+
+@router.get("/logs/actions", response_model=list[str])
+def list_log_actions(
+    _: User = Depends(get_current_admin), db: Session = Depends(get_db)
+) -> list[str]:
+    """Distinct activity-log action names, for the Logs filter dropdown."""
+    rows = db.execute(select(ActivityLog.action).distinct().order_by(ActivityLog.action)).all()
+    return [r[0] for r in rows]

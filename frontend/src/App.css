@@ -4960,8 +4960,20 @@ button.merge-tree__chev {
 .admin-logs__bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.admin-logs__select {
+  padding: 7px 10px;
+  max-width: 200px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
 }
 .admin-subtabs {
   display: flex;
