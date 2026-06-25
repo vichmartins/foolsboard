@@ -828,8 +828,22 @@ function CanvasInner({
       setNodes((nds) => [...nds, toRFNode(created)])
       setSelectedId(created.id)
       markDirty()
+      // Make the new object undoable (Ctrl+Z removes it; redo re-adds it).
+      const live = { id: created.id }
+      pushUndo({
+        undo: () => removeByIds([live.id], []),
+        redo: async () => {
+          const again = await api.createNode(boardId, {
+            type: '', title: 'New object', x: pos.x, y: pos.y,
+          })
+          live.id = again.id
+          setNodes((nds) => [...nds, toRFNode(again)])
+          setSelectedId(again.id)
+          markDirty()
+        },
+      })
     },
-    [boardId, screenToFlowPosition, markDirty],
+    [boardId, screenToFlowPosition, markDirty, pushUndo, removeByIds],
   )
 
   // Drop file(s) onto the canvas -> standalone media node(s) at that point. The
@@ -1685,9 +1699,9 @@ function CanvasInner({
           const message =
             nCount > 0
               ? eCount > 0
-                ? `This will permanently delete ${countLabel(nCount, 'object')} and ${countLabel(eCount, 'link')}, including their media. This can't be undone.`
-                : `This will permanently delete ${countLabel(nCount, 'object')} and their media. This can't be undone.`
-              : `This will permanently delete ${countLabel(eCount, 'connection')}. This can't be undone.`
+                ? `Delete ${countLabel(nCount, 'object')} and ${countLabel(eCount, 'link')}? You can undo this with Ctrl+Z — but any attached media files are removed permanently.`
+                : `Delete ${countLabel(nCount, 'object')} and their connections? You can undo this with Ctrl+Z — but any attached media files are removed permanently.`
+              : `Delete ${countLabel(eCount, 'connection')}? You can undo this with Ctrl+Z.`
           return (
             <ConfirmDialog
               title={title}
@@ -1695,6 +1709,38 @@ function CanvasInner({
               confirmLabel="Delete"
               danger
               onConfirm={() => {
+                // Capture a restorable snapshot BEFORE the deletion proceeds, so
+                // Ctrl+Z recreates the objects + their connections (same path as
+                // cut/undo; attached media files are not restored).
+                const idSet = new Set(pendingDelete.nodes.map((n) => n.id))
+                const restoreEdges = getEdges().filter(
+                  (e) =>
+                    idSet.has(e.source) ||
+                    idSet.has(e.target) ||
+                    pendingDelete.edges.some((d) => d.id === e.id),
+                )
+                const snap = serializeSelection(getNodes(), [], idSet, boardId)
+                const portable: Portable = {
+                  sourceBoardId: boardId,
+                  nodes: snap.nodes,
+                  edges: restoreEdges.map((e) => ({
+                    source: e.source,
+                    target: e.target,
+                    label: typeof e.label === 'string' ? e.label : null,
+                    data: (e.data as Record<string, unknown>) ?? {},
+                  })),
+                }
+                if (idSet.size || restoreEdges.length) {
+                  const live = { nodeIds: [...idSet], edgeIds: restoreEdges.map((e) => e.id) }
+                  pushUndo({
+                    undo: async () => {
+                      const r = await importPortableAt(portable, 0, 0, false)
+                      live.nodeIds = r.nodeIds
+                      live.edgeIds = r.edgeIds
+                    },
+                    redo: () => removeByIds(live.nodeIds, live.edgeIds),
+                  })
+                }
                 pendingDelete.resolve(true)
                 setPendingDelete(null)
               }}
