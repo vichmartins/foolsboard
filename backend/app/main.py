@@ -7,10 +7,15 @@ head` before first use.
 from __future__ import annotations
 
 import io
+import mimetypes
 import threading
 import time
 import traceback
 from pathlib import Path
+
+# Serve the PWA manifest with the right type (not registered by default on some
+# platforms), so the browser accepts it via <link rel="manifest">.
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware

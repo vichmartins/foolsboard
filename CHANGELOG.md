@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.79.0
+
+- feat: foolsboard is now an **installable app (PWA)**. Install it from your
+  browser (e.g. the install icon in the address bar) for an app-like window in
+  your taskbar/dock, and it loads **instantly on repeat visits**. If you lose
+  connection, the app shell still opens (live board data needs a connection).
+
+
 ## v0.78.0
 
 - feat: **Undo now covers deletes and new objects.** Deleting objects or
