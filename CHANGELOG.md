@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.81.0
+
+- feat: The app now reopens the **last board you had open** even in a new
+  browser or after clearing the cache — it’s remembered per-user on the server,
+  not just in the local browser. (A brand-new account still starts on the empty
+  “My first storyboard”.)
+
+
 ## v0.80.1
 
 - fix: The Gallery’s **All boards** view (and the board picker) now includes
