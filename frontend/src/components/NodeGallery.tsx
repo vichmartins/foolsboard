@@ -404,7 +404,11 @@ export default function NodeGallery({
                       draggable
                       onDragStart={(e) => {
                         setAssetDragData(e.dataTransfer, a)
-                        setDragging(true)
+                        // Defer the fade: calling setState synchronously here
+                        // re-renders the dragged element's tree and flips an
+                        // ancestor's opacity mid-dragstart, which aborts the drag
+                        // (the gallery was the only drag source doing this).
+                        setTimeout(() => setDragging(true), 0)
                       }}
                       onDragEnd={(e) => {
                         setDragging(false)

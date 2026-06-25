@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.81.1
+
+- fix: Dragging a media item from the **Gallery** onto the canvas works again.
+  The gallery was fading itself the instant the drag began, which aborted the
+  drag mid-start; the fade is now applied a tick later so the drag survives.
+
+
 ## v0.81.0
 
 - feat: The app now reopens the **last board you had open** even in a new
