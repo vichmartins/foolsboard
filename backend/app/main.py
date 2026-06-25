@@ -6,6 +6,8 @@ head` before first use.
 """
 from __future__ import annotations
 
+import io
+import threading
 import time
 import traceback
 from pathlib import Path
@@ -283,6 +285,46 @@ def _auto_gc_orphans() -> None:
         pass
     finally:
         db.close()
+
+
+@app.on_event("startup")
+def _backfill_image_thumbnails() -> None:
+    """Generate previews for images uploaded before image thumbnails existed, so
+    the gallery/cards load small WebP previews instead of full-res files. Runs in
+    a background thread so it never delays startup; the UI falls back to the full
+    image until each thumbnail is ready."""
+    if settings.storage_backend != "local":
+        return
+
+    def run() -> None:
+        from .routers import assets as assets_mod
+        from .storage import storage
+        from .thumbnails import generate_image_thumbnail
+
+        db = SessionLocal()
+        try:
+            pending = db.scalars(
+                select(Asset).where(Asset.kind == "image", Asset.thumbnail_key.is_(None))
+            ).all()
+            done = 0
+            for asset in pending:
+                path = assets_mod._local_path(asset.storage_key)
+                if not path.exists():
+                    continue
+                thumb = generate_image_thumbnail(path)
+                if not thumb:
+                    continue
+                asset.thumbnail_key = storage.save(io.BytesIO(thumb), "thumb.webp")
+                db.commit()  # persist incrementally
+                done += 1
+            if done:
+                print(f"[startup] generated {done} image thumbnail(s)", flush=True)
+        except Exception:
+            db.rollback()
+        finally:
+            db.close()
+
+    threading.Thread(target=run, name="thumb-backfill", daemon=True).start()
 
 app.add_middleware(
     CORSMiddleware,

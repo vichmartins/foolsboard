@@ -381,7 +381,8 @@ export default function NodeGallery({
             {cat === 'media' &&
               shownMedia.map(({ a, bid }, i) => {
                 const kind = mediaKind(a)
-                const thumb = kind === 'image' ? a.url : a.thumbnail_url
+                // Prefer the small WebP preview; fall back to the full image.
+                const thumb = a.thumbnail_url ?? (kind === 'image' ? a.url : null)
                 const badge = kind === 'file' ? fileExt(a.filename) || 'FILE' : kind.toUpperCase()
                 return (
                   <div key={a.id} className="gallery-media">

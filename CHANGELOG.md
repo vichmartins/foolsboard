@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.77.0
+
+- improve: Images now get a lightweight **preview thumbnail**. The gallery and
+  object cards load small WebP previews instead of full-resolution files, so
+  media-heavy boards and the gallery open much faster. (Full-size images still
+  show on the canvas.) Existing images are upgraded in the background.
+- improve: Opening a board you have already viewed — or one a collaborator just
+  changed — now revalidates instead of re-downloading the whole board when
+  nothing has changed, so navigation and live editing feel snappier.
+
+
 ## v0.76.1
 
 - improve: System tab CPU, memory, and uptime now also report on Windows hosts
