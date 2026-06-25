@@ -119,12 +119,6 @@ function Workspace() {
   const updateAvailable = useUpdateAvailable()
   const [updateDismissed, setUpdateDismissed] = useState(false)
 
-  // Track the initial loads so the explorer-layout prune runs exactly once, only
-  // after we actually know which boards/folders exist.
-  const boardsLoaded = useRef(false)
-  const foldersLoaded = useRef(false)
-  const layoutLoaded = useRef(false)
-  const didPrune = useRef(false)
 
   // Load boards; bootstrap a first board if the workspace is empty. Restore the
   // board the user last had open (falling back to the first).
@@ -140,13 +134,11 @@ function Workspace() {
       }
       setBoards(list)
       setActiveId(saved && list.some((b) => b.id === saved) ? saved : list[0].id)
-      boardsLoaded.current = true
     })
     api
       .listFolders()
       .then((fs) => {
         setFolders(fs)
-        foldersLoaded.current = true
       })
       .catch(() => {})
   }, [])
@@ -301,9 +293,6 @@ function Workspace() {
         setTopOrder(top)
       })
       .catch(() => {})
-      .finally(() => {
-        layoutLoaded.current = true
-      })
   }, [])
   const catsRef = useRef<Category[]>(categories)
   catsRef.current = categories
@@ -314,24 +303,12 @@ function Workspace() {
     setTopOrder(top)
     void api.saveLayout({ categories: next, top }).catch(() => {})
   }
-  // Once boards + folders + layout have all loaded, drop any category/top
-  // references to items that no longer exist (e.g. a deleted board), so stale
-  // ids don't linger and show phantom counts.
-  useEffect(() => {
-    if (didPrune.current) return
-    if (!boardsLoaded.current || !foldersLoaded.current || !layoutLoaded.current) return
-    didPrune.current = true
-    const valid = new Set<string>([...boards.map((b) => b.id), ...folders.map((f) => f.id)])
-    let changed = false
-    const nextCats = categories.map((c) => {
-      const items = c.items.filter((id) => valid.has(id))
-      if (items.length !== c.items.length) changed = true
-      return items.length === c.items.length ? c : { ...c, items }
-    })
-    const nextTop = topOrder.filter((id) => valid.has(id))
-    if (nextTop.length !== topOrder.length) changed = true
-    if (changed) persistLayout(nextCats, nextTop)
-  }, [boards, folders, categories, topOrder])
+  // NOTE: there is deliberately no load-time "prune stale ids" pass here. It used
+  // to drop category/top ids not found in the boards/folders lists and PERSIST
+  // the result -- but on load those lists can be momentarily incomplete (e.g.
+  // shared boards arrive a beat later), so it permanently wiped legitimately
+  // filed boards across sessions. The explorer already filters non-existent ids
+  // at render time, so stale ids are harmless and never shown.
   function persistCategories(next: Category[]) {
     persistLayout(next, topRef.current)
   }

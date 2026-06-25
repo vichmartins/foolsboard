@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.79.2
+
+- fix: Boards (and folders) filed into a category no longer **fall out** when you
+  open the app in a new browser or the installed app. A load-time cleanup pass
+  could wipe category memberships before all boards had finished loading
+  (especially shared boards); it has been removed — the explorer already ignores
+  any stale entries safely, so nothing is lost.
+
+
 ## v0.79.1
 
 - fix: The app now adapts to narrow / resized windows (e.g. the installed PWA
