@@ -8,13 +8,40 @@ missing or a file has no usable image.
 """
 from __future__ import annotations
 
+import io
 import subprocess
 import tempfile
 from pathlib import Path
 
+from PIL import Image
+
 # Longest edge of the generated thumbnail, in pixels.
 _MAX_EDGE = 640
 _TIMEOUT_S = 20
+# Longest edge for image previews (gallery tiles / node cards are small; this
+# leaves retina headroom while being far lighter than the full-res original).
+_IMG_MAX_EDGE = 512
+
+
+def generate_image_thumbnail(src: Path) -> bytes | None:
+    """A small WebP preview of an image (the first frame if animated), capped at
+    _IMG_MAX_EDGE on its longest side. Alpha is preserved. None on any failure
+    (a decompression-bomb image is refused via Image.MAX_IMAGE_PIXELS, set in
+    compression.py), so uploads never break."""
+    try:
+        with Image.open(src) as im:
+            if getattr(im, "is_animated", False):
+                im.seek(0)
+            has_alpha = im.mode in ("RGBA", "LA") or (
+                im.mode == "P" and "transparency" in im.info
+            )
+            thumb = im.convert("RGBA" if has_alpha else "RGB")
+        thumb.thumbnail((_IMG_MAX_EDGE, _IMG_MAX_EDGE))
+        buf = io.BytesIO()
+        thumb.save(buf, "WEBP", quality=80, method=4)
+        return buf.getvalue() or None
+    except Exception:
+        return None
 
 
 def _run(args: list[str]) -> bool:

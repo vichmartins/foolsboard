@@ -35,7 +35,7 @@ from ..deps import get_current_user, get_owned_node
 from ..models import Asset, Board, Node, User
 from ..schemas import AssetOut
 from ..storage import storage
-from ..thumbnails import generate_thumbnail
+from ..thumbnails import generate_image_thumbnail, generate_thumbnail
 
 router = APIRouter(prefix="/api/nodes/{node_id}/assets", tags=["assets"])
 
@@ -264,12 +264,17 @@ def upload_asset(
         with store_path.open("rb") as f:
             key = storage.save(f, store_name)
 
-        # Thumbnail synchronously (a single frame / cover art -- fast).
+        # Thumbnail synchronously (a single frame / cover art / small preview).
         thumbnail_key: str | None = None
         if store_kind in {"video", "audio"}:
             thumb = generate_thumbnail(store_path, store_ct)
             if thumb:
                 thumbnail_key = storage.save(io.BytesIO(thumb), "thumb.jpg")
+        elif store_kind == "image":
+            # A lightweight WebP preview so the gallery/cards don't load full-res.
+            thumb = generate_image_thumbnail(store_path)
+            if thumb:
+                thumbnail_key = storage.save(io.BytesIO(thumb), "thumb.webp")
 
         asset = Asset(
             node_id=node_id,

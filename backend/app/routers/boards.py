@@ -1,9 +1,10 @@
 """Board endpoints, scoped to the authenticated owner."""
 from __future__ import annotations
 
+import hashlib
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
@@ -284,9 +285,32 @@ def get_board(
 
 @router.get("/{board_id}/graph", response_model=BoardGraph)
 def get_board_graph(
-    board_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
-) -> BoardGraph:
+    board_id: UUID,
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> BoardGraph | Response:
     board = _get_accessible_board(board_id, db, user)
+    # A weak ETag from cheap aggregates (counts + newest updated_at of nodes/edges
+    # + the board's own updated_at). It changes on any add/edit/delete, so an
+    # unchanged board revalidates as a tiny 304 instead of re-sending the whole
+    # graph -- which the frequent board_dirty refetch on a busy board would
+    # otherwise do every time. The browser handles the conditional request.
+    n_count, n_max = db.execute(
+        select(func.count(), func.max(Node.updated_at)).where(Node.board_id == board_id)
+    ).one()
+    e_count, e_max = db.execute(
+        select(func.count(), func.max(Edge.updated_at)).where(Edge.board_id == board_id)
+    ).one()
+    sig = f"{board.id}:{board.updated_at}:{n_count}:{n_max}:{e_count}:{e_max}"
+    etag = 'W/"' + hashlib.sha1(sig.encode()).hexdigest()[:20] + '"'
+    cache = "private, no-cache"
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"ETag": etag, "Cache-Control": cache})
+
+    response.headers["ETag"] = etag
+    response.headers["Cache-Control"] = cache
     nodes = list(db.scalars(select(Node).where(Node.board_id == board_id)))
     edges = list(db.scalars(select(Edge).where(Edge.board_id == board_id)))
     return BoardGraph(board=board, nodes=nodes, edges=edges)
