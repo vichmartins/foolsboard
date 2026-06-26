@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.83.4
+
+- fix: Reverted the frontend code-splitting from v0.83.2/v0.83.3. Measured on the
+  deployment network, the whole bundle loads in ~35 ms, so splitting saved nothing
+  on initial load while adding a noticeable delay the first time you opened the
+  admin panel, gallery, or import/export. Everything is back in one bundle, so
+  those surfaces open instantly again.
+
+
 ## v0.83.1
 
 - improve: Saving a node/edge edit now reloads only the server-set timestamp
