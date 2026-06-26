@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.84.1
+
+- feat: **Admin → Storage** now shows a **Backups** panel — when the last backup
+  ran, the retention window, how many copies are kept, total size, and the recent
+  database dumps / media archives. Warns if the latest backup is over 2 days old.
+
+
 ## v0.84.0
 
 - feat: **Automated nightly backups.** The installer now runs a daily backup —

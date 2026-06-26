@@ -209,6 +209,24 @@ export async function updateAdminSettings(patch: AdminSettings): Promise<AdminSe
   return (await http.patch('/admin/settings', patch)).data
 }
 
+export interface BackupItem {
+  name: string
+  kind: string // "database" | "media"
+  size: number
+  created_at: string
+}
+export interface BackupStatus {
+  dir: string
+  exists: boolean
+  last_run: string | null
+  retention_days: number | null
+  total_bytes: number
+  items: BackupItem[]
+}
+export async function getBackups(): Promise<BackupStatus> {
+  return (await http.get('/admin/backups')).data
+}
+
 export interface SystemStats {
   cpu: {
     count: number | null

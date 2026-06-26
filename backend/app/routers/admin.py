@@ -3,6 +3,9 @@ the activity and request logs. New accounts are created via invite codes, not
 here."""
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -233,3 +236,75 @@ def list_log_actions(
     """Distinct activity-log action names, for the Logs filter dropdown."""
     rows = db.execute(select(ActivityLog.action).distinct().order_by(ActivityLog.action)).all()
     return [r[0] for r in rows]
+
+
+class BackupItem(BaseModel):
+    name: str
+    kind: str  # "database" | "media"
+    size: int
+    created_at: datetime
+
+
+class BackupStatus(BaseModel):
+    dir: str
+    exists: bool
+    last_run: str | None = None
+    retention_days: int | None = None
+    total_bytes: int = 0
+    items: list[BackupItem] = []
+
+
+@router.get("/backups", response_model=BackupStatus)
+def backup_status(_: User = Depends(get_current_admin)) -> BackupStatus:
+    """Read-only view of the nightly backup directory (written by
+    foolsboard-backup.timer): the dump/archive files + the status.json summary.
+    The app can list this dir because it's setgid root:foolsboard (see postinst)."""
+    bdir = Path(settings.backup_dir)
+    try:
+        entries = list(bdir.iterdir())
+    except OSError:
+        return BackupStatus(dir=str(bdir), exists=False)
+
+    items: list[BackupItem] = []
+    total = 0
+    for p in entries:
+        if p.name.startswith("db-"):
+            kind = "database"
+        elif p.name.startswith("media-") and p.name.endswith(".tar.gz"):
+            kind = "media"
+        else:
+            continue
+        try:
+            st = p.stat()
+        except OSError:
+            continue
+        total += st.st_size
+        items.append(
+            BackupItem(
+                name=p.name,
+                kind=kind,
+                size=st.st_size,
+                created_at=datetime.fromtimestamp(st.st_mtime, tz=timezone.utc),
+            )
+        )
+    items.sort(key=lambda i: i.created_at, reverse=True)
+
+    last_run: str | None = None
+    retention: int | None = None
+    sp = bdir / "status.json"
+    if sp.is_file():
+        try:
+            data = json.loads(sp.read_text())
+            last_run = data.get("last_run")
+            retention = data.get("retention_days")
+        except (OSError, ValueError):
+            pass
+
+    return BackupStatus(
+        dir=str(bdir),
+        exists=True,
+        last_run=last_run,
+        retention_days=retention,
+        total_bytes=total,
+        items=items[:50],
+    )

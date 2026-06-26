@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react'
 import { apiError } from '../api'
 import * as api from '../api'
-import type { StorageGcResult } from '../api'
+import type { StorageGcResult, BackupStatus } from '../api'
 import ConfirmDialog from './ConfirmDialog'
 
 function humanBytes(n: number): string {
@@ -25,6 +25,21 @@ export default function AdminStorage() {
   const [error, setError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState(false)
   const [done, setDone] = useState<string | null>(null)
+
+  // Backup status (read-only view of the nightly backup directory).
+  const [backups, setBackups] = useState<BackupStatus | null>(null)
+  const [backupsErr, setBackupsErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    api
+      .getBackups()
+      .then((b) => alive && setBackups(b))
+      .catch((e) => alive && setBackupsErr(apiError(e, 'Couldn’t load backup status')))
+    return () => {
+      alive = false
+    }
+  }, [])
 
   // Automatic-cleanup grace period (days).
   const [days, setDays] = useState<string>('')
@@ -105,10 +120,63 @@ export default function AdminStorage() {
 
   const dirtyDays = loadedDays && days !== '' && Number(days) !== savedDays
 
+  const newestBackup = backups?.items[0]?.created_at
+  const newestDate = newestBackup ? new Date(newestBackup) : null
+  const backupStale = newestDate ? Date.now() - newestDate.getTime() > 2 * 86_400_000 : false
+
   return (
     <div className="admin-storage">
       {error && <div className="auth-error">{error}</div>}
       {done && <div className="admin-notice">{done}</div>}
+
+      <section className="admin-storage__section">
+        <h3 className="admin-storage__title">Backups</h3>
+        <p className="admin-storage__intro">
+          A full database dump and a media archive are written automatically every night
+          {backups?.retention_days != null && (
+            <> and kept for <strong>{backups.retention_days} days</strong></>
+          )}
+          {backups?.dir && (
+            <>
+              {' '}in <code>{backups.dir}</code>
+            </>
+          )}
+          .
+        </p>
+        {backupsErr && <div className="auth-error">{backupsErr}</div>}
+        {backups && !backups.exists && (
+          <p className="admin-storage__intro">
+            No backups yet — the first one runs tonight.
+          </p>
+        )}
+        {backups && backups.exists && (
+          <div className="admin-storage__result">
+            <p>
+              Last backup:{' '}
+              <strong>{newestDate ? newestDate.toLocaleString() : backups.last_run ?? 'unknown'}</strong>
+              {backupStale && (
+                <span className="admin-storage__daysmsg">
+                  {' '}⚠ over 2 days ago — backups may have stopped
+                </span>
+              )}
+              {' · '}
+              {backups.items.length} file{backups.items.length === 1 ? '' : 's'} ·{' '}
+              {humanBytes(backups.total_bytes)}
+            </p>
+            <ul className="admin-storage__sample">
+              {backups.items.slice(0, 10).map((b) => (
+                <li key={b.name}>
+                  {b.kind === 'database' ? '🗄' : '🎞'} {b.name} · {humanBytes(b.size)} ·{' '}
+                  {new Date(b.created_at).toLocaleString()}
+                </li>
+              ))}
+              {backups.items.length > 10 && (
+                <li className="admin-storage__more">…and {backups.items.length - 10} more</li>
+              )}
+            </ul>
+          </div>
+        )}
+      </section>
 
       <section className="admin-storage__section">
         <h3 className="admin-storage__title">Automatic cleanup</h3>
