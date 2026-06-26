@@ -317,6 +317,19 @@ export function setNodeDragData(dt: DataTransfer, n: GalleryNode): void {
   dt.effectAllowed = 'copy'
 }
 
+// Warm a lazy import() during browser idle, so the first open of a code-split
+// surface is instant without that chunk blocking the initial paint. Returns a
+// cleanup fn (for useEffect). Falls back to a timer where requestIdleCallback
+// isn't available (older Safari).
+export function prefetchOnIdle(run: () => void): () => void {
+  if (typeof window.requestIdleCallback === 'function') {
+    const h = window.requestIdleCallback(run, { timeout: 3000 })
+    return () => window.cancelIdleCallback(h)
+  }
+  const t = window.setTimeout(run, 1500)
+  return () => window.clearTimeout(t)
+}
+
 // A unique id. Prefers crypto.randomUUID, but falls back for insecure contexts
 // (plain-HTTP over LAN), where crypto.randomUUID is undefined and would throw.
 export function genId(): string {

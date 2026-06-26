@@ -44,6 +44,7 @@ import {
   mediaKind,
   nodePreview,
   OBJECT_COLOR,
+  prefetchOnIdle,
   uploadSizeError,
   type Asset,
   type AssetDragPayload,
@@ -71,8 +72,10 @@ import PromptDialog from './PromptDialog'
 import StoryNodeCard from './StoryNodeCard'
 
 // Lazy: the workspace gallery is opened on demand, so it ships as its own chunk
-// rather than weighing down the canvas bundle.
-const NodeGallery = lazy(() => import('./NodeGallery'))
+// rather than weighing down the canvas bundle. Idle-prefetched after mount
+// (effect below) so the first open is instant.
+const importNodeGallery = () => import('./NodeGallery')
+const NodeGallery = lazy(importNodeGallery)
 
 interface UndoEntry {
   undo: () => Promise<void> | void
@@ -298,6 +301,9 @@ function CanvasInner({
   const dragStartPos = useRef<Map<string, { x: number; y: number }> | null>(null)
 
   // Load the whole board graph whenever the board changes.
+  // Warm the gallery chunk during idle so the first open is instant.
+  useEffect(() => prefetchOnIdle(() => void importNodeGallery()), [])
+
   useEffect(() => {
     let active = true
     api.getGraph(boardId).then((g) => {
