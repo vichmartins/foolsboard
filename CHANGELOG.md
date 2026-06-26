@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.84.6
+
+- docs: Added a **Backups & Restore guide** to the installed package docs
+  (`/usr/share/doc/foolsboard/BACKUP-RESTORE.md`) covering automatic/on-demand
+  backups, the guided restore script, manual restore, off-host copies, and config.
+
+
 ## v0.84.5
 
 - feat: Added an interactive **restore helper** (`sudo /opt/foolsboard/restore.sh`)

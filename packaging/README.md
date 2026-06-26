@@ -57,6 +57,15 @@ journalctl -u foolsboard -f
 systemctl restart foolsboard
 ```
 
+## Backups & restore
+
+A nightly backup (database dump + media archive) runs automatically into
+`/var/backups/foolsboard` (14-day retention). Make one on demand from
+**Admin → Storage → Backups**, with `sudo systemctl start foolsboard-backup.service`,
+or `sudo /opt/foolsboard/backup.sh`. To restore, run the guided
+`sudo /opt/foolsboard/restore.sh`. Full instructions:
+`/usr/share/doc/foolsboard/BACKUP-RESTORE.md`.
+
 ## Reverse proxy (optional)
 
 The app stands alone, but you can place it behind a proxy: set
