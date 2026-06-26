@@ -5,6 +5,8 @@
 - feat: **Run backup now** button in Admin → Storage → Backups — triggers an
   immediate database + media backup (the same job the nightly timer runs) and
   refreshes the status when it finishes.
+- fix: Added the standard `mobile-web-app-capable` meta tag (the Apple-prefixed
+  one is deprecated), clearing a browser console warning.
 
 
 ## v0.84.1
