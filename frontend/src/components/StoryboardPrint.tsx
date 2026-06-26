@@ -2,7 +2,7 @@
 // then it opens the browser print dialog -- the user picks "Save as PDF". Hidden
 // from normal screen view; the print stylesheet (App.css, @media print) lays it
 // out and isolates it from the rest of the app.
-import { useEffect, useRef } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
 import { TYPE_FIELDS, typeLabel, type LinkRef, type StoryNode } from '../types'
 import type { StoryboardSection } from '../storyboard'
 
@@ -93,19 +93,24 @@ export default function StoryboardPrint({
             : []
         return (
           <section className="sb-print__item" key={n.id}>
-            <div className="sb-print__head">
+            <div className="sb-print__kicker">
               <span className="sb-print__num">{s.num}</span>
               <span className="sb-print__type">{typeLabel(n.type)}</span>
-              <h2 className="sb-print__title">{n.title || 'Untitled'}</h2>
             </div>
+            <h2 className="sb-print__title">{n.title || 'Untitled'}</h2>
 
             {img && <img className="sb-print__img" src={img} alt={n.title} />}
 
-            {rows.map((r, i) => (
-              <p className="sb-print__field" key={i}>
-                <strong>{r.label}:</strong> {r.value}
-              </p>
-            ))}
+            {rows.length > 0 && (
+              <dl className="sb-print__fields">
+                {rows.map((r, i) => (
+                  <Fragment key={i}>
+                    <dt>{r.label}</dt>
+                    <dd>{r.value}</dd>
+                  </Fragment>
+                ))}
+              </dl>
+            )}
 
             {refs.length > 0 && (
               <ul className="sb-print__refs">
@@ -116,13 +121,15 @@ export default function StoryboardPrint({
             )}
 
             {s.leadsTo.length > 0 && (
-              <ul className="sb-print__leads">
+              <p className="sb-print__leads">
+                <span className="sb-print__leads-label">Leads to</span>
                 {s.leadsTo.map((l, i) => (
-                  <li key={i}>
-                    → {l.label ? <em>{l.label}</em> : 'continues'} to #{l.num} {l.title}
-                  </li>
+                  <span key={i}>
+                    {i > 0 ? ' · ' : ''}#{l.num} {l.title}
+                    {l.label ? <em> ({l.label})</em> : ''}
+                  </span>
                 ))}
-              </ul>
+              </p>
             )}
           </section>
         )
