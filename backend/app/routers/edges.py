@@ -68,7 +68,8 @@ def update_edge(
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(edge, field, value)
     db.commit()
-    db.refresh(edge)
+    # Only updated_at is server-generated; reload just that, not the whole row.
+    db.refresh(edge, ["updated_at"])
     return edge
 
 

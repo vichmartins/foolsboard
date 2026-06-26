@@ -153,6 +153,32 @@ export default function Sidebar(props: Props) {
 
   const [expanded, setExpanded] = useState<Set<string>>(() => loadSet(EXPANDED_KEY))
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(() => loadSet(COLLAPSED_CATS_KEY))
+
+  // Drop ids of folders/categories that no longer exist from the persisted
+  // expand/collapse sets, so deleting them doesn't leave them accumulating in
+  // localStorage forever.
+  useEffect(() => {
+    // Skip while empty: folders haven't loaded yet, and pruning against an empty
+    // list would wipe the saved state (the v0.79.2 load-order trap).
+    if (!folders.length) return
+    const live = new Set(folders.map((f) => f.id))
+    setExpanded((s) => {
+      const next = new Set([...s].filter((id) => live.has(id)))
+      if (next.size === s.size) return s
+      localStorage.setItem(EXPANDED_KEY, JSON.stringify([...next]))
+      return next
+    })
+  }, [folders])
+  useEffect(() => {
+    if (!categories.length) return
+    const live = new Set(categories.map((c) => c.id))
+    setCollapsedCats((s) => {
+      const next = new Set([...s].filter((id) => live.has(id)))
+      if (next.size === s.size) return s
+      localStorage.setItem(COLLAPSED_CATS_KEY, JSON.stringify([...next]))
+      return next
+    })
+  }, [categories])
   const [editingId, setEditingId] = useState<string | null>(null) // folder/category id
   const [editName, setEditName] = useState('')
   const [editingBoardId, setEditingBoardId] = useState<string | null>(null)

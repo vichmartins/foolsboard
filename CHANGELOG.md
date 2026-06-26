@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.83.1
+
+- improve: Saving a node/edge edit now reloads only the server-set timestamp
+  instead of re-reading the whole row — lighter on the hot drag/edit path.
+- improve: Live-collaboration state (cursors, presence, etc.) for boards you’ve
+  navigated away from is now released instead of lingering for the whole session.
+- fix: The sidebar no longer keeps expand/collapse state for deleted
+  folders/categories in local storage.
+
+
 ## v0.83.0
 
 - improve: The workspace **Gallery** payload is slimmer — it no longer ships each
