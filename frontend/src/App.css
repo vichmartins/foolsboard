@@ -298,99 +298,115 @@
 
 /* --- Storyboard PDF export ------------------------------------------------ */
 /* On screen the document is parked off-screen (so its images load) but never
-   shown; the print stylesheet lays it out and isolates it from the app. */
+   shown. In print we hide the whole app (#root) -- which removes the dark theme
+   background that was bleeding onto the page and wasting ink -- and lay the
+   storyboard out as a clean, light, ink-light document. */
 .sb-print {
   position: fixed;
   left: -10000px;
   top: 0;
   width: 210mm;
-  background: #fff;
-  color: #111;
-  font-family: system-ui, -apple-system, sans-serif;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
 }
 @media print {
-  body * {
-    visibility: hidden !important;
+  /* Drop the entire app + its background; the portaled .sb-print is a sibling of
+     #root, so it survives. */
+  #root {
+    display: none !important;
   }
-  .sb-print,
-  .sb-print * {
-    visibility: visible !important;
-  }
-  .sb-print {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+  html,
+  body {
+    background: #fff !important;
   }
   @page {
-    margin: 14mm;
+    margin: 16mm;
   }
+
+  .sb-print {
+    position: static;
+    left: auto;
+    top: auto;
+    width: auto;
+    color: #1a1a1a;
+    font: 11pt/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  /* Title block at the top of page 1 -- content flows right after it (no blank
+     cover page). */
   .sb-print__cover {
-    text-align: center;
-    padding: 55mm 0 30mm;
-    break-after: page;
+    margin: 0 0 9mm;
+    padding: 0 0 5mm;
+    border-bottom: 2px solid #1a1a1a;
   }
   .sb-print__cover h1 {
-    font-size: 28pt;
-    margin: 0 0 8px;
+    font-size: 23pt;
+    margin: 0;
+    letter-spacing: -0.01em;
   }
   .sb-print__cover p {
-    color: #666;
+    margin: 3pt 0 0;
+    color: #777;
+    font-size: 10pt;
   }
+
   .sb-print__item {
     break-inside: avoid;
     page-break-inside: avoid;
-    margin: 0 0 10pt;
-    padding-bottom: 8pt;
-    border-bottom: 1px solid #ddd;
+    margin: 0 0 7mm;
+    padding: 0 0 5mm;
+    border-bottom: 1px solid #e4e4e4;
   }
   .sb-print__head {
     display: flex;
     align-items: baseline;
     gap: 8px;
-    margin-bottom: 4pt;
+    margin-bottom: 3pt;
   }
   .sb-print__num {
     font-weight: 700;
-    color: #888;
-    min-width: 1.6em;
+    color: #aaa;
+    min-width: 1.4em;
   }
+  /* Outlined badge (no solid fill = cleaner + far less ink). */
   .sb-print__type {
-    font-size: 8pt;
-    letter-spacing: 0.08em;
+    font-size: 7.5pt;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #fff;
-    background: #555;
-    padding: 1px 6px;
+    color: #555;
+    border: 1px solid #c2c2c2;
     border-radius: 4px;
+    padding: 0 5px;
   }
   .sb-print__title {
-    font-size: 14pt;
+    font-size: 13pt;
+    font-weight: 700;
     margin: 0;
   }
   .sb-print__img {
     max-width: 100%;
-    max-height: 100mm;
+    max-height: 85mm;
     object-fit: contain;
     margin: 4pt 0;
+    border: 1px solid #e4e4e4;
+    border-radius: 3px;
   }
   .sb-print__field {
-    margin: 2pt 0;
-    font-size: 11pt;
-    line-height: 1.4;
+    margin: 1.5pt 0;
     white-space: pre-wrap;
+  }
+  .sb-print__field strong {
+    color: #333;
   }
   .sb-print__refs,
   .sb-print__leads {
-    margin: 4pt 0 0;
-    padding-left: 1.2em;
-    font-size: 10pt;
-    color: #555;
+    margin: 3pt 0 0;
+    padding-left: 1.1em;
+    list-style: none;
+    color: #777;
+    font-size: 9.5pt;
   }
-  .sb-print__leads {
-    color: #333;
+  .sb-print__leads li {
+    color: #555;
   }
 }
 .tree-empty {
