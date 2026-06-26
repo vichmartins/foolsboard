@@ -56,9 +56,13 @@ find "$BACKUP_DIR" -maxdepth 1 -type f \
 LATEST_DB="$(ls -1t "$BACKUP_DIR"/db-* 2>/dev/null | head -1 || true)"
 LATEST_MEDIA="$(ls -1t "$BACKUP_DIR"/media-*.tar.gz 2>/dev/null | head -1 || true)"
 COUNT="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'db-*' | wc -l | tr -d ' ')"
-cat > "$BACKUP_DIR/status.json" <<EOF
+# Write via tmp+rename so it works whether the previous run was the root timer
+# or the app user -- rename only needs dir write (the dir is group-writable),
+# unlike truncating an existing file owned by the other user.
+cat > "$BACKUP_DIR/status.json.tmp" <<EOF
 {"last_run":"$TS","retention_days":$RETENTION_DAYS,"db_dump":"$(basename "${LATEST_DB:-}")","media_archive":"$(basename "${LATEST_MEDIA:-}")","db_backup_count":$COUNT}
 EOF
-chmod 0640 "$BACKUP_DIR/status.json" 2>/dev/null || true
+chmod 0640 "$BACKUP_DIR/status.json.tmp" 2>/dev/null || true
+mv "$BACKUP_DIR/status.json.tmp" "$BACKUP_DIR/status.json"
 
 echo "foolsboard backup complete: $TS (retention ${RETENTION_DAYS}d)"

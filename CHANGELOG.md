@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.84.4
+
+- fix: “Run backup now” could fail writing its status file when the previous
+  backup was the nightly (root) run. The status file is now written via a
+  temp-and-rename, so manual and automatic backups interoperate cleanly.
+
+
 ## v0.84.3
 
 - improve: Folders and categories in the sidebar now **expand and collapse with a
