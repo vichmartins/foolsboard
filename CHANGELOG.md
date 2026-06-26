@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.85.1
+
+- feat: **Toggle the Explorer sidebar with Ctrl/Cmd-B** (also listed under the
+  keyboard shortcuts).
+
+
+## v0.85.0
+
+- feat: **Export a board as an image.** A button in the canvas controls
+  (under the zoom/lock) saves the whole board — every card and connection — as a
+  high-resolution PNG, named after the board.
+
+
 ## v0.84.6
 
 - docs: Added a **Backups & Restore guide** to the installed package docs

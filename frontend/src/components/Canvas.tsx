@@ -6,7 +6,10 @@ import {
   applyNodeChanges,
   Background,
   ConnectionMode,
+  ControlButton,
   Controls,
+  getNodesBounds,
+  getViewportForBounds,
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
@@ -16,6 +19,8 @@ import {
   type Node,
   type NodeChange,
 } from '@xyflow/react'
+import { toPng } from 'html-to-image'
+import { ImageIcon } from './icons'
 import '@xyflow/react/dist/style.css'
 
 import * as api from '../api'
@@ -506,6 +511,40 @@ function CanvasInner({
     },
     [boardId, markDirty],
   )
+
+  // Export the whole board as a high-res PNG (the "visual map"). Captures the RF
+  // viewport (nodes + edges only -- controls/minimap/background grid live outside
+  // it) fitted to the bounding box of every node.
+  const exportImage = useCallback(() => {
+    const ns = getNodes()
+    if (!ns.length) return
+    const bounds = getNodesBounds(ns)
+    const aspect = bounds.height / Math.max(1, bounds.width)
+    const width = Math.min(3200, Math.max(1200, Math.round(bounds.width * 1.1)))
+    const height = Math.max(800, Math.round(width * aspect))
+    const vp = getViewportForBounds(bounds, width, height, 0.2, 4, 0.08)
+    const viewportEl = document.querySelector<HTMLElement>('.react-flow__viewport')
+    if (!viewportEl) return
+    const paneEl = document.querySelector<HTMLElement>('.react-flow')
+    const bg = paneEl ? getComputedStyle(paneEl).backgroundColor : '#0f1115'
+    const name = boards.find((b) => b.id === boardId)?.name || 'board'
+    void toPng(viewportEl, {
+      backgroundColor: bg,
+      width,
+      height,
+      pixelRatio: 2,
+      style: {
+        width: `${width}px`,
+        height: `${height}px`,
+        transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.zoom})`,
+      },
+    }).then((dataUrl) => {
+      const a = document.createElement('a')
+      a.download = `${name}.png`
+      a.href = dataUrl
+      a.click()
+    })
+  }, [getNodes, boards, boardId])
 
   // Select exactly the given nodes (deselecting the rest).
   const selectNodes = useCallback((ids: string[]) => {
@@ -1627,7 +1666,15 @@ function CanvasInner({
         onlyRenderVisibleElements
       >
         <Background gap={20} />
-        <Controls />
+        <Controls>
+          <ControlButton
+            className="rf-export-btn"
+            onClick={exportImage}
+            title="Export board as image (PNG)"
+          >
+            <ImageIcon />
+          </ControlButton>
+        </Controls>
         <MiniMap
           pannable
           zoomable

@@ -111,6 +111,17 @@ function Workspace() {
   useEffect(() => {
     localStorage.setItem('foolsboard:sidebar', sidebarOpen ? '1' : '0')
   }, [sidebarOpen])
+  // Ctrl/Cmd-B toggles the Explorer sidebar (like VS Code).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
+        e.preventDefault()
+        setSidebarOpen((o) => !o)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   // A node to pan to after switching boards (from the workspace-wide Gallery).
   const [pendingFocus, setPendingFocus] = useState<{ boardId: string; nodeId: string } | null>(
     null,
