@@ -2,18 +2,15 @@
 
 ## v0.85.1
 
-- feat: **Export a board as a storyboard PDF.** A new document button in the canvas
-  controls lays the board out as an ordered, paginated document — a numbered section
-  per item in story order, with its details and media, and branches shown as
-  “→ leads to #N” links. Opens your browser’s print dialog → choose “Save as PDF.”
+- feat: **Toggle the Explorer sidebar with Ctrl/Cmd-B** (also listed under the
+  keyboard shortcuts).
 
 
 ## v0.85.0
 
-- feat: **Export a board as an image.** A new button in the canvas controls
-  (bottom-left) saves the whole board — every card and connection — as a
-  high-resolution PNG, named after the board. (Storyboard PDF document export is
-  coming next.)
+- feat: **Export a board as an image.** A button in the canvas controls
+  (under the zoom/lock) saves the whole board — every card and connection — as a
+  high-resolution PNG, named after the board.
 
 
 ## v0.84.6

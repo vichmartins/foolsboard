@@ -6,11 +6,11 @@ import {
   applyNodeChanges,
   Background,
   ConnectionMode,
+  ControlButton,
   Controls,
   getNodesBounds,
   getViewportForBounds,
   MiniMap,
-  Panel,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
@@ -20,10 +20,7 @@ import {
   type NodeChange,
 } from '@xyflow/react'
 import { toPng } from 'html-to-image'
-import { createPortal } from 'react-dom'
-import { DocumentIcon, DownloadIcon, ImageIcon } from './icons'
-import StoryboardPrint from './StoryboardPrint'
-import { buildStoryboard, type StoryboardSection } from '../storyboard'
+import { ImageIcon } from './icons'
 import '@xyflow/react/dist/style.css'
 
 import * as api from '../api'
@@ -548,25 +545,6 @@ function CanvasInner({
       a.click()
     })
   }, [getNodes, boards, boardId])
-
-  // Storyboard PDF export: ordered, paginated document (opens the print dialog →
-  // "Save as PDF"). printDoc holds the built document while it renders + prints.
-  const [printDoc, setPrintDoc] = useState<{ title: string; sections: StoryboardSection[] } | null>(
-    null,
-  )
-  const exportStoryboard = useCallback(() => {
-    const storyNodes = getNodes()
-      .map((n) => n.data?.story as StoryNode | undefined)
-      .filter((n): n is StoryNode => !!n)
-    if (!storyNodes.length) return
-    const sbEdges = getEdges().map((e) => ({
-      source: e.source,
-      target: e.target,
-      label: typeof e.label === 'string' ? e.label : '',
-    }))
-    const title = boards.find((b) => b.id === boardId)?.name || 'Storyboard'
-    setPrintDoc({ title, sections: buildStoryboard(storyNodes, sbEdges) })
-  }, [getNodes, getEdges, boards, boardId])
 
   // Select exactly the given nodes (deselecting the rest).
   const selectNodes = useCallback((ids: string[]) => {
@@ -1688,36 +1666,11 @@ function CanvasInner({
         onlyRenderVisibleElements
       >
         <Background gap={20} />
-        <Controls />
-        {/* One Export control; hover or focus reveals a flyout with both formats.
-            In its own Panel (not inside Controls, which clips overflow). */}
-        <Panel position="top-left">
-          <div className="rf-export">
-            <button
-              type="button"
-              className="rf-export__trigger"
-              title="Export…"
-              aria-haspopup="true"
-            >
-              <DownloadIcon />
-            </button>
-            <div className="rf-export__menu" role="menu">
-              <button type="button" className="rf-export__item" role="menuitem" onClick={exportImage}>
-                <ImageIcon />
-                <span>Image (PNG)</span>
-              </button>
-              <button
-                type="button"
-                className="rf-export__item"
-                role="menuitem"
-                onClick={exportStoryboard}
-              >
-                <DocumentIcon />
-                <span>Storyboard (PDF)</span>
-              </button>
-            </div>
-          </div>
-        </Panel>
+        <Controls>
+          <ControlButton onClick={exportImage} title="Export board as image (PNG)">
+            <ImageIcon />
+          </ControlButton>
+        </Controls>
         <MiniMap
           pannable
           zoomable
@@ -1774,16 +1727,6 @@ function CanvasInner({
           onClose={() => onCloseGallery?.()}
         />
       )}
-
-      {printDoc &&
-        createPortal(
-          <StoryboardPrint
-            title={printDoc.title}
-            sections={printDoc.sections}
-            onDone={() => setPrintDoc(null)}
-          />,
-          document.body,
-        )}
 
       {dragKind !== 'none' && (
         <div className="drop-overlay drop-overlay--ready">

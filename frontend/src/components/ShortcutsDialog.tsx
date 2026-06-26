@@ -14,6 +14,10 @@ interface Shortcut {
 
 const GROUPS: { title: string; items: Shortcut[] }[] = [
   {
+    title: 'Workspace',
+    items: [{ keys: ['Ctrl', 'B'], desc: 'Toggle the Explorer sidebar' }],
+  },
+  {
     title: 'Clipboard',
     items: [
       { keys: ['Ctrl', 'C'], desc: 'Copy selection' },
