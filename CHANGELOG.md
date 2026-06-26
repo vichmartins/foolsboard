@@ -1,12 +1,5 @@
 # Changelog
 
-## v0.83.3
-
-- improve: The code-split surfaces (admin panel, gallery, import/export, changelog)
-  are now **prefetched during idle** right after the app loads, so the first open
-  is instant instead of incurring a brief one-time fetch delay.
-
-
 ## v0.83.2
 
 - improve: The app now **code-splits** its frontend — the initial download is

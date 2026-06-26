@@ -12,15 +12,10 @@ import FolderSelect from './components/FolderSelect'
 import LoginScreen from './components/LoginScreen'
 
 // Lazy-loaded: heavy, on-demand surfaces that aren't needed for the initial
-// canvas/login render -- split into their own chunks. They're also idle-
-// prefetched once the app settles (see effect below) so the first open is
-// instant, while still not weighing down the initial paint.
-const importWhatsNew = () => import('./components/WhatsNewDialog')
-const importAdmin = () => import('./components/AdminPanel')
-const importImpex = () => import('./components/ImportExportDialog')
-const WhatsNewDialog = lazy(importWhatsNew)
-const AdminPanel = lazy(importAdmin)
-const ImportExportDialog = lazy(importImpex)
+// canvas/login render -- split into their own chunks (HTTP/2 fetches on open).
+const WhatsNewDialog = lazy(() => import('./components/WhatsNewDialog'))
+const AdminPanel = lazy(() => import('./components/AdminPanel'))
+const ImportExportDialog = lazy(() => import('./components/ImportExportDialog'))
 import PresenceBar from './components/PresenceBar'
 import ProfileMenu from './components/ProfileMenu'
 import Sidebar from './components/Sidebar'
@@ -50,24 +45,13 @@ import {
 import { realtime, useBoardActivity, useBoardPresence, type ActivityKind } from './realtime'
 import { useUpdateAvailable } from './useUpdateAvailable'
 import type { Board, Category, Folder } from './types'
-import { genId, prefetchOnIdle } from './types'
+import { genId } from './types'
 import './App.css'
 
 type ShareTarget = { type: 'board' | 'folder'; id: string; name: string }
 
 function Workspace() {
   const { user } = useAuth()
-  // Warm the lazy chunks during idle so the first open feels instant (they still
-  // don't block initial paint). Admin only matters for admins.
-  useEffect(
-    () =>
-      prefetchOnIdle(() => {
-        void importImpex()
-        void importWhatsNew()
-        if (user?.is_admin) void importAdmin()
-      }),
-    [user?.is_admin],
-  )
   const [boards, setBoards] = useState<Board[]>([])
   const [folders, setFolders] = useState<Folder[]>([])
   // Active folder filter for the board list (null = All Boards).
