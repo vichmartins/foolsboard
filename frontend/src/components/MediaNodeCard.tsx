@@ -8,7 +8,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react'
 import * as api from '../api'
-import { safeHref, type StoryNode } from '../types'
+import { safeHref, type Asset, type StoryNode } from '../types'
 import { useAuth } from '../auth'
 import { useBoardId } from '../boardContext'
 import { collabColor } from '../collab'
@@ -97,8 +97,26 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
     const v = nameVal.trim()
     if (!v || !assetId) return
     try {
-      const updated = await api.renameAsset(id, assetId, v)
-      const newContent = { ...content, filename: updated.filename }
+      let targetId = assetId
+      let updated: Asset
+      try {
+        updated = await api.renameAsset(id, targetId, v)
+      } catch {
+        // The asset belongs to another node -- an older copy that still shares
+        // the original's asset (the ownership check 404s). Give THIS node its own
+        // asset row (sharing the stored file), then rename that one.
+        const refs = await api.referenceAssets(id, [assetId])
+        if (!refs[0]) return
+        targetId = refs[0].id
+        updated = await api.renameAsset(id, targetId, v)
+      }
+      const newContent = {
+        ...content,
+        assetId: targetId,
+        filename: updated.filename,
+        url: updated.url,
+        thumbnailUrl: updated.thumbnail_url,
+      }
       await api.updateNode(boardId, id, { content: newContent, title: updated.filename })
       setNodes((nds) =>
         nds.map((n) =>

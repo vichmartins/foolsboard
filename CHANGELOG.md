@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.82.1
+
+- fix: Renaming a **copied** media item now works even for copies made before
+  v0.82.0. Such copies shared the original’s asset, so the rename was rejected;
+  renaming one now gives it its own asset first (sharing the file), then applies
+  the new name.
+
+
 ## v0.82.0
 
 - feat: Drag any card from the Gallery’s **Objects** tab onto the canvas to copy
