@@ -35,8 +35,10 @@ import { findNodeAt, nodeSize, snapToBorder } from '../edgeGeometry'
 import { toRFEdge } from '../rfMappers'
 import {
   clearDraggedAsset,
+  clearDraggedNode,
   downloadAsset,
   getDraggedAsset,
+  getDraggedNode,
   isMediaNodeType,
   KIND_COLORS,
   mediaKind,
@@ -45,6 +47,7 @@ import {
   uploadSizeError,
   type Asset,
   type AssetDragPayload,
+  type NodeDragPayload,
   type Board,
   type Category,
   type Folder,
@@ -441,6 +444,34 @@ function CanvasInner({
         }),
       )
       const createdEdges = edgeResults.filter((e): e is StoryEdge => e !== null)
+
+      // Media copies need their OWN asset row (sharing the stored file) so they
+      // can be renamed/deleted independently. Without this the copy points at the
+      // source node's asset, and rename fails the ownership check (asset.node_id
+      // must equal the node). Skips silently if the source asset is gone/unowned.
+      await Promise.all(
+        createdNodes.map(async (node, i) => {
+          const content = (p.nodes[i].content ?? {}) as Record<string, unknown>
+          const srcAssetId = content.assetId
+          if (typeof srcAssetId !== 'string') return
+          try {
+            const refs = await api.referenceAssets(node.id, [srcAssetId])
+            const a = refs[0]
+            if (!a) return
+            createdNodes[i] = await api.updateNode(boardId, node.id, {
+              content: {
+                ...content,
+                assetId: a.id,
+                url: a.url,
+                thumbnailUrl: a.thumbnail_url,
+                filename: a.filename,
+              },
+            })
+          } catch {
+            // Source asset missing/unowned -- keep the shared reference.
+          }
+        }),
+      )
 
       const rfNew = createdNodes.map(toRFNode)
       const rfNewEdges = createdEdges.map(toRFEdge)
@@ -969,6 +1000,37 @@ function CanvasInner({
     [boardId, screenToFlowPosition, markDirty],
   )
 
+  // Copy a node dragged from the gallery onto this board at the drop point.
+  // Reuses importPortableAt (which also gives media copies their own asset).
+  const createNodeCopyAt = useCallback(
+    (payload: NodeDragPayload, clientX: number, clientY: number) => {
+      const pos = screenToFlowPosition({ x: clientX, y: clientY })
+      void importPortableAt(
+        {
+          sourceBoardId: boardId,
+          nodes: [
+            {
+              tempId: 'gallery-drop',
+              type: payload.type,
+              title: payload.title,
+              content: payload.content,
+              x: 0,
+              y: 0,
+              width: payload.width,
+              height: payload.height,
+              color: payload.color,
+            },
+          ],
+          edges: [],
+        },
+        pos.x,
+        pos.y,
+        true,
+      )
+    },
+    [boardId, screenToFlowPosition, importPortableAt],
+  )
+
   // The drag listeners are mounted once; read the latest creators via refs.
   const createMediaNodesAtRef = useRef(createMediaNodesAt)
   createMediaNodesAtRef.current = createMediaNodesAt
@@ -976,6 +1038,8 @@ function CanvasInner({
   createLinkNodeAtRef.current = createLinkNodeAt
   const createMediaNodeFromAssetRef = useRef(createMediaNodeFromAsset)
   createMediaNodeFromAssetRef.current = createMediaNodeFromAsset
+  const createNodeCopyAtRef = useRef(createNodeCopyAt)
+  createNodeCopyAtRef.current = createNodeCopyAt
 
   // Gate every deletion (objects and/or connections) behind a confirm dialog.
   const onBeforeDelete = useCallback(
@@ -1310,6 +1374,7 @@ function CanvasInner({
     // allowed even though internalDrag is set. (Backspace cancel makes the ref
     // read null, so the drop is refused.)
     const assetDrag = () => getDraggedAsset() !== null
+    const nodeDrag = () => getDraggedNode() !== null
     const externalDrag = (e: DragEvent) => {
       const types = Array.from(e.dataTransfer?.types ?? [])
       // A real OS file drag is the only thing that reports 'Files' now that every
@@ -1326,13 +1391,14 @@ function CanvasInner({
     // A real OS file drag must always be droppable -- never gate it behind
     // modalOpen, internalDrag, or a stale asset ref. Asset drags use the ref.
     const droppable = (e: DragEvent) =>
-      hasFiles(e) || assetDrag() || (!modalOpen() && externalDrag(e))
+      hasFiles(e) || assetDrag() || nodeDrag() || (!modalOpen() && externalDrag(e))
     const onDragStart = () => {
       internalDrag = true
     }
     const onDragEnd = () => {
       internalDrag = false
       clearDraggedAsset()
+      clearDraggedNode()
     }
     const onEnter = (e: DragEvent) => {
       if (!droppable(e)) return
@@ -1347,7 +1413,7 @@ function CanvasInner({
       // the gallery cancel relies on. Do NOT set it for OS file drags: forcing
       // 'copy' when the source's effectAllowed doesn't permit it makes Chromium
       // reject the drop (this was the regression that broke filesystem drops).
-      if (assetDrag() && e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+      if ((assetDrag() || nodeDrag()) && e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
     }
     const onLeave = (e: DragEvent) => {
       if (!droppable(e)) return
@@ -1362,11 +1428,14 @@ function CanvasInner({
       // drop. An asset drag is the in-memory ref.
       const files = dt ? Array.from(dt.files) : []
       const asset = getDraggedAsset()
-      const allow = !!asset || (!modalOpen() && (files.length > 0 || externalDrag(e)))
+      const droppedNode = getDraggedNode()
+      const allow =
+        !!asset || !!droppedNode || (!modalOpen() && (files.length > 0 || externalDrag(e)))
       // Always reset the drag bookkeeping on any drop, even one we ignore, so a
       // missed dragend can't leave stale state that breaks the next drop.
       internalDrag = false
       clearDraggedAsset()
+      clearDraggedNode()
       if (!allow) return
       e.preventDefault() // stop the browser from opening the file
       dragDepthRef.current = 0

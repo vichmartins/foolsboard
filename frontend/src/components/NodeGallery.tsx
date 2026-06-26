@@ -18,6 +18,7 @@ import {
   OBJECT_COLOR,
   safeHref,
   setAssetDragData,
+  setNodeDragData,
   typeLabel,
   type Asset,
   type Board,
@@ -369,6 +370,17 @@ export default function NodeGallery({
                     className="gallery-item"
                     style={{ '--item-color': nodeColor(s) } as React.CSSProperties}
                     onClick={() => pickNode(bid, s.id)}
+                    draggable
+                    onDragStart={(e) => {
+                      setNodeDragData(e.dataTransfer, s)
+                      // Deferred so the synchronous re-render doesn't abort the drag.
+                      setTimeout(() => setDragging(true), 0)
+                    }}
+                    onDragEnd={(e) => {
+                      setDragging(false)
+                      if (e.dataTransfer.dropEffect !== 'none') onClose()
+                    }}
+                    title={`${s.title || 'Untitled'} · drag onto the canvas to copy it here`}
                   >
                     <span className="gallery-item__tag">{typeLabel(s.type)}</span>
                     <span className="gallery-item__title">{s.title || 'Untitled'}</span>
