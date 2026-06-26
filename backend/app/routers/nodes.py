@@ -65,7 +65,10 @@ def update_node(
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(node, field, value)
     db.commit()
-    db.refresh(node)
+    # Only updated_at is server-generated (onupdate=func.now()); the rest we just
+    # wrote, so reload just that column instead of re-reading the whole row
+    # (content can be large, and this fires on every drag/edit).
+    db.refresh(node, ["updated_at"])
     return node
 
 

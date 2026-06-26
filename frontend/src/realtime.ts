@@ -297,7 +297,19 @@ class Realtime {
 
   setBoard(boardId: string | null) {
     if (this.boardId === boardId) return
+    const prev = this.boardId
     this.boardId = boardId
+    // Drop the board we're leaving from the per-board live-state maps. The server
+    // re-sends a fresh snapshot on join, so keeping old boards' entries only leaks
+    // memory across a long multi-board session. (globalPresence is workspace-wide.)
+    if (prev) {
+      delete this.presence[prev]
+      delete this.cursors[prev]
+      delete this.selections[prev]
+      delete this.uploads[prev]
+      delete this.editing[prev]
+      delete this.activities[prev]
+    }
     this.send({ type: 'join', board_id: boardId })
     // Let the new board's members see what I'm currently doing.
     if (boardId && this.myActivity !== 'viewing') {
