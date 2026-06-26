@@ -1,21 +1,18 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as api from './api'
 import { useAuth } from './auth'
 import AccountDialog from './components/AccountDialog'
 import PreferencesDialog from './components/PreferencesDialog'
+import WhatsNewDialog from './components/WhatsNewDialog'
+import AdminPanel from './components/AdminPanel'
 import BoardSelect from './components/BoardSelect'
 import CategorySelect from './components/CategorySelect'
 import BrandMenu from './components/BrandMenu'
 import Canvas from './components/Canvas'
 import ConfirmDialog from './components/ConfirmDialog'
 import FolderSelect from './components/FolderSelect'
+import ImportExportDialog from './components/ImportExportDialog'
 import LoginScreen from './components/LoginScreen'
-
-// Lazy-loaded: heavy, on-demand surfaces that aren't needed for the initial
-// canvas/login render -- split into their own chunks (HTTP/2 fetches on open).
-const WhatsNewDialog = lazy(() => import('./components/WhatsNewDialog'))
-const AdminPanel = lazy(() => import('./components/AdminPanel'))
-const ImportExportDialog = lazy(() => import('./components/ImportExportDialog'))
 import PresenceBar from './components/PresenceBar'
 import ProfileMenu from './components/ProfileMenu'
 import Sidebar from './components/Sidebar'
@@ -938,44 +935,36 @@ function Workspace() {
       {accountOpen && <AccountDialog onClose={() => setAccountOpen(false)} />}
       {prefsOpen && <PreferencesDialog onClose={() => setPrefsOpen(false)} />}
       {whatsNewOpen && (
-        <Suspense fallback={null}>
-          <WhatsNewDialog
-            onClose={() => {
-              localStorage.setItem('foolsboard:changelogSeen', __APP_VERSION__)
-              setWhatsNewOpen(false)
-            }}
-          />
-        </Suspense>
+        <WhatsNewDialog
+          onClose={() => {
+            localStorage.setItem('foolsboard:changelogSeen', __APP_VERSION__)
+            setWhatsNewOpen(false)
+          }}
+        />
       )}
-      {adminOpen && (
-        <Suspense fallback={null}>
-          <AdminPanel onClose={() => setAdminOpen(false)} />
-        </Suspense>
-      )}
+      {adminOpen && <AdminPanel onClose={() => setAdminOpen(false)} />}
       {impexOpen && (
-        <Suspense fallback={null}>
-          <ImportExportDialog
-            boards={boards}
-            folders={folders}
-            categories={categories}
-            orderedTop={computeOrderedTop()}
-            onDownload={() => flashActivity('downloading')}
-            onClose={() => setImpexOpen(false)}
-            onImported={(created) => {
-              setBoards((b) => [...created, ...b])
-              if (created.length) setActiveId(created[0].id)
-              // Import may have created folders and categories; refresh both.
-              api.listFolders().then(setFolders).catch(() => {})
-              api
-                .getLayout()
-                .then(({ categories, top }) => {
-                  setCategories(categories)
-                  setTopOrder(top)
-                })
-                .catch(() => {})
-            }}
-          />
-        </Suspense>
+        <ImportExportDialog
+          boards={boards}
+          folders={folders}
+          categories={categories}
+          orderedTop={computeOrderedTop()}
+          onDownload={() => flashActivity('downloading')}
+          onClose={() => setImpexOpen(false)}
+          onImported={(created) => {
+            setBoards((b) => [...created, ...b])
+            if (created.length) setActiveId(created[0].id)
+            // Import may have created folders and categories; refresh both.
+            api.listFolders().then(setFolders).catch(() => {})
+            api
+              .getLayout()
+              .then(({ categories, top }) => {
+                setCategories(categories)
+                setTopOrder(top)
+              })
+              .catch(() => {})
+          }}
+        />
       )}
 
       {toast && (

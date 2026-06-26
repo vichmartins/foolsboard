@@ -1,12 +1,5 @@
 # Changelog
 
-## v0.83.2
-
-- improve: The app now **code-splits** its frontend — the initial download is
-  ~18% smaller (691→565 KB) because the admin panel, gallery, import/export, and
-  the changelog dialog load on demand instead of upfront. Pairs with HTTP/2.
-
-
 ## v0.83.1
 
 - improve: Saving a node/edge edit now reloads only the server-set timestamp
