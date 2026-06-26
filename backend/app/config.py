@@ -27,8 +27,11 @@ class Settings(BaseSettings):
     storage_public_url: str = "/media"
 
     # Where the nightly backup job writes dumps/archives (mirrors the default in
-    # packaging/foolsboard-backup.sh). Read-only here -- surfaced in Admin > Storage.
+    # packaging/foolsboard-backup.sh). Surfaced in Admin > Storage.
     backup_dir: str = "/var/backups/foolsboard"
+    # The backup script the admin "Run backup now" button invokes (same one the
+    # systemd timer runs). The backup dir is group-writable so the app can run it.
+    backup_script: str = "/opt/foolsboard/backup.sh"
 
     # Built frontend directory (the Vite `dist/`). When set, uvicorn serves the
     # SPA + its assets alongside the API on one port -- the production single-port

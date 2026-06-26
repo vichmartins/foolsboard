@@ -29,6 +29,21 @@ export default function AdminStorage() {
   // Backup status (read-only view of the nightly backup directory).
   const [backups, setBackups] = useState<BackupStatus | null>(null)
   const [backupsErr, setBackupsErr] = useState<string | null>(null)
+  const [runningBackup, setRunningBackup] = useState(false)
+  const [backupMsg, setBackupMsg] = useState<string | null>(null)
+
+  async function runBackupNow() {
+    setRunningBackup(true)
+    setBackupMsg(null)
+    try {
+      setBackups(await api.runBackup())
+      setBackupMsg('Backup complete.')
+    } catch (e) {
+      setBackupMsg(apiError(e, 'Backup failed'))
+    } finally {
+      setRunningBackup(false)
+    }
+  }
 
   useEffect(() => {
     let alive = true
@@ -143,10 +158,16 @@ export default function AdminStorage() {
           )}
           .
         </p>
+        <div className="admin-storage__actions">
+          <button className="btn btn--primary" disabled={runningBackup} onClick={runBackupNow}>
+            {runningBackup ? 'Backing up…' : 'Run backup now'}
+          </button>
+          {backupMsg && <span className="admin-storage__daysmsg">{backupMsg}</span>}
+        </div>
         {backupsErr && <div className="auth-error">{backupsErr}</div>}
         {backups && !backups.exists && (
           <p className="admin-storage__intro">
-            No backups yet — the first one runs tonight.
+            No backups yet — run one now or wait for tonight’s.
           </p>
         )}
         {backups && backups.exists && (

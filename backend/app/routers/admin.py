@@ -4,6 +4,8 @@ here."""
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
@@ -254,11 +256,10 @@ class BackupStatus(BaseModel):
     items: list[BackupItem] = []
 
 
-@router.get("/backups", response_model=BackupStatus)
-def backup_status(_: User = Depends(get_current_admin)) -> BackupStatus:
-    """Read-only view of the nightly backup directory (written by
-    foolsboard-backup.timer): the dump/archive files + the status.json summary.
-    The app can list this dir because it's setgid root:foolsboard (see postinst)."""
+def _read_backup_status() -> BackupStatus:
+    """Read the nightly backup directory (written by foolsboard-backup.timer):
+    the dump/archive files + the status.json summary. The app can read this dir
+    because it's setgid root:foolsboard (see postinst)."""
     bdir = Path(settings.backup_dir)
     try:
         entries = list(bdir.iterdir())
@@ -308,3 +309,36 @@ def backup_status(_: User = Depends(get_current_admin)) -> BackupStatus:
         total_bytes=total,
         items=items[:50],
     )
+
+
+@router.get("/backups", response_model=BackupStatus)
+def backup_status(_: User = Depends(get_current_admin)) -> BackupStatus:
+    return _read_backup_status()
+
+
+@router.post("/backups/run", response_model=BackupStatus)
+def run_backup(
+    admin: User = Depends(get_current_admin), db: Session = Depends(get_db)
+) -> BackupStatus:
+    """Run a backup on demand -- invokes the same script the nightly timer uses
+    (the backup dir is group-writable so the app can run it). Sync def, so FastAPI
+    runs it in a threadpool and the few-second dump doesn't block the event loop."""
+    script = settings.backup_script
+    if not (os.path.isfile(script) and os.access(script, os.X_OK)):
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE, "Backups aren’t configured on this host"
+        )
+    try:
+        proc = subprocess.run([script], capture_output=True, text=True, timeout=600)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, f"Couldn’t start backup: {exc}"
+        )
+    if proc.returncode != 0:
+        tail = (proc.stderr or proc.stdout or "").strip().splitlines()
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            f"Backup failed: {tail[-1] if tail else 'unknown error'}"[:400],
+        )
+    log_event(db, user=admin, action="admin.backup.run", summary="ran a manual backup")
+    return _read_backup_status()

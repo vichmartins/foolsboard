@@ -226,6 +226,9 @@ export interface BackupStatus {
 export async function getBackups(): Promise<BackupStatus> {
   return (await http.get('/admin/backups')).data
 }
+export async function runBackup(): Promise<BackupStatus> {
+  return (await http.post('/admin/backups/run')).data
+}
 
 export interface SystemStats {
   cpu: {

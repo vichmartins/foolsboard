@@ -80,11 +80,13 @@ EOF
     systemctl enable foolsboard.service >/dev/null 2>&1 || true
     systemctl restart foolsboard.service
 
-    # 7. Backup directory + daily backup timer. setgid so each dump inherits the
-    #    foolsboard group, letting the app expose backup status to admins.
+    # 7. Backup directory + daily backup timer. setgid + group-writable so dumps
+    #    inherit the foolsboard group AND the app can run on-demand backups / show
+    #    status (the timer still runs as root). No sticky bit, so retention can
+    #    prune across owners.
     mkdir -p /var/backups/foolsboard
     chown root:"$SVC_USER" /var/backups/foolsboard
-    chmod 2750 /var/backups/foolsboard
+    chmod 2770 /var/backups/foolsboard
     systemctl enable foolsboard-backup.timer >/dev/null 2>&1 || true
     systemctl start foolsboard-backup.timer || true
     ;;

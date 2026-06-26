@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.84.2
+
+- feat: **Run backup now** button in Admin → Storage → Backups — triggers an
+  immediate database + media backup (the same job the nightly timer runs) and
+  refreshes the status when it finishes.
+
+
 ## v0.84.1
 
 - feat: **Admin → Storage** now shows a **Backups** panel — when the last backup
