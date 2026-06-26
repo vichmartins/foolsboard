@@ -1454,6 +1454,11 @@ function CanvasInner({
         if (!onPanel) void createMediaNodeFromAssetRef.current(asset, e.clientX, e.clientY)
         return
       }
+      if (droppedNode) {
+        // A node dragged from the gallery -- copy it onto this board at the drop.
+        if (!onPanel) createNodeCopyAtRef.current(droppedNode, e.clientX, e.clientY)
+        return
+      }
       // A 'Files' drag that produced no real files is an in-page image drag --
       // don't turn it into a link node.
       if (Array.from(dt.types).includes('Files')) return

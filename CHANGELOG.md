@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.82.3
+
+- fix: Dragging a card from the Gallery’s **Objects** tab now actually drops a
+  copy onto the canvas. The drop was being accepted but never created the node,
+  so it appeared to do nothing.
+
+
 ## v0.82.2
 
 - fix: Renaming (and copying) media on a **shared board** as a collaborator now
