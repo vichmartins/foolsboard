@@ -20,7 +20,10 @@ import {
   type NodeChange,
 } from '@xyflow/react'
 import { toPng } from 'html-to-image'
-import { DownloadIcon } from './icons'
+import { createPortal } from 'react-dom'
+import { DocumentIcon, DownloadIcon } from './icons'
+import StoryboardPrint from './StoryboardPrint'
+import { buildStoryboard, type StoryboardSection } from '../storyboard'
 import '@xyflow/react/dist/style.css'
 
 import * as api from '../api'
@@ -545,6 +548,25 @@ function CanvasInner({
       a.click()
     })
   }, [getNodes, boards, boardId])
+
+  // Storyboard PDF export: ordered, paginated document (opens the print dialog →
+  // "Save as PDF"). printDoc holds the built document while it renders + prints.
+  const [printDoc, setPrintDoc] = useState<{ title: string; sections: StoryboardSection[] } | null>(
+    null,
+  )
+  const exportStoryboard = useCallback(() => {
+    const storyNodes = getNodes()
+      .map((n) => n.data?.story as StoryNode | undefined)
+      .filter((n): n is StoryNode => !!n)
+    if (!storyNodes.length) return
+    const sbEdges = getEdges().map((e) => ({
+      source: e.source,
+      target: e.target,
+      label: typeof e.label === 'string' ? e.label : '',
+    }))
+    const title = boards.find((b) => b.id === boardId)?.name || 'Storyboard'
+    setPrintDoc({ title, sections: buildStoryboard(storyNodes, sbEdges) })
+  }, [getNodes, getEdges, boards, boardId])
 
   // Select exactly the given nodes (deselecting the rest).
   const selectNodes = useCallback((ids: string[]) => {
@@ -1670,6 +1692,9 @@ function CanvasInner({
           <ControlButton onClick={exportImage} title="Export board as image (PNG)">
             <DownloadIcon />
           </ControlButton>
+          <ControlButton onClick={exportStoryboard} title="Export storyboard (PDF)">
+            <DocumentIcon />
+          </ControlButton>
         </Controls>
         <MiniMap
           pannable
@@ -1727,6 +1752,16 @@ function CanvasInner({
           onClose={() => onCloseGallery?.()}
         />
       )}
+
+      {printDoc &&
+        createPortal(
+          <StoryboardPrint
+            title={printDoc.title}
+            sections={printDoc.sections}
+            onDone={() => setPrintDoc(null)}
+          />,
+          document.body,
+        )}
 
       {dragKind !== 'none' && (
         <div className="drop-overlay drop-overlay--ready">
