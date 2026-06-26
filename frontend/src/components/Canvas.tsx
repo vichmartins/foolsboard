@@ -10,6 +10,7 @@ import {
   getNodesBounds,
   getViewportForBounds,
   MiniMap,
+  Panel,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
@@ -1687,12 +1688,14 @@ function CanvasInner({
         onlyRenderVisibleElements
       >
         <Background gap={20} />
-        <Controls>
-          {/* One Export control; hover or focus reveals a flyout with both formats. */}
+        <Controls />
+        {/* One Export control; hover or focus reveals a flyout with both formats.
+            In its own Panel (not inside Controls, which clips overflow). */}
+        <Panel position="top-left">
           <div className="rf-export">
             <button
               type="button"
-              className="react-flow__controls-button rf-export__trigger"
+              className="rf-export__trigger"
               title="Export…"
               aria-haspopup="true"
             >
@@ -1714,7 +1717,7 @@ function CanvasInner({
               </button>
             </div>
           </div>
-        </Controls>
+        </Panel>
         <MiniMap
           pannable
           zoomable
