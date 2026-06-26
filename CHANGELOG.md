@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.82.2
+
+- fix: Renaming (and copying) media on a **shared board** as a collaborator now
+  works. Referencing media was restricted to the board *owner*, so a
+  collaborator’s rename self-heal silently failed; collaborators with accepted
+  access can now reference media on boards shared with them.
+
+
 ## v0.82.1
 
 - fix: Renaming a **copied** media item now works even for copies made before

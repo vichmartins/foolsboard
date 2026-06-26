@@ -31,7 +31,7 @@ from ..audit import log_event
 from ..compression import compress
 from ..config import settings
 from ..database import SessionLocal, get_db
-from ..deps import get_current_user, get_owned_node
+from ..deps import can_access_board, get_current_user, get_owned_node
 from ..models import Asset, Board, Node, User
 from ..schemas import AssetOut
 from ..storage import storage
@@ -316,38 +316,47 @@ def reference_assets(
     """Attach existing media (from other nodes) to this node by sharing their
     stored files -- the dedup mechanism, keyed by asset id instead of an upload.
     Lets the UI pull a nearby node's media into the node being edited instantly."""
-    # Content already on this node, so we never reference a duplicate of it.
-    have: set[str | None] = set(
-        db.scalars(select(Asset.content_hash).where(Asset.node_id == node.id))
-    )
+    # This node's existing assets, keyed by content. A re-reference of content
+    # already here returns the node's OWN asset instead of making a duplicate --
+    # idempotent, and it lets a caller repair a node whose content.assetId points
+    # at another node's asset (the self-heal rename path).
+    existing: dict[str | None, Asset] = {
+        a.content_hash: a
+        for a in db.scalars(select(Asset).where(Asset.node_id == node.id))
+    }
+    result: list[Asset] = []
     created: list[Asset] = []
     for source_id in payload.asset_ids:
         src = db.get(Asset, source_id)
         if src is None:
             continue
-        # Only reference media the caller owns (the source node's board owner).
+        # The caller must be able to ACCESS the source's board -- owner OR an
+        # accepted collaborator -- not merely own it, so editors of a shared board
+        # can reference media that lives on that same board.
         src_node = db.get(Node, src.node_id)
         if src_node is None:
             continue
         src_board = db.get(Board, src_node.board_id)
-        if src_board is None or src_board.owner_id != user.id:
+        if src_board is None or not can_access_board(src_board, user, db):
             continue
-        if src.content_hash in have:
-            continue  # already attached to this node
-        have.add(src.content_hash)
-        created.append(
-            Asset(
-                node_id=node.id,
-                kind=src.kind,
-                filename=src.filename,
-                content_type=src.content_type,
-                size=src.size,
-                storage_key=src.storage_key,
-                thumbnail_key=src.thumbnail_key,
-                processing=False,
-                content_hash=src.content_hash,
-            )
+        owned = existing.get(src.content_hash)
+        if owned is not None:
+            result.append(owned)  # already on this node -- hand back its own row
+            continue
+        new = Asset(
+            node_id=node.id,
+            kind=src.kind,
+            filename=src.filename,
+            content_type=src.content_type,
+            size=src.size,
+            storage_key=src.storage_key,
+            thumbnail_key=src.thumbnail_key,
+            processing=False,
+            content_hash=src.content_hash,
         )
+        existing[src.content_hash] = new
+        created.append(new)
+        result.append(new)
     for asset in created:
         db.add(asset)
     db.commit()
@@ -356,7 +365,7 @@ def reference_assets(
     if created:
         log_event(db, user=user, action="media.reference", entity_type="media",
                   summary=f"referenced {len(created)} media item(s)")
-    return [_to_out(asset) for asset in created]
+    return [_to_out(asset) for asset in result]
 
 
 class AssetRenameIn(BaseModel):
