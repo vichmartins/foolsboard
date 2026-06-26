@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.85.0
+
+- feat: **Export a board as an image.** A new button in the canvas controls
+  (bottom-left) saves the whole board — every card and connection — as a
+  high-resolution PNG, named after the board. (Storyboard PDF document export is
+  coming next.)
+
+
 ## v0.84.6
 
 - docs: Added a **Backups & Restore guide** to the installed package docs
