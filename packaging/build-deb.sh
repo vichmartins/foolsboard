@@ -57,6 +57,7 @@ install -m 0755 packaging/foolsboard-restore.sh            "$STAGE/opt/foolsboar
 install -m 0644 packaging/systemd/foolsboard-backup.service "$STAGE/lib/systemd/system/foolsboard-backup.service"
 install -m 0644 packaging/systemd/foolsboard-backup.timer   "$STAGE/lib/systemd/system/foolsboard-backup.timer"
 install -m 0644 packaging/foolsboard.env.example      "$STAGE/usr/share/doc/foolsboard/foolsboard.env.example"
+install -m 0644 packaging/BACKUP-RESTORE.md           "$STAGE/usr/share/doc/foolsboard/BACKUP-RESTORE.md"
 [ -f CHANGELOG.md ] && install -m 0644 CHANGELOG.md   "$STAGE/usr/share/doc/foolsboard/CHANGELOG.md" || true
 # Optional reverse-proxy example (added once finalized).
 [ -f packaging/nginx/foolsboard-proxy.example.conf ] && \
