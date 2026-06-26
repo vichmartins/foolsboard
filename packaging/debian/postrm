@@ -7,6 +7,7 @@ set -e
 case "$1" in
   remove)
     systemctl disable foolsboard.service >/dev/null 2>&1 || true
+    systemctl disable foolsboard-backup.timer >/dev/null 2>&1 || true
     systemctl daemon-reload >/dev/null 2>&1 || true
     ;;
   purge)

@@ -1,0 +1,10 @@
+[Unit]
+Description=foolsboard backup (database dump + media archive)
+After=postgresql.service network.target
+Wants=postgresql.service
+
+[Service]
+Type=oneshot
+# Runs as root: needs to read the secrets env (640 root:foolsboard), read the
+# media directory, and write to /var/backups/foolsboard.
+ExecStart=/opt/foolsboard/backup.sh

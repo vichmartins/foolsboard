@@ -51,6 +51,10 @@ install -m 0755 packaging/debian/postrm   "$STAGE/DEBIAN/postrm"
 
 # systemd unit + docs.
 install -m 0644 packaging/systemd/foolsboard.service "$STAGE/lib/systemd/system/foolsboard.service"
+# Backup script + daily timer.
+install -m 0755 packaging/foolsboard-backup.sh              "$STAGE/opt/foolsboard/backup.sh"
+install -m 0644 packaging/systemd/foolsboard-backup.service "$STAGE/lib/systemd/system/foolsboard-backup.service"
+install -m 0644 packaging/systemd/foolsboard-backup.timer   "$STAGE/lib/systemd/system/foolsboard-backup.timer"
 install -m 0644 packaging/foolsboard.env.example      "$STAGE/usr/share/doc/foolsboard/foolsboard.env.example"
 [ -f CHANGELOG.md ] && install -m 0644 CHANGELOG.md   "$STAGE/usr/share/doc/foolsboard/CHANGELOG.md" || true
 # Optional reverse-proxy example (added once finalized).
@@ -62,7 +66,10 @@ install -m 0644 packaging/foolsboard.env.example      "$STAGE/usr/share/doc/fool
 for f in control postinst prerm postrm; do
   [ -f "$STAGE/DEBIAN/$f" ] && sed -i 's/\r$//' "$STAGE/DEBIAN/$f"
 done
-sed -i 's/\r$//' "$STAGE/lib/systemd/system/foolsboard.service"
+sed -i 's/\r$//' "$STAGE/lib/systemd/system/foolsboard.service" \
+                 "$STAGE/lib/systemd/system/foolsboard-backup.service" \
+                 "$STAGE/lib/systemd/system/foolsboard-backup.timer" \
+                 "$STAGE/opt/foolsboard/backup.sh"
 
 # 3. Build.
 mkdir -p build

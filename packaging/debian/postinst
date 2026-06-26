@@ -79,6 +79,14 @@ EOF
     systemctl daemon-reload
     systemctl enable foolsboard.service >/dev/null 2>&1 || true
     systemctl restart foolsboard.service
+
+    # 7. Backup directory + daily backup timer. setgid so each dump inherits the
+    #    foolsboard group, letting the app expose backup status to admins.
+    mkdir -p /var/backups/foolsboard
+    chown root:"$SVC_USER" /var/backups/foolsboard
+    chmod 2750 /var/backups/foolsboard
+    systemctl enable foolsboard-backup.timer >/dev/null 2>&1 || true
+    systemctl start foolsboard-backup.timer || true
     ;;
 esac
 

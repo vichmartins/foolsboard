@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.84.0
+
+- feat: **Automated nightly backups.** The installer now runs a daily backup —
+  a full database dump plus an archive of all media — into `/var/backups/foolsboard`,
+  keeping the last 14 days (configurable). Previously there were no backups at all;
+  this protects your boards and media against disk loss or accidental deletion.
+
+
 ## v0.83.4
 
 - fix: Reverted the frontend code-splitting from v0.83.2/v0.83.3. Measured on the
