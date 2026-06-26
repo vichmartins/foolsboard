@@ -1,17 +1,12 @@
 # Changelog
 
-## v0.83.3
+## v0.83.4
 
-- improve: The code-split surfaces (admin panel, gallery, import/export, changelog)
-  are now **prefetched during idle** right after the app loads, so the first open
-  is instant instead of incurring a brief one-time fetch delay.
-
-
-## v0.83.2
-
-- improve: The app now **code-splits** its frontend — the initial download is
-  ~18% smaller (691→565 KB) because the admin panel, gallery, import/export, and
-  the changelog dialog load on demand instead of upfront. Pairs with HTTP/2.
+- fix: Reverted the frontend code-splitting from v0.83.2/v0.83.3. Measured on the
+  deployment network, the whole bundle loads in ~35 ms, so splitting saved nothing
+  on initial load while adding a noticeable delay the first time you opened the
+  admin panel, gallery, or import/export. Everything is back in one bundle, so
+  those surfaces open instantly again.
 
 
 ## v0.83.1
