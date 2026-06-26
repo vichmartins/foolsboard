@@ -6,7 +6,6 @@ import {
   applyNodeChanges,
   Background,
   ConnectionMode,
-  ControlButton,
   Controls,
   getNodesBounds,
   getViewportForBounds,
@@ -21,7 +20,7 @@ import {
 } from '@xyflow/react'
 import { toPng } from 'html-to-image'
 import { createPortal } from 'react-dom'
-import { DocumentIcon, DownloadIcon } from './icons'
+import { DocumentIcon, DownloadIcon, ImageIcon } from './icons'
 import StoryboardPrint from './StoryboardPrint'
 import { buildStoryboard, type StoryboardSection } from '../storyboard'
 import '@xyflow/react/dist/style.css'
@@ -1689,12 +1688,32 @@ function CanvasInner({
       >
         <Background gap={20} />
         <Controls>
-          <ControlButton onClick={exportImage} title="Export board as image (PNG)">
-            <DownloadIcon />
-          </ControlButton>
-          <ControlButton onClick={exportStoryboard} title="Export storyboard (PDF)">
-            <DocumentIcon />
-          </ControlButton>
+          {/* One Export control; hover or focus reveals a flyout with both formats. */}
+          <div className="rf-export">
+            <button
+              type="button"
+              className="react-flow__controls-button rf-export__trigger"
+              title="Export…"
+              aria-haspopup="true"
+            >
+              <DownloadIcon />
+            </button>
+            <div className="rf-export__menu" role="menu">
+              <button type="button" className="rf-export__item" role="menuitem" onClick={exportImage}>
+                <ImageIcon />
+                <span>Image (PNG)</span>
+              </button>
+              <button
+                type="button"
+                className="rf-export__item"
+                role="menuitem"
+                onClick={exportStoryboard}
+              >
+                <DocumentIcon />
+                <span>Storyboard (PDF)</span>
+              </button>
+            </div>
+          </div>
         </Controls>
         <MiniMap
           pannable
