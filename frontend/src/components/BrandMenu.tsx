@@ -1,9 +1,11 @@
 // Clickable logo that opens a dropdown: app actions (shortcuts reference,
 // what's new) with the current app version pinned to the bottom.
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { APP_VERSION } from '../version'
 import ShortcutsDialog from './ShortcutsDialog'
-import WhatsNewDialog from './WhatsNewDialog'
+
+// Lazy so the changelog dialog shares the same split chunk as App's usage.
+const WhatsNewDialog = lazy(() => import('./WhatsNewDialog'))
 
 export default function BrandMenu() {
   const [open, setOpen] = useState(false)
@@ -74,14 +76,16 @@ export default function BrandMenu() {
 
       {showShortcuts && <ShortcutsDialog onClose={() => setShowShortcuts(false)} />}
       {showWhatsNew && (
-        <WhatsNewDialog
-          onClose={() => {
-            // Opening it manually also marks this version seen, so the
-            // auto-popup won't reappear for the current release.
-            localStorage.setItem('foolsboard:changelogSeen', APP_VERSION)
-            setShowWhatsNew(false)
-          }}
-        />
+        <Suspense fallback={null}>
+          <WhatsNewDialog
+            onClose={() => {
+              // Opening it manually also marks this version seen, so the
+              // auto-popup won't reappear for the current release.
+              localStorage.setItem('foolsboard:changelogSeen', APP_VERSION)
+              setShowWhatsNew(false)
+            }}
+          />
+        </Suspense>
       )}
     </div>
   )

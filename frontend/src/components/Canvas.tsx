@@ -1,5 +1,5 @@
 // The infinite storyboard canvas, backed by React Flow and the REST API.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   addEdge,
   applyEdgeChanges,
@@ -67,9 +67,12 @@ import ContextPanel from './ContextPanel'
 import FloatingEdge from './FloatingEdge'
 import MediaNodeCard from './MediaNodeCard'
 import MinimapSelection from './MinimapSelection'
-import NodeGallery from './NodeGallery'
 import PromptDialog from './PromptDialog'
 import StoryNodeCard from './StoryNodeCard'
+
+// Lazy: the workspace gallery is opened on demand, so it ships as its own chunk
+// rather than weighing down the canvas bundle.
+const NodeGallery = lazy(() => import('./NodeGallery'))
 
 interface UndoEntry {
   undo: () => Promise<void> | void
@@ -1664,25 +1667,27 @@ function CanvasInner({
       )}
 
       {galleryOpen && (
-        <NodeGallery
-          boardId={boardId}
-          boards={boards}
-          folders={folders}
-          categories={categories}
-          onPickNode={(id) => {
-            focusNode(id)
-            onCloseGallery?.()
-          }}
-          onPickEdge={(s, t) => {
-            focusEdge(s, t)
-            onCloseGallery?.()
-          }}
-          onOpenBoard={(bid, nid) => {
-            onOpenBoard?.(bid, nid)
-            onCloseGallery?.()
-          }}
-          onClose={() => onCloseGallery?.()}
-        />
+        <Suspense fallback={null}>
+          <NodeGallery
+            boardId={boardId}
+            boards={boards}
+            folders={folders}
+            categories={categories}
+            onPickNode={(id) => {
+              focusNode(id)
+              onCloseGallery?.()
+            }}
+            onPickEdge={(s, t) => {
+              focusEdge(s, t)
+              onCloseGallery?.()
+            }}
+            onOpenBoard={(bid, nid) => {
+              onOpenBoard?.(bid, nid)
+              onCloseGallery?.()
+            }}
+            onClose={() => onCloseGallery?.()}
+          />
+        </Suspense>
       )}
 
       {dragKind !== 'none' && (
