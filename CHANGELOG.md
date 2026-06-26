@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.83.0
+
+- improve: The workspace **Gallery** payload is slimmer — it no longer ships each
+  node’s coordinates/timestamps/board id or each connection’s metadata, none of
+  which the gallery uses. Scales with workspace size; no change to what you see.
+
+
 ## v0.82.3
 
 - fix: Dragging a card from the Gallery’s **Objects** tab now actually drops a
