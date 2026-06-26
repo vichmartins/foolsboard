@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.84.5
+
+- feat: Added an interactive **restore helper** (`sudo /opt/foolsboard/restore.sh`)
+  — lists available backup snapshots, lets you pick one and choose database / media
+  / both, takes a safety backup of the current state first, restores, re-applies
+  migrations, and restarts the app.
+
+
 ## v0.84.4
 
 - fix: “Run backup now” could fail writing its status file when the previous
