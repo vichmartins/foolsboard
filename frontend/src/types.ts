@@ -140,12 +140,32 @@ export interface StoryEdge {
 }
 
 // One board's contents for the workspace-wide Gallery.
+// The Gallery ships slimmed nodes/edges -- only the fields it renders, searches,
+// and drag-copies (geometry/timestamps dropped to shrink the workspace-wide
+// payload). Mirrors GalleryNodeOut / GalleryConnOut on the backend.
+export interface GalleryNode {
+  id: string
+  type: string
+  title: string
+  content: Record<string, unknown>
+  color: string | null
+  width: number | null
+  height: number | null
+}
+
+export interface GalleryConn {
+  id: string
+  source_id: string
+  target_id: string
+  label: string | null
+}
+
 export interface GalleryBoard {
   id: string
   name: string
   folder_id: string | null
-  nodes: StoryNode[]
-  edges: StoryEdge[]
+  nodes: GalleryNode[]
+  edges: GalleryConn[]
   assets: Asset[]
 }
 
@@ -283,7 +303,7 @@ export function clearDraggedNode(): void {
   _draggedNode = null
 }
 
-export function setNodeDragData(dt: DataTransfer, n: StoryNode): void {
+export function setNodeDragData(dt: DataTransfer, n: GalleryNode): void {
   const payload: NodeDragPayload = {
     type: n.type,
     title: n.title,

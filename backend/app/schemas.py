@@ -200,13 +200,34 @@ class BoardGraph(BaseModel):
     edges: list[EdgeOut]
 
 
+class GalleryNodeOut(ORMModel):
+    """A node, slimmed to only what the Gallery renders/searches/drag-copies.
+    Drops geometry (x/y/width are kept for drag-copy fidelity) and timestamps /
+    board_id, which the gallery never reads -- a big cut workspace-wide."""
+    id: UUID
+    type: str
+    title: str
+    content: dict
+    color: str | None = None
+    width: float | None = None
+    height: float | None = None
+
+
+class GalleryConnOut(ORMModel):
+    """An edge, slimmed to what the Gallery's Connections tab needs."""
+    id: UUID
+    source_id: UUID
+    target_id: UUID
+    label: str | None = None
+
+
 class GalleryBoardOut(BaseModel):
     """One board's contents for the workspace-wide Gallery."""
     id: UUID
     name: str
     folder_id: UUID | None = None
-    nodes: list[NodeOut]
-    edges: list[EdgeOut]
+    nodes: list[GalleryNodeOut]
+    edges: list[GalleryConnOut]
     assets: list[AssetOut]
 
 

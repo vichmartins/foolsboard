@@ -26,7 +26,7 @@ import {
   type Folder,
   type GalleryBoard,
   type LinkRef,
-  type StoryNode,
+  type GalleryNode,
 } from '../types'
 import { makeMatcher } from '../search'
 
@@ -52,7 +52,7 @@ function collectStrings(value: unknown, out: string[]): void {
   }
 }
 
-function nodeColor(s: StoryNode): string {
+function nodeColor(s: GalleryNode): string {
   return s.color || (s.type ? KIND_COLORS[s.type] ?? OBJECT_COLOR : OBJECT_COLOR)
 }
 
@@ -124,7 +124,7 @@ export default function NodeGallery({
   const folderName = useMemo(() => new Map(folders.map((f) => [f.id, f.name])), [folders])
   const boardName = useMemo(() => new Map(boards.map((b) => [b.id, b.name])), [boards])
   const nodeById = useMemo(() => {
-    const m = new Map<string, StoryNode>()
+    const m = new Map<string, GalleryNode>()
     for (const b of data) for (const n of b.nodes) m.set(n.id, n)
     return m
   }, [data])
@@ -162,7 +162,7 @@ export default function NodeGallery({
 
   // --- Build each category's searchable, board-tagged rows ------------------
   const objectRows = useMemo(() => {
-    const rows: { s: StoryNode; bid: string; search: string }[] = []
+    const rows: { s: GalleryNode; bid: string; search: string }[] = []
     for (const b of scopedBoards)
       for (const s of b.nodes) {
         const parts = [s.type, typeLabel(s.type), s.title, b.name]
@@ -187,7 +187,7 @@ export default function NodeGallery({
   }, [scopedBoards, nodeById])
 
   const linkRows = useMemo(() => {
-    const rows: { ref: LinkRef; node: StoryNode; bid: string; search: string }[] = []
+    const rows: { ref: LinkRef; node: GalleryNode; bid: string; search: string }[] = []
     for (const b of scopedBoards)
       for (const n of b.nodes) {
         const refs = n.content?.references
