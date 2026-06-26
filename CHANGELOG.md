@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.82.0
+
+- feat: Drag any card from the Gallery’s **Objects** tab onto the canvas to copy
+  it onto the current board (previously only the **Media** tab was draggable).
+- fix: Duplicated or pasted **media can now be renamed independently**. Copies
+  used to share the original’s asset, so renaming a copy failed the ownership
+  check; each copy now gets its own asset row (sharing the stored file).
+
+
 ## v0.81.1
 
 - fix: Dragging a media item from the **Gallery** onto the canvas works again.

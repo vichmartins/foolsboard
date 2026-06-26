@@ -260,6 +260,43 @@ export function readAssetDragData(dt: DataTransfer): AssetDragPayload | null {
   }
 }
 
+// Dragging a gallery OBJECT (any node card) onto the canvas copies that node onto
+// the current board. Same module-ref pattern as the asset drag above.
+export const NODE_DRAG_MIME = 'application/x-foolsboard-node'
+
+export interface NodeDragPayload {
+  type: string
+  title: string
+  content: Record<string, unknown>
+  width: number | null
+  height: number | null
+  color: string | null
+}
+
+let _draggedNode: NodeDragPayload | null = null
+
+export function getDraggedNode(): NodeDragPayload | null {
+  return _draggedNode
+}
+
+export function clearDraggedNode(): void {
+  _draggedNode = null
+}
+
+export function setNodeDragData(dt: DataTransfer, n: StoryNode): void {
+  const payload: NodeDragPayload = {
+    type: n.type,
+    title: n.title,
+    content: n.content,
+    width: n.width,
+    height: n.height,
+    color: n.color,
+  }
+  _draggedNode = payload
+  dt.setData(NODE_DRAG_MIME, JSON.stringify(payload))
+  dt.effectAllowed = 'copy'
+}
+
 // A unique id. Prefers crypto.randomUUID, but falls back for insecure contexts
 // (plain-HTTP over LAN), where crypto.randomUUID is undefined and would throw.
 export function genId(): string {
