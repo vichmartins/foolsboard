@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.84.3
+
+- improve: Folders and categories in the sidebar now **expand and collapse with a
+  smooth height animation** instead of snapping open/closed — the rows below glide
+  along with them.
+
+
 ## v0.84.2
 
 - feat: **Run backup now** button in Admin → Storage → Backups — triggers an

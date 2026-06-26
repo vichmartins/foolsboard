@@ -677,7 +677,7 @@ export default function Sidebar(props: Props) {
             </span>
           )}
         </div>
-        {isOpen && (
+        <div className="tree-collapse" data-open={isOpen} aria-hidden={!isOpen}>
           <div
             className="tree-children"
             // The open body is a "drop into this folder" zone; stop the event so
@@ -701,7 +701,7 @@ export default function Sidebar(props: Props) {
               <div className="tree-empty">Empty</div>
             )}
           </div>
-        )}
+        </div>
       </div>
     )
   }
@@ -932,7 +932,7 @@ export default function Sidebar(props: Props) {
                       </span>
                     </div>
                   )}
-                  {isOpen && (
+                  <div className="tree-collapse" data-open={isOpen} aria-hidden={!isOpen}>
                     <div
                       className="tree-children"
                       onDragOver={(e) => {
@@ -952,7 +952,7 @@ export default function Sidebar(props: Props) {
                         <div className="tree-empty">Empty — use + or drag items here</div>
                       )}
                     </div>
-                  )}
+                  </div>
                 </div>
               )
             })}

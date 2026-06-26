@@ -191,6 +191,31 @@
 .tree-children--root {
   padding-left: 6px;
 }
+/* Smooth expand/collapse of folder/category children: the wrapper animates its
+   grid row height (0fr <-> 1fr), which also glides the rows below it in sync. */
+.tree-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 190ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.tree-collapse[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+.tree-collapse > .tree-children {
+  overflow: hidden;
+  min-height: 0;
+  opacity: 0;
+  transition: opacity 130ms ease;
+}
+.tree-collapse[data-open='true'] > .tree-children {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tree-collapse,
+  .tree-collapse > .tree-children {
+    transition: none;
+  }
+}
 .tree-empty {
   padding: 4px 10px;
   font-size: 12px;
