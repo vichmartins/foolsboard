@@ -1667,7 +1667,11 @@ function CanvasInner({
       >
         <Background gap={20} />
         <Controls>
-          <ControlButton onClick={exportImage} title="Export board as image (PNG)">
+          <ControlButton
+            className="rf-export-btn"
+            onClick={exportImage}
+            title="Export board as image (PNG)"
+          >
             <ImageIcon />
           </ControlButton>
         </Controls>
