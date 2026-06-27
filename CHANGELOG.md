@@ -5,6 +5,8 @@
 - fix: **Export board as image** now works even when one or more nodes are
   expanded (their in-card preview was silently breaking the capture). The export
   shows the base board cards.
+- improve: A confirmation toast appears after the board image is downloaded (and a
+  clear message if an export ever fails).
 
 
 ## v0.85.2

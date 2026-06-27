@@ -88,6 +88,8 @@ interface CanvasProps {
   galleryOpen?: boolean
   onCloseGallery?: () => void
   onMoveSelection?: (nodeIds: string[]) => void
+  // Brief status toast (e.g. after an image export).
+  onToast?: (message: string) => void
   // Workspace context for the (workspace-wide) Gallery.
   boards?: Board[]
   folders?: Folder[]
@@ -159,6 +161,7 @@ function CanvasInner({
   galleryOpen,
   onCloseGallery,
   onMoveSelection,
+  onToast,
   boards = [],
   folders = [],
   categories = [],
@@ -549,11 +552,13 @@ function CanvasInner({
         a.download = `${name}.png`
         a.href = dataUrl
         a.click()
+        onToast?.('Board image downloaded')
       })
       .catch((err) => {
         console.error('Board image export failed', err)
+        onToast?.('Couldn’t export the board image')
       })
-  }, [getNodes, boards, boardId])
+  }, [getNodes, boards, boardId, onToast])
 
   // Select exactly the given nodes (deselecting the rest).
   const selectNodes = useCallback((ids: string[]) => {

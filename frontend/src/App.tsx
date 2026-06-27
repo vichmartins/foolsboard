@@ -744,6 +744,7 @@ function Workspace() {
             galleryOpen={galleryOpen}
             onCloseGallery={() => setGalleryOpen(false)}
             onMoveSelection={(ids) => setMoveIds(ids)}
+            onToast={showToast}
             boards={boards}
             folders={folders}
             categories={categories}
