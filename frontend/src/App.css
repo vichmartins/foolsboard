@@ -329,10 +329,14 @@
 }
 .tree-board__template {
   flex: none;
+  display: inline-flex;
+  align-items: center;
   margin-left: 4px;
-  font-size: 11px;
-  line-height: 1;
-  color: #e0a93a;
+  color: var(--text-dim);
+}
+.tree-board__template svg {
+  width: 13px;
+  height: 13px;
 }
 .tree-board__owner {
   flex: none;

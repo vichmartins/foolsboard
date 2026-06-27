@@ -18,6 +18,7 @@ import {
   PencilIcon,
   PlusIcon,
   ShareIcon,
+  TemplateIcon,
   TrashIcon,
 } from './icons'
 
@@ -534,7 +535,7 @@ export default function Sidebar(props: Props) {
           <span className="tree-board__name">{b.name}</span>
           {b.is_template && (
             <span className="tree-board__template" title="Template" aria-label="Template">
-              ★
+              <TemplateIcon />
             </span>
           )}
           {(b.shared || b.shared_out) && (
