@@ -722,6 +722,10 @@ function Workspace() {
           }}
           onUnshareBoard={unshareBoard}
           onCreatePrivateCopy={(b) => setCopyTarget(b)}
+          onSetTemplate={async (b, isTemplate) => {
+            const updated = await api.updateBoard(b.id, { is_template: isTemplate })
+            setBoards((bs) => bs.map((x) => (x.id === b.id ? updated : x)))
+          }}
           onCreateCategory={createCategory}
           onRenameCategory={renameCategory}
           onDeleteCategory={deleteCategory}

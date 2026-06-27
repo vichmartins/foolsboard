@@ -327,6 +327,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.tree-board__template {
+  flex: none;
+  margin-left: 4px;
+  font-size: 11px;
+  line-height: 1;
+  color: #e0a93a;
+}
 .tree-board__owner {
   flex: none;
   max-width: 40%;

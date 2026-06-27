@@ -49,6 +49,7 @@ interface Props {
   onMergeBoard: (board: Board) => void
   onUnshareBoard: (board: Board) => void
   onCreatePrivateCopy: (board: Board) => void
+  onSetTemplate: (board: Board, isTemplate: boolean) => void
   onCreateCategory: (name: string) => void
   onRenameCategory: (id: string, name: string) => void
   onDeleteCategory: (id: string) => void
@@ -141,6 +142,7 @@ export default function Sidebar(props: Props) {
     onMergeBoard,
     onUnshareBoard,
     onCreatePrivateCopy,
+    onSetTemplate,
     onCreateCategory,
     onRenameCategory,
     onDeleteCategory,
@@ -530,6 +532,11 @@ export default function Sidebar(props: Props) {
             <BoardIcon />
           </span>
           <span className="tree-board__name">{b.name}</span>
+          {b.is_template && (
+            <span className="tree-board__template" title="Template" aria-label="Template">
+              ★
+            </span>
+          )}
           {(b.shared || b.shared_out) && (
             <ShareMark
               boardId={b.id}
@@ -984,6 +991,26 @@ export default function Sidebar(props: Props) {
                   { label: 'Move to…', mnemonic: 'v', onClick: () => onMoveBoard(menu.board) },
                   { label: 'Share', mnemonic: 's', onClick: () => onShareBoard(menu.board) },
                   { label: 'Merge', mnemonic: 'm', onClick: () => onMergeBoard(menu.board) },
+                  ...(menu.board.is_template
+                    ? [
+                        {
+                          label: 'New board from template',
+                          mnemonic: 'n',
+                          onClick: () => onCreatePrivateCopy(menu.board),
+                        },
+                        {
+                          label: 'Remove from templates',
+                          mnemonic: 't',
+                          onClick: () => onSetTemplate(menu.board, false),
+                        },
+                      ]
+                    : [
+                        {
+                          label: 'Save as template',
+                          mnemonic: 't',
+                          onClick: () => onSetTemplate(menu.board, true),
+                        },
+                      ]),
                   ...(menu.board.shared_out
                     ? [
                         { label: 'Create Private Copy', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },

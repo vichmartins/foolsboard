@@ -297,7 +297,7 @@ export async function reorderFolders(folderIds: string[]): Promise<void> {
 
 export async function updateBoard(
   boardId: string,
-  payload: { name?: string; description?: string },
+  payload: { name?: string; description?: string; is_template?: boolean },
 ): Promise<Board> {
   return (await http.patch(`/boards/${boardId}`, payload)).data
 }

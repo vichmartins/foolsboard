@@ -56,6 +56,7 @@ class BoardCreate(BaseModel):
 class BoardUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
+    is_template: bool | None = None
 
 
 class BoardReorder(BaseModel):
@@ -76,6 +77,7 @@ class BoardOut(ORMModel):
     description: str | None
     folder_id: UUID | None = None
     owner_id: UUID | None = None
+    is_template: bool = False
     # True when this board was shared with the caller (not owned by them).
     shared: bool = False
     # True when the caller owns this board and has shared it out (crown badge).
