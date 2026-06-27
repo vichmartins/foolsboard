@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.85.4
+
+- fix: Invite codes that have an expiry no longer error on SQLite-backed installs
+  (a timezone comparison only worked on PostgreSQL).
+
+
 ## v0.85.3
 
 - fix: **Export board as image** now works even when one or more nodes are
