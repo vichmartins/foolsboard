@@ -1755,6 +1755,7 @@ function CanvasInner({
             target_id: e.target,
             label: (e.label as string | undefined) ?? null,
           }))}
+          startId={selectedId ?? undefined}
           onClose={() => setPlayOpen(false)}
         />
       )}

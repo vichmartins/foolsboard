@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   isMediaNodeType,
   KIND_COLORS,
+  nodePreview,
   TYPE_FIELDS,
   typeLabel,
   type StoryNode,
@@ -52,26 +53,71 @@ export default function Playthrough({
     return m
   }, [edges, byId])
 
-  // Start at the requested node, else the first node with no incoming connection
-  // (a natural beginning), else just the first node.
-  const initial = useMemo(() => {
-    if (startId && byId.has(startId)) return startId
-    const hasIncoming = new Set(edges.map((e) => e.target_id))
-    const root = nodes.find((n) => !hasIncoming.has(n.id))
-    return (root ?? nodes[0])?.id
-  }, [startId, nodes, edges, byId])
+  // How many nodes are reachable from a node (so the "main" story -- the entry
+  // point that leads to the most -- sorts first in the chooser).
+  const reachFrom = useCallback(
+    (id: string) => {
+      const seen = new Set<string>([id])
+      const queue = [id]
+      while (queue.length) {
+        const cur = queue.shift() as string
+        for (const c of outgoing.get(cur) ?? []) {
+          if (!seen.has(c.to)) {
+            seen.add(c.to)
+            queue.push(c.to)
+          }
+        }
+      }
+      return seen.size
+    },
+    [outgoing],
+  )
 
-  const [current, setCurrent] = useState<string | undefined>(initial)
+  // Candidate starting points: objects that actually lead somewhere. Prefer true
+  // beginnings (nothing points at them); fall back to any object with an outgoing
+  // connection. Loose objects (standalone media, unconnected notes) are excluded.
+  const starts = useMemo(() => {
+    const hasIncoming = new Set(edges.map((e) => e.target_id))
+    const leadsSomewhere = nodes.filter((n) => (outgoing.get(n.id)?.length ?? 0) > 0)
+    const roots = leadsSomewhere.filter((n) => !hasIncoming.has(n.id))
+    const pool = roots.length ? roots : leadsSomewhere
+    return pool
+      .map((n) => ({ n, reach: reachFrom(n.id) }))
+      .sort((a, b) => b.reach - a.reach)
+      .map((x) => x.n)
+  }, [nodes, edges, outgoing, reachFrom])
+
+  // Where we begin: an explicitly-selected object wins; otherwise auto-start only
+  // when there's exactly one sensible entry; otherwise show the chooser (null).
+  const initialChosen = useMemo<string | null>(() => {
+    if (startId && byId.has(startId)) return startId
+    return starts.length === 1 ? starts[0].id : null
+  }, [startId, starts, byId])
+
+  // A chooser is shown (and reachable via "play again"/back) only when there's a
+  // real choice of entry point.
+  const canChoose = !startId && starts.length > 1
+
+  const [chosen, setChosen] = useState<string | null>(initialChosen)
+  const [current, setCurrent] = useState<string | undefined>(initialChosen ?? undefined)
   const [history, setHistory] = useState<string[]>([])
 
   useEffect(() => {
-    setCurrent(initial)
+    setChosen(initialChosen)
+    setCurrent(initialChosen ?? undefined)
     setHistory([])
-  }, [initial])
+  }, [initialChosen])
 
-  const node = current ? byId.get(current) : undefined
-  const choices = current ? outgoing.get(current) ?? [] : []
-
+  const begin = useCallback((id: string) => {
+    setChosen(id)
+    setCurrent(id)
+    setHistory([])
+  }, [])
+  const toChooser = useCallback(() => {
+    setChosen(null)
+    setCurrent(undefined)
+    setHistory([])
+  }, [])
   const go = useCallback(
     (to: string) => {
       setHistory((h) => (current ? [...h, current] : h))
@@ -81,22 +127,34 @@ export default function Playthrough({
   )
   const back = useCallback(() => {
     setHistory((h) => {
-      if (!h.length) return h
+      if (!h.length) {
+        if (canChoose) toChooser()
+        return h
+      }
       const copy = h.slice()
       setCurrent(copy.pop())
       return copy
     })
-  }, [])
-  const restart = useCallback(() => {
-    setCurrent(initial)
-    setHistory([])
-  }, [initial])
+  }, [canChoose, toChooser])
+
+  const node = current ? byId.get(current) : undefined
+  const choices = current ? outgoing.get(current) ?? [] : []
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') return onClose()
+      if (chosen === null) {
+        if (/^[1-9]$/.test(e.key)) {
+          const pick = starts[Number(e.key) - 1]
+          if (pick) {
+            e.preventDefault()
+            begin(pick.id)
+          }
+        }
+        return
+      }
       if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
-        if (history.length) {
+        if (history.length || canChoose) {
           e.preventDefault()
           back()
         }
@@ -116,7 +174,7 @@ export default function Playthrough({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [choices, history.length, back, go, onClose])
+  }, [chosen, choices, history.length, canChoose, starts, back, begin, go, onClose])
 
   const trail = useMemo(
     () =>
@@ -126,20 +184,6 @@ export default function Playthrough({
         .slice(-4),
     [history, current, byId],
   )
-
-  const accent = node ? KIND_COLORS[node.type] ?? 'var(--text-dim)' : 'var(--text-dim)'
-  const fields = node
-    ? (TYPE_FIELDS[node.type] ?? [])
-        .filter((d) => !d.widget)
-        .map((d) => ({ d, v: node.content?.[d.key] }))
-        .filter((x): x is { d: (typeof TYPE_FIELDS)[string][number]; v: string } =>
-          typeof x.v === 'string' && x.v.trim().length > 0,
-        )
-    : []
-  const url =
-    node && isMediaNodeType(node.type) && typeof node.content?.url === 'string'
-      ? (node.content.url as string)
-      : null
 
   return (
     <div className="pt-overlay" role="dialog" aria-label="Playthrough">
@@ -152,7 +196,7 @@ export default function Playthrough({
         </button>
       </div>
 
-      {trail.length > 1 && (
+      {chosen !== null && trail.length > 1 && (
         <div className="pt-path">
           {trail.map((t, i) => (
             <span key={i}>
@@ -164,77 +208,161 @@ export default function Playthrough({
       )}
 
       <div className="pt-stage">
-        {!node ? (
+        {chosen === null ? (
+          <Chooser starts={starts} onPick={begin} onClose={onClose} />
+        ) : !node ? (
           <div className="pt-empty">
-            <p>This board has nothing to play yet.</p>
+            <p>This object no longer exists.</p>
             <button className="pt-btn" onClick={onClose}>
               Close
             </button>
           </div>
         ) : (
-          <div className="pt-card">
-            <span className="pt-badge" style={{ color: accent, borderColor: accent }}>
-              {typeLabel(node.type)}
-            </span>
-            <h2 className="pt-title">{node.title || 'Untitled'}</h2>
-            {url && (
-              <a className="pt-link" href={url} target="_blank" rel="noopener noreferrer">
-                {url}
-              </a>
-            )}
-            {fields.map(({ d, v }) =>
-              d.multiline ? (
-                <div key={d.key} className="pt-field">
-                  <div className="pt-field__label">{d.label}</div>
-                  <p className="pt-field__body">{v}</p>
-                </div>
-              ) : (
-                <div key={d.key} className="pt-meta">
-                  <span className="pt-meta__label">{d.label}</span>
-                  {v}
-                </div>
-              ),
-            )}
-            {!fields.length && !url && <p className="pt-field__body pt-dim">(no details on this object)</p>}
-
-            {choices.length > 1 && (
-              <div className="pt-choices">
-                {choices.map((c, i) => (
-                  <button key={i} className="pt-choice" onClick={() => go(c.to)}>
-                    <span className="pt-choice__num">{i + 1}</span>
-                    <span className="pt-choice__label">{c.label}</span>
-                    <span className="pt-choice__arrow">→</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {choices.length === 0 && <div className="pt-end">The end</div>}
-          </div>
+          <Scene node={node} choices={choices} onChoose={go} />
         )}
       </div>
 
-      <div className="pt-foot">
-        <div>
-          {history.length > 0 && (
-            <button className="pt-btn" onClick={back}>
-              ← Back
-            </button>
-          )}
+      {chosen !== null && node && (
+        <div className="pt-foot">
+          <div>
+            {(history.length > 0 || canChoose) && (
+              <button className="pt-btn" onClick={back}>
+                ← Back
+              </button>
+            )}
+          </div>
+          <div className="pt-foot__right">
+            {choices.length === 1 && (
+              <button className="pt-btn pt-btn--primary" onClick={() => go(choices[0].to)}>
+                Next →
+              </button>
+            )}
+            {choices.length === 0 && (
+              <button
+                className="pt-btn pt-btn--primary"
+                onClick={() => (canChoose ? toChooser() : begin(chosen))}
+              >
+                {canChoose ? 'Choose another start' : 'Play again'}
+              </button>
+            )}
+            {choices.length > 1 && <span className="pt-hint">Pick a path above</span>}
+          </div>
         </div>
-        <div className="pt-foot__right">
-          {choices.length === 1 && (
-            <button className="pt-btn pt-btn--primary" onClick={() => go(choices[0].to)}>
-              Next →
-            </button>
-          )}
-          {node && choices.length === 0 && (
-            <button className="pt-btn pt-btn--primary" onClick={restart}>
-              Play again
-            </button>
-          )}
-          {choices.length > 1 && <span className="pt-hint">Pick a path above</span>}
-        </div>
+      )}
+    </div>
+  )
+}
+
+function Chooser({
+  starts,
+  onPick,
+  onClose,
+}: {
+  starts: StoryNode[]
+  onPick: (id: string) => void
+  onClose: () => void
+}) {
+  if (!starts.length) {
+    return (
+      <div className="pt-empty">
+        <p>This board has no connected path to play yet.</p>
+        <p className="pt-dim">Link objects together with connections, then press play.</p>
+        <button className="pt-btn" onClick={onClose}>
+          Close
+        </button>
       </div>
+    )
+  }
+  return (
+    <div className="pt-card">
+      <h2 className="pt-title">Where would you like to start?</h2>
+      <p className="pt-dim" style={{ marginTop: '-6px', marginBottom: '6px' }}>
+        These objects each begin a path through the board.
+      </p>
+      <div className="pt-choices">
+        {starts.map((n, i) => {
+          const preview = nodePreview(n.type, n.content)
+          const accent = KIND_COLORS[n.type] ?? 'var(--text-dim)'
+          return (
+            <button key={n.id} className="pt-choice pt-choice--start" onClick={() => onPick(n.id)}>
+              <span className="pt-choice__num">{i + 1}</span>
+              <span className="pt-choice__label">
+                <span className="pt-choice__top">
+                  <span className="pt-tag" style={{ color: accent, borderColor: accent }}>
+                    {typeLabel(n.type)}
+                  </span>
+                  {n.title || 'Untitled'}
+                </span>
+                {preview && <span className="pt-choice__sub">{preview}</span>}
+              </span>
+              <span className="pt-choice__arrow">→</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function Scene({
+  node,
+  choices,
+  onChoose,
+}: {
+  node: StoryNode
+  choices: Choice[]
+  onChoose: (id: string) => void
+}) {
+  const accent = KIND_COLORS[node.type] ?? 'var(--text-dim)'
+  const fields = (TYPE_FIELDS[node.type] ?? [])
+    .filter((d) => !d.widget)
+    .map((d) => ({ d, v: node.content?.[d.key] }))
+    .filter((x): x is { d: (typeof TYPE_FIELDS)[string][number]; v: string } =>
+      typeof x.v === 'string' && x.v.trim().length > 0,
+    )
+  const url =
+    isMediaNodeType(node.type) && typeof node.content?.url === 'string'
+      ? (node.content.url as string)
+      : null
+
+  return (
+    <div className="pt-card">
+      <span className="pt-badge" style={{ color: accent, borderColor: accent }}>
+        {typeLabel(node.type)}
+      </span>
+      <h2 className="pt-title">{node.title || 'Untitled'}</h2>
+      {url && (
+        <a className="pt-link" href={url} target="_blank" rel="noopener noreferrer">
+          {url}
+        </a>
+      )}
+      {fields.map(({ d, v }) =>
+        d.multiline ? (
+          <div key={d.key} className="pt-field">
+            <div className="pt-field__label">{d.label}</div>
+            <p className="pt-field__body">{v}</p>
+          </div>
+        ) : (
+          <div key={d.key} className="pt-meta">
+            <span className="pt-meta__label">{d.label}</span>
+            {v}
+          </div>
+        ),
+      )}
+      {!fields.length && !url && <p className="pt-field__body pt-dim">(no details on this object)</p>}
+
+      {choices.length > 1 && (
+        <div className="pt-choices">
+          {choices.map((c, i) => (
+            <button key={i} className="pt-choice" onClick={() => onChoose(c.to)}>
+              <span className="pt-choice__num">{i + 1}</span>
+              <span className="pt-choice__label">{c.label}</span>
+              <span className="pt-choice__arrow">→</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {choices.length === 0 && <div className="pt-end">The end</div>}
     </div>
   )
 }
