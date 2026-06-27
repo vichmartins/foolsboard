@@ -155,27 +155,38 @@ export default function WhatsNewDialog({ onClose }: { onClose: () => void }) {
           </span>
         </div>
         <div className="whatsnew__body">
-          {releases.map((r) => (
-            <section className="whatsnew__rel" key={r.version}>
-              <h3 className="whatsnew__relver">{r.version}</h3>
-              <div className="whatsnew__list">
-                {r.bullets.map((b, i) => {
-                  const { cat, text } = classify(b)
-                  const C = CATS[cat]
-                  return (
-                    <div className="whatsnew__item" key={i}>
-                      <span className="whatsnew__icon" style={{ color: C.color }} title={C.label}>
-                        <C.Icon />
-                      </span>
-                      <span className="whatsnew__text">
-                        <Rich text={text} />
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-          ))}
+          {releases.map((r) => {
+            // Every item gets a real icon: an unprefixed line (a sub-bullet/detail)
+            // inherits the category of the item above it, falling back to a neutral
+            // one if it's the first line in the release.
+            let lastCat: Cat = 'improve'
+            const items = r.bullets.map((b) => {
+              const c = classify(b)
+              const cat: Cat = c.cat === 'note' ? lastCat : c.cat
+              if (c.cat !== 'note') lastCat = c.cat
+              return { cat, text: c.text }
+            })
+            return (
+              <section className="whatsnew__rel" key={r.version}>
+                <h3 className="whatsnew__relver">{r.version}</h3>
+                <div className="whatsnew__list">
+                  {items.map((it, i) => {
+                    const C = CATS[it.cat]
+                    return (
+                      <div className="whatsnew__item" key={i}>
+                        <span className="whatsnew__icon" style={{ color: C.color }} title={C.label}>
+                          <C.Icon />
+                        </span>
+                        <span className="whatsnew__text">
+                          <Rich text={it.text} />
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )
+          })}
         </div>
         <div className="whatsnew__actions">
           <button className="btn btn--primary" onClick={onClose}>

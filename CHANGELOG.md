@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.87.2
+
+- fix: Every entry in the **What’s New** dialog now shows a category icon — detail
+  / sub-bullet lines inherit the icon of the item above them instead of rendering
+  as a plain dot.
+
+
 ## v0.87.1
 
 - fix: On SQLite-backed installs, deleting a node now also removes its connections,
