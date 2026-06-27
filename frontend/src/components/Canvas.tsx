@@ -20,7 +20,8 @@ import {
   type NodeChange,
 } from '@xyflow/react'
 import { toPng } from 'html-to-image'
-import { ImageIcon } from './icons'
+import { ImageIcon, PlayIcon } from './icons'
+import Playthrough from './Playthrough'
 import '@xyflow/react/dist/style.css'
 
 import * as api from '../api'
@@ -227,6 +228,7 @@ function CanvasInner({
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [playOpen, setPlayOpen] = useState(false)
 
   // Smoothly track remote node moves by easing each node's *position* toward its
   // latest target every frame -- so React Flow recomputes the node and its edges
@@ -1710,6 +1712,13 @@ function CanvasInner({
         <Background gap={20} />
         <Controls>
           <ControlButton
+            className="rf-play-btn"
+            onClick={() => setPlayOpen(true)}
+            title="Play through the story"
+          >
+            <PlayIcon />
+          </ControlButton>
+          <ControlButton
             className="rf-export-btn"
             onClick={exportImage}
             title="Export board as image (PNG)"
@@ -1737,6 +1746,18 @@ function CanvasInner({
       )}
 
       {lockMsg && <div className="toast">{lockMsg}</div>}
+
+      {playOpen && (
+        <Playthrough
+          nodes={nodes.map((n) => n.data.story as StoryNode).filter(Boolean)}
+          edges={edges.map((e) => ({
+            source_id: e.source,
+            target_id: e.target,
+            label: (e.label as string | undefined) ?? null,
+          }))}
+          onClose={() => setPlayOpen(false)}
+        />
+      )}
 
       {editorStory && (
         <ContextPanel

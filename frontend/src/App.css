@@ -1387,6 +1387,228 @@
   fill: none;
   stroke: currentColor;
 }
+/* The play-through button uses a solid triangle (fill, not stroke). */
+.react-flow__controls-button.rf-play-btn svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* ---- Playthrough (full-screen interactive story reader) ---- */
+.pt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  animation: pt-fade 0.18s ease forwards;
+}
+@keyframes pt-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.pt-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.pt-bar__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+.pt-x {
+  display: flex;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+}
+.pt-x:hover {
+  color: var(--text);
+  background: var(--border);
+}
+.pt-path {
+  padding: 10px 18px 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.pt-path__sep {
+  margin: 0 6px;
+  opacity: 0.5;
+}
+.pt-stage {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 18px;
+}
+.pt-card {
+  width: min(640px, 100%);
+  animation: pt-card-in 0.22s ease forwards;
+}
+@keyframes pt-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.pt-badge {
+  display: inline-block;
+  font-size: 12px;
+  padding: 3px 11px;
+  border: 1px solid;
+  border-radius: 999px;
+}
+.pt-title {
+  font-size: 26px;
+  margin: 12px 0 14px;
+  color: var(--text);
+}
+.pt-link {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--accent);
+  word-break: break-all;
+}
+.pt-meta {
+  font-size: 14px;
+  color: var(--text);
+  margin: 6px 0;
+}
+.pt-meta__label {
+  color: var(--text-dim);
+  margin-right: 8px;
+}
+.pt-field {
+  margin: 16px 0;
+}
+.pt-field__label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.pt-field__body {
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--text);
+  margin: 0;
+  white-space: pre-wrap;
+}
+.pt-dim {
+  color: var(--text-dim);
+}
+.pt-end {
+  margin-top: 24px;
+  font-size: 15px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+.pt-choices {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pt-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 13px 15px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+  transition: border-color 0.12s, transform 0.06s;
+}
+.pt-choice:hover {
+  border-color: var(--accent);
+}
+.pt-choice:active {
+  transform: scale(0.99);
+}
+.pt-choice__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 7px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+}
+.pt-choice__label {
+  flex: 1;
+}
+.pt-choice__arrow {
+  color: var(--text-dim);
+}
+.pt-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  min-height: 32px;
+}
+.pt-foot__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pt-hint {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.pt-btn {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.pt-btn:hover {
+  border-color: var(--accent);
+}
+.pt-btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.pt-empty {
+  text-align: center;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
 
 /* MiniMap — themed to match the dark UI */
 .react-flow__minimap {
