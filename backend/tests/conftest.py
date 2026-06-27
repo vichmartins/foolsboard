@@ -25,11 +25,16 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Asset  # noqa: E402
+from app.ratelimit import login_limiter, password_change_limiter  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
 def _fresh_db():
-    """Each test runs against a clean schema."""
+    """Each test runs against a clean schema, with the in-memory rate limiters
+    cleared (they're process-global and would otherwise leak between tests -- the
+    login limiter is keyed by the shared 'testclient' IP)."""
+    login_limiter.clear()
+    password_change_limiter.clear()
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.87.4
+
+- fix: A malformed `Authorization` token containing non-ASCII characters could
+  cause a 500 error (in the request-logging middleware) instead of a clean 401.
+  Token decoding is now hardened to reject any malformed token gracefully.
+
+
 ## v0.87.3
 
 - improve: Security hardening — avatar uploads over 5 MB are now rejected up front,

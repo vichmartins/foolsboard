@@ -51,11 +51,11 @@ def decode_token(token: str) -> UUID | None:
     """Return the user id if the token is valid and unexpired, else None."""
     try:
         header_b64, payload_b64, sig = token.split(".")
-    except ValueError:
-        return None
-    if not hmac.compare_digest(sig, _sign(f"{header_b64}.{payload_b64}")):
-        return None
-    try:
+        # _sign() encodes as ASCII, so a token with non-ASCII characters would
+        # raise UnicodeEncodeError (a ValueError) here -- keep it inside the try so
+        # any malformed token yields None (a clean 401), never an uncaught 500.
+        if not hmac.compare_digest(sig, _sign(f"{header_b64}.{payload_b64}")):
+            return None
         payload = json.loads(_b64url_decode(payload_b64))
         if int(payload.get("exp", 0)) < int(time.time()):
             return None

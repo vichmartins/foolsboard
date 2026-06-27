@@ -42,6 +42,11 @@ class SlidingWindowLimiter:
         with self._lock:
             self._events.pop(key, None)
 
+    def clear(self) -> None:
+        """Drop all tracked events (used by tests for isolation)."""
+        with self._lock:
+            self._events.clear()
+
 
 # Up to 10 failed login attempts per IP per 10 minutes; a success clears the IP.
 login_limiter = SlidingWindowLimiter(max_events=10, window_seconds=600)
