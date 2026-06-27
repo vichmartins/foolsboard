@@ -93,7 +93,7 @@ type Cat = keyof typeof CATS
 // it to a category; lines without a prefix are neutral notes.
 function classify(text: string): { cat: Cat; text: string } {
   const m =
-    /^(feat|feature|add|added|fix|fixed|bug|improve|improvement|improved|change|changed)\s*[:—-]\s*(.+)$/is.exec(
+    /^(feat|feature|add|added|fix|fixed|bug|improve|improvement|improved|change|changed|docs|doc)\s*[:—-]\s*(.+)$/is.exec(
       text,
     )
   if (!m) return { cat: 'note', text }

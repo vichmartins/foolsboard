@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.85.2
+
+- fix: The **What’s New** dialog now shows a category icon for documentation
+  entries (they were rendering as a plain bullet).
+
+
 ## v0.85.1
 
 - feat: **Toggle the Explorer sidebar with Ctrl/Cmd-B** (also listed under the
