@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.87.1
+
+- fix: On SQLite-backed installs, deleting a node now also removes its connections,
+  and deleting a folder unfiles its boards instead of leaving dangling references
+  (database foreign-key enforcement was off for SQLite). PostgreSQL was unaffected.
+
+
 ## v0.87.0
 
 - feat: **Board templates.** Right-click a board → **Save as template** (marked with

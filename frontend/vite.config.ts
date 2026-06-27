@@ -1,6 +1,18 @@
 import { readFileSync } from 'node:fs'
-import { defineConfig, type Plugin } from 'vite'
+import { createLogger, defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+
+// Quiet the benign dev-only WebSocket proxy churn: React StrictMode mounts twice
+// on load, so the realtime socket opens then immediately closes, aborting one
+// proxied connection ("ws proxy error: write ECONNABORTED"). It doesn't happen in
+// production (no StrictMode, no Vite) and breaks nothing. Every other error -- a
+// backend that's down, a real /api proxy failure -- still logs normally.
+const quietLogger = createLogger()
+const baseError = quietLogger.error.bind(quietLogger)
+quietLogger.error = (msg, options) => {
+  if (typeof msg === 'string' && msg.includes('ws proxy')) return
+  baseError(msg, options)
+}
 
 const pkg = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
@@ -26,6 +38,7 @@ const emitVersion: Plugin = {
 // Dev server proxies API + media calls to the FastAPI backend so the browser
 // talks to a single origin (no CORS juggling during development).
 export default defineConfig({
+  customLogger: quietLogger,
   plugins: [react(), emitVersion],
   // Bake the build version into the bundle for the update check.
   define: {
