@@ -9,6 +9,7 @@ export interface Board {
   member_ids?: string[] // everyone with access (owner + accepted collaborators)
   shared: boolean // shared with me (not owned by me)
   shared_out?: boolean // I own it and have shared it out (crown badge)
+  is_template?: boolean // a reusable starting point ("New from template")
   owner_name: string | null
   created_at: string
   updated_at: string

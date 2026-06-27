@@ -280,7 +280,16 @@ def get_board(
     board_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> BoardOut:
     board = _get_accessible_board(board_id, db, user)
-    return _board_out(board, user, db, {})
+    shared_out_ids = set(
+        db.scalars(
+            select(Share.board_id).where(
+                Share.owner_id == user.id,
+                Share.board_id.is_not(None),
+                Share.status.in_(["pending", "accepted"]),
+            )
+        )
+    )
+    return _board_out(board, user, db, {}, shared_out_ids)
 
 
 @router.get("/{board_id}/graph", response_model=BoardGraph)
@@ -389,7 +398,7 @@ def copy_board(
     db.refresh(new)
     log_event(db, user=user, action="board.copy", entity_type="board", entity_id=new.id,
               summary=f"made a private copy of “{src.name}”")
-    return _board_out(new, user, db, {})
+    return _board_out(new, user, db, {}, set())
 
 
 @router.post("/{board_id}/absorb", status_code=status.HTTP_204_NO_CONTENT)

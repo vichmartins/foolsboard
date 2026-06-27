@@ -26,6 +26,25 @@ def test_board_node_edge_crud(client, admin):
     assert client.delete(f"/api/boards/{bid}/nodes/{n1}", headers=auth(token)).status_code == 204
 
 
+def test_get_single_board(client, admin):
+    token, _ = admin
+    bid = new_board(client, token, "Solo")
+    r = client.get(f"/api/boards/{bid}", headers=auth(token))
+    assert r.status_code == 200, r.text
+    assert r.json()["id"] == bid and r.json()["is_template"] is False
+
+
+def test_mark_template_and_copy_is_plain_board(client, admin):
+    token, _ = admin
+    bid = new_board(client, token, "Starter")
+    marked = client.patch(f"/api/boards/{bid}", json={"is_template": True}, headers=auth(token))
+    assert marked.status_code == 200 and marked.json()["is_template"] is True
+    # "New from template" = copy; the instance must NOT itself be a template.
+    copy = client.post(f"/api/boards/{bid}/copy", headers=auth(token))
+    assert copy.status_code == 201, copy.text
+    assert copy.json()["is_template"] is False
+
+
 def test_other_user_cannot_access_unshared_board(client, admin):
     token, _ = admin
     bid = new_board(client, token)

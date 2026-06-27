@@ -142,6 +142,16 @@ export function DownloadIcon() {
   )
 }
 
+// A star outline = a board marked as a reusable template.
+export function TemplateIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3.5l2.6 5.27 5.82.85-4.21 4.1.99 5.79L12 16.77l-5.2 2.74.99-5.79-4.21-4.1 5.82-.85L12 3.5z" />
+    </svg>
+  )
+}
+
 // A framed picture = exporting the board as an image.
 export function ImageIcon() {
   return (

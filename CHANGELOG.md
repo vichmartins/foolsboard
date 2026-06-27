@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.87.0
+
+- feat: **Board templates.** Right-click a board → **Save as template** (marked with
+  a ★); create fresh boards from it via **New board from template**.
+- fix: Opening a board directly or making a private copy could error in some cases
+  (an internal mismatch) — now fixed and covered by tests.
+
+
 ## v0.86.0
 
 - feat: **Undo now covers content edits.** After you save changes to a node’s
