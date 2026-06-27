@@ -533,17 +533,26 @@ function CanvasInner({
       width,
       height,
       pixelRatio: 2,
+      // Skip the expandable in-card preview (.story-node__more): its grid-row
+      // animation renders invalid inside html-to-image's SVG foreignObject (and
+      // its lazy media can taint the capture), which silently failed the export
+      // whenever a node was expanded. The export shows the base board regardless.
+      filter: (el) => !(el instanceof HTMLElement && el.classList.contains('story-node__more')),
       style: {
         width: `${width}px`,
         height: `${height}px`,
         transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.zoom})`,
       },
-    }).then((dataUrl) => {
-      const a = document.createElement('a')
-      a.download = `${name}.png`
-      a.href = dataUrl
-      a.click()
     })
+      .then((dataUrl) => {
+        const a = document.createElement('a')
+        a.download = `${name}.png`
+        a.href = dataUrl
+        a.click()
+      })
+      .catch((err) => {
+        console.error('Board image export failed', err)
+      })
   }, [getNodes, boards, boardId])
 
   // Select exactly the given nodes (deselecting the rest).
