@@ -25,6 +25,7 @@ from ..deps import get_current_user
 from ..models import Asset, Board, Edge, Folder, Node, User
 from ..schemas import BoardOut
 from ..storage import storage
+from .assets import DEFAULT_MAX_UPLOAD_BYTES, MAX_UPLOAD_BYTES
 
 router = APIRouter(prefix="/api/boards", tags=["transfer"])
 
@@ -285,17 +286,30 @@ def _restore_file(
     names: set[str],
     arc: str | None,
     fallback_name: str,
-    key_map: dict[str, str],
-) -> str | None:
-    """Write a bundled file into storage, returning its new key (or None)."""
+    key_map: dict[str, tuple[str, int]],
+    max_bytes: int,
+) -> tuple[str, int] | None:
+    """Write a bundled file into storage, returning (new key, byte size) or None.
+
+    The size cap is checked against the zip's recorded uncompressed size and
+    rejects an oversized entry *before* extracting it -- so a crafted bundle can't
+    create assets larger than a normal upload allows, nor act as a decompression
+    bomb. The returned size is the real byte count, so we never trust the
+    manifest's attacker-supplied `size` field."""
     if not arc or arc not in names:
         return None
     if arc in key_map:  # shared file already restored this import
         return key_map[arc]
+    size = zf.getinfo(arc).file_size
+    if size > max_bytes:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            f"A file in the bundle exceeds the {max_bytes // (1024 * 1024)} MB limit",
+        )
     with zf.open(arc) as src:  # streamed to storage in chunks, not read into RAM
         key = storage.save(src, fallback_name)
-    key_map[arc] = key
-    return key
+    key_map[arc] = (key, size)
+    return key_map[arc]
 
 
 @router.post("/import", response_model=list[BoardOut])
@@ -338,7 +352,7 @@ def _do_import(zf: zipfile.ZipFile, db: Session, user: User) -> list[Board]:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bundle contains no boards")
 
     names = set(zf.namelist())
-    key_map: dict[str, str] = {}
+    key_map: dict[str, tuple[str, int]] = {}
     created: list[Board] = []
 
     # Recreate folders referenced by the bundle (v3+) and file boards into them.
@@ -392,23 +406,28 @@ def _do_import(zf: zipfile.ZipFile, db: Session, user: User) -> list[Board]:
             for a in n.get("assets") or []:
                 if not isinstance(a, dict):
                     continue
-                key = _restore_file(zf, names, a.get("file"), a.get("filename") or "file", key_map)
-                if key is None:
+                kind = (str(a.get("kind") or "file"))[:30]
+                limit = MAX_UPLOAD_BYTES.get(kind, DEFAULT_MAX_UPLOAD_BYTES)
+                restored = _restore_file(
+                    zf, names, a.get("file"), a.get("filename") or "file", key_map, limit
+                )
+                if restored is None:
                     continue  # bytes weren't in the bundle; skip this asset
-                thumb = (
-                    _restore_file(zf, names, a.get("thumb"), "thumb.jpg", key_map)
+                key, real_size = restored
+                thumb_restored = (
+                    _restore_file(zf, names, a.get("thumb"), "thumb.jpg", key_map, MAX_UPLOAD_BYTES["image"])
                     if a.get("thumb")
                     else None
                 )
                 db.add(
                     Asset(
                         node_id=node.id,
-                        kind=(str(a.get("kind") or "file"))[:30],
+                        kind=kind,
                         filename=(str(a.get("filename") or "file"))[:500],
                         content_type=(str(a.get("content_type") or "application/octet-stream"))[:150],
-                        size=int(a.get("size") or 0),
+                        size=real_size,  # actual restored bytes, not the manifest's claim
                         storage_key=key,
-                        thumbnail_key=thumb,
+                        thumbnail_key=thumb_restored[0] if thumb_restored else None,
                         content_hash=a.get("content_hash"),
                     )
                 )

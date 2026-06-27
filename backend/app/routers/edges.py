@@ -1,4 +1,5 @@
-"""Edge endpoints, scoped under a board the caller owns."""
+"""Edge endpoints, scoped under a board the caller can access (its owner or an
+accepted collaborator -- same edit rights as nodes/assets, via get_owned_board)."""
 from __future__ import annotations
 
 from uuid import UUID
