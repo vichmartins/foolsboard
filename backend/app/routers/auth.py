@@ -15,7 +15,7 @@ from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
 from ..models import Board, InviteCode, User
-from ..ratelimit import login_limiter
+from ..ratelimit import login_limiter, password_change_limiter
 from ..realtime import PALETTE, hub
 from ..schemas import (
     CategoriesPayload,
@@ -33,6 +33,10 @@ from ..security import create_access_token, hash_password, verify_password
 from ..storage import storage
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+# Avatars get downscaled to 256px anyway, so anything beyond a few MB is just an
+# upload to reject before we hand the bytes to Pillow.
+MAX_AVATAR_BYTES = 5 * 1024 * 1024
 
 
 def _user_out(user: User) -> UserOut:
@@ -227,8 +231,16 @@ def update_password(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> None:
+    key = str(user.id)
+    if password_change_limiter.is_blocked(key):
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "Too many password-change attempts. Please wait a few minutes and try again.",
+        )
     if not verify_password(payload.current_password, user.password_hash):
+        password_change_limiter.record(key)  # only wrong guesses count
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Current password is incorrect")
+    password_change_limiter.reset(key)  # a correct current password clears the counter
     user.password_hash = hash_password(payload.new_password)
     db.commit()
 
@@ -241,10 +253,20 @@ def upload_avatar(
 ) -> UserOut:
     from PIL import Image, UnidentifiedImageError
 
+    # Cap the raw upload: read one byte past the limit and bail if we got it. This
+    # bounds memory before Pillow touches the data (the pixel-count bomb guard
+    # below is a second line of defence against small-but-huge-canvas images).
+    data = file.file.read(MAX_AVATAR_BYTES + 1)
+    if len(data) > MAX_AVATAR_BYTES:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            "Avatar image is too large (max 5 MB).",
+        )
+
     try:
         # MAX_IMAGE_PIXELS is set process-wide in compression.py, so an oversized
         # "decompression bomb" raises here instead of exhausting memory.
-        img = Image.open(file.file).convert("RGB")
+        img = Image.open(io.BytesIO(data)).convert("RGB")
         img.thumbnail((256, 256))
         buf = io.BytesIO()
         img.save(buf, format="WEBP", quality=82)

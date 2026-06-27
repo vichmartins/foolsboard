@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.87.3
+
+- improve: Security hardening — avatar uploads over 5 MB are now rejected up front,
+  and password changes are rate-limited (5 failed attempts per 10 min per account)
+  to block brute-forcing the current password from a stolen session.
+
+
 ## v0.87.2
 
 - fix: Every entry in the **What’s New** dialog now shows a category icon — detail

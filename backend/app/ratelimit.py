@@ -45,3 +45,7 @@ class SlidingWindowLimiter:
 
 # Up to 10 failed login attempts per IP per 10 minutes; a success clears the IP.
 login_limiter = SlidingWindowLimiter(max_events=10, window_seconds=600)
+
+# Up to 5 failed password-change attempts per user per 10 minutes -- stops someone
+# with a stolen session from brute-forcing the current password. Success clears it.
+password_change_limiter = SlidingWindowLimiter(max_events=5, window_seconds=600)
