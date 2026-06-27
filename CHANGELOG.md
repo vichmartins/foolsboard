@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.85.5
+
+- feat: **Ctrl/Cmd-K opens workspace search** — jump straight to the Gallery’s
+  search to find and open anything across all your boards from the keyboard.
+
+
 ## v0.85.4
 
 - fix: Invite codes that have an expiry no longer error on SQLite-backed installs

@@ -111,12 +111,18 @@ function Workspace() {
   useEffect(() => {
     localStorage.setItem('foolsboard:sidebar', sidebarOpen ? '1' : '0')
   }, [sidebarOpen])
-  // Ctrl/Cmd-B toggles the Explorer sidebar (like VS Code).
+  // Global shortcuts: Ctrl/Cmd-B toggles the Explorer sidebar (like VS Code);
+  // Ctrl/Cmd-K opens the workspace search (the Gallery, with its search focused).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return
+      const k = e.key.toLowerCase()
+      if (k === 'b' && !e.shiftKey) {
         e.preventDefault()
         setSidebarOpen((o) => !o)
+      } else if (k === 'k' && !e.shiftKey) {
+        e.preventDefault()
+        setGalleryOpen(true)
       }
     }
     window.addEventListener('keydown', onKey)
