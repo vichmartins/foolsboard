@@ -11,6 +11,7 @@ import mimetypes
 import threading
 import time
 import traceback
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 # Serve the PWA manifest with the right type (not registered by default on some
@@ -46,7 +47,16 @@ from .routers import (
 )
 from .security import decode_token
 
-app = FastAPI(title="foolsboard API", version="0.4.0")
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    # One-time maintenance/backfills run in a single background thread so they
+    # never delay the server from accepting connections, and each is isolated so
+    # one failure can't abort the rest or startup. See _run_startup_jobs.
+    threading.Thread(target=_run_startup_jobs, name="startup-jobs", daemon=True).start()
+    yield
+
+
+app = FastAPI(title="foolsboard API", version="0.4.0", lifespan=_lifespan)
 
 # Content-Security-Policy. Now enforced (was Report-Only through v0.73.0, which
 # confirmed no legitimate resource was wrongly blocked on a real deploy). script-src
@@ -184,7 +194,6 @@ async def _log_requests(request: Request, call_next):
     return response
 
 
-@app.on_event("startup")
 def _clear_stuck_processing() -> None:
     """A restart kills any in-flight background compression; clear the flag so
     those assets don't show "optimizing" forever (they keep their originals)."""
@@ -196,7 +205,6 @@ def _clear_stuck_processing() -> None:
         db.close()
 
 
-@app.on_event("startup")
 def _backfill_content_hashes() -> None:
     """Assets created before content-hash dedup have no hash, so re-uploading the
     same media can't dedup against them. Hash each one's stored file once so it
@@ -224,7 +232,6 @@ def _backfill_content_hashes() -> None:
         db.close()
 
 
-@app.on_event("startup")
 def _backfill_user_colors() -> None:
     """Give users created before the color feature a distinct collaborator color
     (so highlights/cursors differ), preferring palette colors not already taken."""
@@ -246,7 +253,6 @@ def _backfill_user_colors() -> None:
         db.close()
 
 
-@app.on_event("startup")
 def _prune_old_logs() -> None:
     """Keep the high-volume raw request/error logs bounded: drop rows older than
     the configured retention window. The curated activity log is left intact."""
@@ -267,7 +273,6 @@ def _prune_old_logs() -> None:
         db.close()
 
 
-@app.on_event("startup")
 def _auto_gc_orphans() -> None:
     """Automatically reclaim orphaned media files older than the configured
     grace period (admin-tunable; default 90 days). 0 disables it. The manual
@@ -292,7 +297,6 @@ def _auto_gc_orphans() -> None:
         db.close()
 
 
-@app.on_event("startup")
 def _backfill_image_thumbnails() -> None:
     """Generate previews for images uploaded before image thumbnails existed, so
     the gallery/cards load small WebP previews instead of full-res files. Runs in
@@ -330,6 +334,25 @@ def _backfill_image_thumbnails() -> None:
             db.close()
 
     threading.Thread(target=run, name="thumb-backfill", daemon=True).start()
+
+
+def _run_startup_jobs() -> None:
+    """Run every one-time boot job in turn, each isolated so a single failure can't
+    stop the others (or the server). Invoked from the lifespan handler in a worker
+    thread, so heavy backfills never block the app from accepting connections."""
+    for job in (
+        _clear_stuck_processing,
+        _backfill_content_hashes,
+        _backfill_user_colors,
+        _prune_old_logs,
+        _auto_gc_orphans,
+        _backfill_image_thumbnails,
+    ):
+        try:
+            job()
+        except Exception:
+            traceback.print_exc()
+
 
 app.add_middleware(
     CORSMiddleware,

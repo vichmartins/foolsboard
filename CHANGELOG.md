@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.87.5
+
+- improve: Hardened board-bundle import — oversized assets are now rejected up
+  front (per-type limits, decompression-bomb safe) and each imported asset records
+  its true byte size instead of trusting the bundle’s manifest.
+- improve: Orphan-file cleanup now keeps a short safety grace even on a manual
+  "GC now", so an in-flight upload can never be swept mid-write.
+- improve: Startup maintenance tasks moved to a non-blocking, fault-isolated
+  lifespan handler — one failing job no longer affects the others or boot time
+  (also removes framework deprecation warnings from the server log).
+
+
 ## v0.87.4
 
 - fix: A malformed `Authorization` token containing non-ASCII characters could

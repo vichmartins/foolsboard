@@ -17,6 +17,11 @@ from sqlalchemy.orm import Session
 from .config import settings
 from .models import Asset, User
 
+# Never delete a file younger than this, even on a manual (min_age_days=0) GC.
+# LocalStorage.save() writes the file before its Asset row is committed, so a GC
+# that snapshotted references a moment earlier must not sweep an in-flight upload.
+_MIN_GRACE_SECONDS = 300
+
 
 def _referenced_keys(db: Session) -> set[str]:
     keys: set[str] = set()
@@ -28,16 +33,18 @@ def _referenced_keys(db: Session) -> set[str]:
 def gc_orphans(db: Session, *, dry_run: bool, min_age_days: int = 0) -> dict:
     """Find (and, unless dry_run, delete) orphaned storage files.
 
-    min_age_days > 0 skips files modified within that window -- the grace period
-    for the automatic sweep. Files are content-addressed and never modified in
-    place, so mtime is effectively the upload time. Returns a summary dict.
+    min_age_days skips files modified within that window -- the grace period for
+    the automatic sweep. A short floor (_MIN_GRACE_SECONDS) always applies, so even
+    a manual (min_age_days=0) GC won't race an in-flight upload. Files are
+    content-addressed and never modified in place, so mtime is effectively the
+    upload time. Returns a summary dict.
     """
     if settings.storage_backend != "local":
         return {"dry_run": dry_run, "orphans": 0, "freed_bytes": 0, "sample": []}
 
     referenced = _referenced_keys(db)
     root = Path(settings.storage_local_dir)
-    cutoff = time.time() - min_age_days * 86400 if min_age_days > 0 else None
+    cutoff = time.time() - max(min_age_days * 86400, _MIN_GRACE_SECONDS)
 
     removed = 0
     freed = 0
@@ -49,7 +56,7 @@ def gc_orphans(db: Session, *, dry_run: bool, min_age_days: int = 0) -> dict:
             st = p.stat()
         except OSError:
             continue
-        if cutoff is not None and st.st_mtime > cutoff:
+        if st.st_mtime > cutoff:
             continue  # newer than the grace window -- leave it for now
         freed += st.st_size
         if len(sample) < 20:

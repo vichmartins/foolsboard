@@ -1,8 +1,17 @@
-"""Export a board to a bundle and import it back (round-trip), plus import errors."""
+"""Export a board to a bundle and import it back (round-trip), plus import errors
+and per-asset size enforcement."""
 import io
+import json
+import pathlib
+import uuid
 import zipfile
 
-from conftest import auth, new_board, new_node
+from sqlalchemy import select
+
+from conftest import auth, make_asset, new_board, new_node
+
+from app.config import settings
+from app.models import Asset, Node
 
 
 def test_export_then_import_round_trip(client, admin):
@@ -50,3 +59,58 @@ def test_import_rejects_zip_without_manifest(client, admin):
         headers=auth(token),
     )
     assert r.status_code == 400, r.text
+
+
+def test_import_rejects_oversized_asset(client, admin):
+    token, _ = admin
+    manifest = {
+        "version": 4,
+        "boards": [{
+            "name": "B",
+            "nodes": [{
+                "id": "n1", "type": "media", "title": "M",
+                "assets": [{
+                    "file": "media/big.bin", "filename": "big.png", "kind": "image",
+                    "content_type": "image/png", "size": 1,  # lies; real bytes are huge
+                }],
+            }],
+            "edges": [],
+        }],
+    }
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("manifest.json", json.dumps(manifest))
+        z.writestr("media/big.bin", b"\x00" * (5 * 1024 * 1024 + 100))  # > 5 MB image cap
+    buf.seek(0)
+    r = client.post(
+        "/api/boards/import",
+        files={"file": ("b.zip", buf, "application/zip")},
+        headers=auth(token),
+    )
+    assert r.status_code == 413, r.text
+
+
+def test_imported_asset_uses_real_bytes_and_fresh_key(client, admin, db):
+    token, _ = admin
+    bid = new_board(client, token, "WithMedia")
+    nid = new_node(client, token, bid, type="media", title="M")
+    store = pathlib.Path(settings.storage_local_dir)
+    (store / "orig.bin").write_bytes(b"hello-bytes")  # 11 real bytes on disk
+    # Asset row claims size=10 (helper default) -- import must record the REAL 11.
+    make_asset(db, uuid.UUID(nid), filename="pic.png", storage_key="orig.bin", content_hash="h1")
+
+    ex = client.post("/api/boards/export", json={"board_ids": [bid]}, headers=auth(token))
+    assert ex.status_code == 200, ex.text
+    imp = client.post(
+        "/api/boards/import",
+        files={"file": ("b.zip", io.BytesIO(ex.content), "application/zip")},
+        headers=auth(token),
+    )
+    assert imp.status_code == 200, imp.text
+    new_board_id = uuid.UUID(imp.json()[0]["id"])
+
+    node_ids = list(db.scalars(select(Node.id).where(Node.board_id == new_board_id)))
+    imported = list(db.scalars(select(Asset).where(Asset.node_id.in_(node_ids))))
+    assert len(imported) == 1
+    assert imported[0].size == 11               # actual restored bytes, not the manifest's 10
+    assert imported[0].storage_key != "orig.bin"  # a fresh key, never reuses the source's
