@@ -1132,6 +1132,34 @@ function CanvasInner({
     [markDirty],
   )
 
+  // Make a committed panel edit undoable: undo re-saves the pre-edit content,
+  // redo re-saves the new content (and both reflect back into the canvas/panel).
+  const handleNodeEdited = useCallback(
+    (
+      nodeId: string,
+      before: { title: string; type: string; content: Record<string, unknown> },
+      after: { title: string; type: string; content: Record<string, unknown> },
+    ) => {
+      pushUndo({
+        undo: async () => {
+          try {
+            applyNodeUpdate(await api.updateNode(boardId, nodeId, before))
+          } catch {
+            /* node deleted since -- nothing to restore */
+          }
+        },
+        redo: async () => {
+          try {
+            applyNodeUpdate(await api.updateNode(boardId, nodeId, after))
+          } catch {
+            /* node deleted since */
+          }
+        },
+      })
+    },
+    [boardId, pushUndo, applyNodeUpdate],
+  )
+
   // --- Edge editing --------------------------------------------------------
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.preventDefault()
@@ -1719,6 +1747,7 @@ function CanvasInner({
           droppedFiles={droppedFiles}
           onDroppedConsumed={() => setDroppedFiles(null)}
           onChange={applyNodeUpdate}
+          onEdited={handleNodeEdited}
           onDelete={removeSelected}
           onClose={closePanel}
         />

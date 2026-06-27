@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.86.0
+
+- feat: **Undo now covers content edits.** After you save changes to a node’s
+  fields, Ctrl+Z reverts them (Ctrl+Shift+Z redoes) — alongside the existing undo
+  for moving, creating, and deleting. If the edit panel is open it updates to match.
+
+
 ## v0.85.5
 
 - feat: **Ctrl/Cmd-K opens workspace search** — jump straight to the Gallery’s

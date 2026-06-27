@@ -42,6 +42,13 @@ interface Props {
   node: StoryNode
   nearby: NearbyNode[]
   onChange: (node: StoryNode) => void
+  // Report a committed edit (before/after title/type/content) so the canvas can
+  // make it undoable. Only fired when something actually changed.
+  onEdited?: (
+    nodeId: string,
+    before: { title: string; type: string; content: Record<string, unknown> },
+    after: { title: string; type: string; content: Record<string, unknown> },
+  ) => void
   onDelete: (nodeId: string) => void
   onClose: () => void
   // True while the panel is sliding out (before it unmounts).
@@ -70,6 +77,7 @@ export default function ContextPanel({
   node,
   nearby,
   onChange,
+  onEdited,
   onDelete,
   onClose,
   closing,
@@ -103,15 +111,49 @@ export default function ContextPanel({
   const mediaTimer = useRef<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // The node state we last loaded into the fields -- lets us tell an external
+  // change (undo/redo, a collaborator) apart from the user's in-progress edits.
+  const baseline = useRef({
+    title: node.title,
+    type: node.type,
+    content: JSON.stringify(node.content ?? {}),
+  })
+
   // Re-sync local state whenever a different node is selected.
   useEffect(() => {
     setTitle(node.title)
     setType(node.type)
     setContent(node.content ?? {})
+    baseline.current = {
+      title: node.title,
+      type: node.type,
+      content: JSON.stringify(node.content ?? {}),
+    }
     setConfirmDelete(false)
     setShowNearby(false)
     listAssets(node.id).then(setAssets).catch(() => setAssets([]))
   }, [node.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The SAME node changed underneath us (undo/redo, or a collaborator's save):
+  // adopt it -- but only if the user has no unsaved edits, so we never clobber
+  // in-progress typing.
+  useEffect(() => {
+    const incoming = JSON.stringify(node.content ?? {})
+    const changed =
+      node.title !== baseline.current.title ||
+      node.type !== baseline.current.type ||
+      incoming !== baseline.current.content
+    const noLocalEdits =
+      title === baseline.current.title &&
+      type === baseline.current.type &&
+      JSON.stringify(content) === baseline.current.content
+    if (changed && noLocalEdits) {
+      setTitle(node.title)
+      setType(node.type)
+      setContent(node.content ?? {})
+      baseline.current = { title: node.title, type: node.type, content: incoming }
+    }
+  }, [node.title, node.type, node.content]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Untyped (blank) objects show no type-specific fields until a type is chosen.
   const fields = type ? TYPE_FIELDS[type] ?? TYPE_FIELDS.note : []
@@ -167,9 +209,16 @@ export default function ContextPanel({
     // flash the buttons' disabled styling.
     if (savingRef.current) return
     savingRef.current = true
+    // Snapshot the last-saved state (the node prop) so the edit can be undone.
+    const before = { title: node.title, type: node.type, content: node.content ?? {} }
     try {
       const updated = await updateNode(boardId, node.id, { title, type, content })
       onChange(updated)
+      const after = { title: updated.title, type: updated.type, content: updated.content ?? {} }
+      // The fields now match the saved state, so move the baseline forward (lets
+      // a later undo/redo be recognised as an external change and re-synced).
+      baseline.current = { title: after.title, type: after.type, content: JSON.stringify(after.content) }
+      if (JSON.stringify(before) !== JSON.stringify(after)) onEdited?.(node.id, before, after)
       setJustSaved(true)
       if (savedTimer.current) window.clearTimeout(savedTimer.current)
       savedTimer.current = window.setTimeout(() => setJustSaved(false), 1800)
