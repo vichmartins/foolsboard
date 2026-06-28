@@ -211,7 +211,7 @@ export async function updateAdminSettings(patch: AdminSettings): Promise<AdminSe
 
 export interface BackupItem {
   name: string
-  kind: string // "database" | "media"
+  kind: string // "snapshot" (restic) | "database" | "media" (legacy)
   size: number
   created_at: string
 }
@@ -219,7 +219,8 @@ export interface BackupStatus {
   dir: string
   exists: boolean
   last_run: string | null
-  retention_days: number | null
+  retention: string | null // restic keep policy, e.g. "7 daily / 6 weekly / 12 monthly"
+  retention_days: number | null // legacy
   total_bytes: number
   items: BackupItem[]
 }

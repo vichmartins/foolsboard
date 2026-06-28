@@ -1,76 +1,85 @@
 # foolsboard — Backups & Restore
 
-foolsboard backs itself up automatically. This guide explains what the backups
-are, how to make them on demand, and how to restore — both with the guided
-script and by hand.
+foolsboard backs itself up automatically using **restic** — an incremental,
+deduplicated, encrypted snapshot tool. Each nightly run adds a snapshot that
+contains the **whole** database + media, but only the data that changed since the
+last run is actually stored. Every snapshot is a complete, independently
+restorable point in time — there's no fragile "full + increments" chain to keep
+intact.
 
-All paths below are the package defaults. Server commands are run on the host
+All paths below are the package defaults. Server commands run on the host
 foolsboard is installed on (e.g. over SSH), as a user with `sudo`.
 
 ---
 
-## What gets backed up
+## How it works
 
-Each backup run produces **two files that share a timestamp** — together they are
-**one consistent snapshot**:
+| Thing | Where |
+|-------|-------|
+| restic repository (all snapshots) | `/var/backups/foolsboard/restic` |
+| Repository password | `/etc/foolsboard/restic-password` (generated on install; back this up somewhere safe — without it the repo can't be read) |
+| Status summary (read by the Admin UI) | `/var/backups/foolsboard/status.json` |
 
-| File | What it is |
-|------|------------|
-| `db-<TIMESTAMP>.dump` | A full **database** dump — every board, node, connection, user, share, category, etc. (PostgreSQL custom-format; on a SQLite install it's `db-<TIMESTAMP>.sqlite`.) |
-| `media-<TIMESTAMP>.tar.gz` | A **media** archive — every uploaded image, video, audio, and file. |
-| `status.json` | A small summary (last run, retention) the Admin UI reads. |
+- **What's in each snapshot:** a full PostgreSQL dump (`database.dump`) **and** the
+  entire media directory — every board, node, connection, user, share, plus every
+  uploaded image/video/audio/file. The DB and media in one snapshot are a
+  consistent pair.
+- **Schedule:** automatically every night (~03:30), plus any on-demand runs. Runs
+  as the `foolsboard` user.
+- **Retention:** the chain is thinned to the most recent **7 daily, 6 weekly, and
+  12 monthly** snapshots; older ones are forgotten and their unreferenced data
+  pruned. (Configurable — see below.)
 
-- **Location:** `/var/backups/foolsboard`
-- **Schedule:** automatically every night (~03:30), plus any on-demand runs.
-- **Retention:** the last **14 days** are kept; older ones are pruned.
-
-> The database references media files internally, so the `db` and `media` of the
-> **same timestamp** belong together. When restoring, use a matched pair.
-
-> ⚠️ **Disaster recovery:** backups are written to the **same host** as the app.
-> If that host's disk is lost, the backups are lost too. For real DR, copy
-> snapshots off the host (see *Off-host copies* below).
+> ⚠️ **Disaster recovery:** the repository lives on the **same host** as the app.
+> If that host's disk is lost, so are the backups. For real DR, copy the repo (and
+> the password) off-host — see *Off-host copies* below.
 
 ---
 
 ## Making a backup
 
-### Automatically
-Nothing to do — it runs nightly. Confirm the schedule with:
+**Automatically** — nothing to do; it runs nightly. Confirm the schedule:
 
 ```bash
 systemctl list-timers foolsboard-backup.timer
 ```
 
-### On demand — from the app (easiest)
-Sign in as an admin and go to **Admin → Storage → Backups → “Run backup now.”**
-The list updates and shows “Backup complete.”
+**On demand, from the app** — sign in as an admin, go to
+**Admin → Storage → Backups → “Run backup now.”**
 
-### On demand — from the server
+**On demand, from the server:**
+
 ```bash
 sudo systemctl start foolsboard-backup.service   # same as the nightly run
-# …or run the script directly:
-sudo /opt/foolsboard/backup.sh
+# …or directly, as the foolsboard user:
+sudo -u foolsboard /opt/foolsboard/backup.sh
 ```
 
 ---
 
 ## Checking your backups
 
-- **In the app:** **Admin → Storage → Backups** shows the last run, how many are
-  kept, total size, the recent files, and a warning if the newest backup is more
-  than two days old (a sign backups have stopped).
-- **On the server:**
-  ```bash
-  ls -lh /var/backups/foolsboard/
-  ```
+**In the app:** **Admin → Storage → Backups** shows the last run, the retention
+policy, snapshot count, repo size, the recent snapshots, and a warning if the
+newest is over two days old (a sign backups have stopped).
+
+**On the server** — list the chain with restic:
+
+```bash
+sudo -u foolsboard env \
+  RESTIC_REPOSITORY=/var/backups/foolsboard/restic \
+  RESTIC_PASSWORD_FILE=/etc/foolsboard/restic-password \
+  restic snapshots
+```
+
+(Tip: `export` those two env vars once per shell and the `restic …` commands below
+get shorter.)
 
 ---
 
 ## Restoring (recommended: the guided script)
 
-Restoring **replaces** the current data, so it's a server operation. SSH in and
-run:
+Restoring **replaces** the current data, so it's a server operation:
 
 ```bash
 sudo /opt/foolsboard/restore.sh
@@ -85,101 +94,99 @@ It lists your snapshots and asks three things:
 It then automatically:
 
 1. Stops the app.
-2. **Takes a fresh backup of the current state first** (so the restore itself is reversible).
-3. Restores the chosen snapshot (database and/or media).
+2. **Takes a fresh safety snapshot of the current state first** (so the restore is itself reversible).
+3. Extracts the chosen snapshot and restores the database and/or media.
 4. Re-applies database migrations, so an older snapshot still matches the running version.
 5. Restarts the app.
 
 **To undo a restore:** run the script again and pick the **newest** snapshot —
-that's the safety backup it just took, which rolls you back.
+that's the safety one it just took.
 
 ---
 
 ## Manual restore (advanced)
 
-Prefer the script above. These are the equivalent steps if you need them.
-
-First, find the database URL (the `pg_*` tools want it **without** the
-`+psycopg` part):
+Prefer the script above. The equivalent steps, with the restic env exported:
 
 ```bash
-grep '^DATABASE_URL=' /etc/foolsboard/foolsboard.env
-sudo systemctl stop foolsboard          # always stop the app first
+export RESTIC_REPOSITORY=/var/backups/foolsboard/restic
+export RESTIC_PASSWORD_FILE=/etc/foolsboard/restic-password
+restic snapshots                       # find the snapshot short-id
+sudo systemctl stop foolsboard
+restic restore <SNAPSHOT_ID> --target /tmp/fb-restore
 ```
+
+That recreates the snapshot's files under `/tmp/fb-restore` at their original
+absolute paths:
+`/tmp/fb-restore/var/backups/foolsboard/.stage/database.dump` and
+`/tmp/fb-restore/var/lib/foolsboard/storage`.
 
 ### Database (PostgreSQL)
 ```bash
 PG_URL="postgresql://USER:PASSWORD@localhost:5432"   # from DATABASE_URL, no +psycopg
-DB="foolsboard"                                       # the database name
+DB="foolsboard"
 sudo -u postgres psql -c "DROP DATABASE IF EXISTS \"$DB\";"
 sudo -u postgres psql -c "CREATE DATABASE \"$DB\" OWNER foolsboard;"
-pg_restore --no-owner -d "$PG_URL/$DB" /var/backups/foolsboard/db-<TIMESTAMP>.dump
-# bring the schema up to the running version:
+pg_restore --no-owner -d "$PG_URL/$DB" /tmp/fb-restore/var/backups/foolsboard/.stage/database.dump
 sudo -u foolsboard sh -c '. /etc/foolsboard/foolsboard.env; cd /opt/foolsboard/backend; /opt/foolsboard/venv/bin/alembic upgrade head'
 ```
 
 ### Media
 ```bash
 sudo rm -rf /var/lib/foolsboard/storage
-sudo tar xzf /var/backups/foolsboard/media-<TIMESTAMP>.tar.gz -C /var/lib/foolsboard
+sudo cp -a /tmp/fb-restore/var/lib/foolsboard/storage /var/lib/foolsboard/storage
 sudo chown -R foolsboard:foolsboard /var/lib/foolsboard/storage
-```
-
-Then start the app again:
-```bash
 sudo systemctl start foolsboard
 ```
 
 ---
 
-## Inspecting a backup without touching production
-
-To peek at a backup's contents safely, restore the dump into a throwaway
-database — production is untouched:
+## Inspecting a snapshot without touching production
 
 ```bash
-PG_URL="postgresql://USER:PASSWORD@localhost:5432"
-sudo -u postgres createdb scratch
-pg_restore --no-owner -d "$PG_URL/scratch" /var/backups/foolsboard/db-<TIMESTAMP>.dump
-# …inspect with psql…
-sudo -u postgres dropdb scratch
+export RESTIC_REPOSITORY=/var/backups/foolsboard/restic
+export RESTIC_PASSWORD_FILE=/etc/foolsboard/restic-password
+restic mount /tmp/fb-browse        # browse all snapshots as files (Ctrl-C to unmount)
+# or restore one to a scratch dir and load the dump into a throwaway DB.
+restic check                       # verify repository integrity
 ```
 
 ---
 
 ## Off-host copies (disaster recovery)
 
-Copy snapshots to another machine or a NAS so they survive losing this host:
+The cleanest option is to keep a second restic repository elsewhere and copy
+snapshots into it (still deduplicated):
 
 ```bash
-# from another computer — pull a snapshot:
-scp user@<this-host>:/var/backups/foolsboard/db-<TIMESTAMP>.dump .
-scp user@<this-host>:/var/backups/foolsboard/media-<TIMESTAMP>.tar.gz .
-
-# or mirror the whole backup directory to a NAS, on a schedule:
-rsync -a /var/backups/foolsboard/ /mnt/nas/foolsboard-backups/
+restic copy --repo2 sftp:user@nas:/backups/foolsboard --password-file2 <pwfile2>
 ```
+
+Or simply mirror the repository directory (plus the password) to a NAS:
+
+```bash
+rsync -a /var/backups/foolsboard/restic/ /mnt/nas/foolsboard-restic/
+```
+
+Either way, **keep a copy of `/etc/foolsboard/restic-password`** somewhere safe —
+the repository is encrypted and useless without it.
 
 ---
 
 ## Configuration
 
-| Setting | Default | How to change |
-|---------|---------|---------------|
-| Backup directory | `/var/backups/foolsboard` | `FOOLSBOARD_BACKUP_DIR` in the script's environment |
-| Retention (days) | `14` | `FOOLSBOARD_BACKUP_RETENTION_DAYS` |
+| Setting | Default | Env var |
+|---------|---------|---------|
+| Repository | `/var/backups/foolsboard/restic` | `FOOLSBOARD_RESTIC_REPO` |
+| Password file | `/etc/foolsboard/restic-password` | `FOOLSBOARD_RESTIC_PASSWORD_FILE` |
+| Keep daily / weekly / monthly | `7` / `6` / `12` | `FOOLSBOARD_KEEP_DAILY` / `_WEEKLY` / `_MONTHLY` |
 
-To change retention for the **scheduled** job, add an override:
+To change the retention for the **scheduled** job:
 
 ```bash
 sudo systemctl edit foolsboard-backup.service
 # add:
 #   [Service]
-#   Environment=FOOLSBOARD_BACKUP_RETENTION_DAYS=30
-```
-
-For a one-off manual run with a different value:
-
-```bash
-sudo FOOLSBOARD_BACKUP_RETENTION_DAYS=30 /opt/foolsboard/backup.sh
+#   Environment=FOOLSBOARD_KEEP_DAILY=14
+#   Environment=FOOLSBOARD_KEEP_MONTHLY=24
 ```

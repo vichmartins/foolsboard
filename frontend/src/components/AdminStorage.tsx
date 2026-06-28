@@ -147,7 +147,13 @@ export default function AdminStorage() {
       <section className="admin-storage__section">
         <h3 className="admin-storage__title">Backups</h3>
         <p className="admin-storage__intro">
-          A full database dump and a media archive are written automatically every night
+          An incremental, deduplicated snapshot (database + media) is taken automatically every
+          night — each one a complete restore point
+          {backups?.retention && (
+            <>
+              , keeping <strong>{backups.retention}</strong>
+            </>
+          )}
           {backups?.retention_days != null && (
             <> and kept for <strong>{backups.retention_days} days</strong></>
           )}
@@ -181,13 +187,17 @@ export default function AdminStorage() {
                 </span>
               )}
               {' · '}
-              {backups.items.length} file{backups.items.length === 1 ? '' : 's'} ·{' '}
-              {humanBytes(backups.total_bytes)}
+              {backups.items.length}{' '}
+              {(backups.items[0]?.kind === 'snapshot' ? 'snapshot' : 'file') +
+                (backups.items.length === 1 ? '' : 's')}
+              {' · '}
+              {humanBytes(backups.total_bytes)} on disk
             </p>
             <ul className="admin-storage__sample">
               {backups.items.slice(0, 10).map((b) => (
                 <li key={b.name}>
-                  {b.kind === 'database' ? '🗄' : '🎞'} {b.name} · {humanBytes(b.size)} ·{' '}
+                  {b.kind === 'snapshot' ? '📦' : b.kind === 'database' ? '🗄' : '🎞'} {b.name}
+                  {b.size ? <> · {humanBytes(b.size)}</> : null} ·{' '}
                   {new Date(b.created_at).toLocaleString()}
                 </li>
               ))}

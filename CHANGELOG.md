@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.89.0
+
+- improve: **Incremental, deduplicated backups (restic).** Instead of a full
+  database dump + full media tarball every night, foolsboard now takes a restic
+  snapshot — each one a complete, independently-restorable point in time (database
+  + media), but only the changed data is stored. The repository is encrypted, and
+  the chain is thinned to 7 daily / 6 weekly / 12 monthly snapshots. The restore
+  script and Admin → Storage are updated; see BACKUP-RESTORE.md.
+
+
 ## v0.88.12
 
 - improve: Board export now streams each media file into the zip in blocks instead

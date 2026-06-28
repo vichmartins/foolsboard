@@ -1,10 +1,14 @@
 [Unit]
-Description=foolsboard backup (database dump + media archive)
+Description=foolsboard backup (restic snapshot of database + media)
 After=postgresql.service network.target
 Wants=postgresql.service
 
 [Service]
 Type=oneshot
-# Runs as root: needs to read the secrets env (640 root:foolsboard), read the
-# media directory, and write to /var/backups/foolsboard.
+# Runs as the foolsboard user so the restic repo has a single owner (the app's
+# "Run backup now" runs as this user too). It can read the env (640
+# root:foolsboard), read the media dir it owns, reach Postgres via DATABASE_URL,
+# and write to the group-writable /var/backups/foolsboard.
+User=foolsboard
+Group=foolsboard
 ExecStart=/opt/foolsboard/backup.sh
