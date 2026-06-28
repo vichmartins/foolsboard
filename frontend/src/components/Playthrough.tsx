@@ -4,6 +4,7 @@ import {
   isMediaNodeType,
   KIND_COLORS,
   nodePreview,
+  safeHref,
   TYPE_FIELDS,
   typeLabel,
   type StoryNode,
@@ -314,16 +315,13 @@ function Scene({
   onChoose: (id: string) => void
 }) {
   const accent = KIND_COLORS[node.type] ?? 'var(--text-dim)'
+  const media = isMediaNodeType(node.type)
   const fields = (TYPE_FIELDS[node.type] ?? [])
     .filter((d) => !d.widget)
     .map((d) => ({ d, v: node.content?.[d.key] }))
     .filter((x): x is { d: (typeof TYPE_FIELDS)[string][number]; v: string } =>
       typeof x.v === 'string' && x.v.trim().length > 0,
     )
-  const url =
-    isMediaNodeType(node.type) && typeof node.content?.url === 'string'
-      ? (node.content.url as string)
-      : null
 
   return (
     <div className="pt-card">
@@ -331,25 +329,29 @@ function Scene({
         {typeLabel(node.type)}
       </span>
       <h2 className="pt-title">{node.title || 'Untitled'}</h2>
-      {url && (
-        <a className="pt-link" href={url} target="_blank" rel="noopener noreferrer">
-          {url}
-        </a>
+
+      {media ? (
+        <MediaBlock node={node} />
+      ) : (
+        <>
+          {fields.map(({ d, v }) =>
+            d.multiline ? (
+              <div key={d.key} className="pt-field">
+                <div className="pt-field__label">{d.label}</div>
+                <p className="pt-field__body">{v}</p>
+              </div>
+            ) : (
+              <div key={d.key} className="pt-meta">
+                <span className="pt-meta__label">{d.label}</span>
+                {v}
+              </div>
+            ),
+          )}
+          {!fields.length && (
+            <p className="pt-field__body pt-dim">(no details on this object)</p>
+          )}
+        </>
       )}
-      {fields.map(({ d, v }) =>
-        d.multiline ? (
-          <div key={d.key} className="pt-field">
-            <div className="pt-field__label">{d.label}</div>
-            <p className="pt-field__body">{v}</p>
-          </div>
-        ) : (
-          <div key={d.key} className="pt-meta">
-            <span className="pt-meta__label">{d.label}</span>
-            {v}
-          </div>
-        ),
-      )}
-      {!fields.length && !url && <p className="pt-field__body pt-dim">(no details on this object)</p>}
 
       {choices.length > 1 && (
         <div className="pt-choices">
@@ -364,6 +366,67 @@ function Scene({
       )}
       {choices.length === 0 && <div className="pt-end">The end</div>}
     </div>
+  )
+}
+
+// Render a media/link object inline (image, video, audio player, file, or a link
+// preview) -- everything needed lives in the node's content, like MediaNodeCard.
+function MediaBlock({ node }: { node: StoryNode }) {
+  const c = node.content ?? {}
+  const str = (k: string) => (typeof c[k] === 'string' ? (c[k] as string) : '')
+  const url = str('url')
+
+  if (node.type === 'link') {
+    if (!url) return <p className="pt-field__body pt-dim">(empty link)</p>
+    const image = str('image')
+    return (
+      <a className="pt-link-card" href={safeHref(url)} target="_blank" rel="noreferrer noopener">
+        {image && (
+          <img
+            className="pt-link-card__img"
+            src={image}
+            alt=""
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+            }}
+          />
+        )}
+        <span className="pt-link-card__body">
+          <span className="pt-link-card__title">{str('title') || url}</span>
+          <span className="pt-link-card__site">{str('site_name') || url}</span>
+        </span>
+      </a>
+    )
+  }
+
+  if (!url) return <p className="pt-field__body pt-dim">(media not available)</p>
+  const mk = str('mediaKind') || 'file'
+  const thumb = str('thumbnailUrl')
+  const filename = str('filename') || node.title || 'file'
+
+  if (mk === 'image') return <img className="pt-media-img" src={url} alt={filename} />
+  if (mk === 'video')
+    return (
+      <video className="pt-media-video" src={url} poster={thumb || undefined} controls preload="metadata" />
+    )
+  if (mk === 'audio')
+    return (
+      <div className="pt-media-audio">
+        {thumb && <img className="pt-media-audio__cover" src={thumb} alt="" />}
+        <audio src={url} controls preload="metadata" />
+      </div>
+    )
+  return (
+    <a
+      className="pt-media-file"
+      href={safeHref(url)}
+      target="_blank"
+      rel="noreferrer noopener"
+      download={filename}
+    >
+      <span className="pt-media-file__icon">↓</span>
+      {filename}
+    </a>
   )
 }
 
