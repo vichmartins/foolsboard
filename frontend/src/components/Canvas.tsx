@@ -235,6 +235,29 @@ function CanvasInner({
   // The object a context menu was opened on (for "Play from here"); null for the
   // multi-selection menu.
   const [menuNodeId, setMenuNodeId] = useState<string | null>(null)
+  // Attached media per object (node_id -> assets), loaded when playthrough opens
+  // so the reader can show images/video/audio that live on story objects.
+  const [playAssets, setPlayAssets] = useState<Map<string, Asset[]>>(new Map())
+
+  const openPlaythrough = useCallback(
+    (start: string | null) => {
+      setPlayStart(start)
+      setPlayOpen(true)
+      api
+        .listBoardAssets(boardId)
+        .then((list) => {
+          const m = new Map<string, Asset[]>()
+          for (const a of list) {
+            const arr = m.get(a.node_id) ?? []
+            arr.push(a)
+            m.set(a.node_id, arr)
+          }
+          setPlayAssets(m)
+        })
+        .catch(() => setPlayAssets(new Map()))
+    },
+    [boardId],
+  )
 
   // Smoothly track remote node moves by easing each node's *position* toward its
   // latest target every frame -- so React Flow recomputes the node and its edges
@@ -1721,10 +1744,7 @@ function CanvasInner({
         <Controls>
           <ControlButton
             className="rf-play-btn"
-            onClick={() => {
-              setPlayStart(null)
-              setPlayOpen(true)
-            }}
+            onClick={() => openPlaythrough(null)}
             title="Play through the story"
           >
             <PlayIcon />
@@ -1767,6 +1787,7 @@ function CanvasInner({
             label: (e.label as string | undefined) ?? null,
           }))}
           startId={playStart ?? selectedId ?? undefined}
+          assets={playAssets}
           onClose={() => setPlayOpen(false)}
         />
       )}
@@ -1850,18 +1871,6 @@ function CanvasInner({
           y={nodeMenu.y}
           onClose={() => setNodeMenu(null)}
           items={[
-            ...(menuNodeId
-              ? [
-                  {
-                    label: 'Play from here',
-                    mnemonic: 'y',
-                    onClick: () => {
-                      setPlayStart(menuNodeId)
-                      setPlayOpen(true)
-                    },
-                  },
-                ]
-              : []),
             { label: 'Copy', mnemonic: 'C', onClick: () => doCopy() },
             { label: 'Cut', mnemonic: 't', onClick: () => void doCut() },
             { label: 'Duplicate', mnemonic: 'D', onClick: () => void doDuplicate() },
@@ -1871,6 +1880,9 @@ function CanvasInner({
               : []),
             ...(selMediaDl
               ? [{ label: 'Download', mnemonic: 'w', onClick: () => downloadAsset(selMediaDl) }]
+              : []),
+            ...(menuNodeId
+              ? [{ label: 'Play from here', mnemonic: 'y', onClick: () => openPlaythrough(menuNodeId) }]
               : []),
             { label: 'Delete', mnemonic: 'l', onClick: () => doDelete() },
           ]}

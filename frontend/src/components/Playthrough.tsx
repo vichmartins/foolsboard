@@ -3,10 +3,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   isMediaNodeType,
   KIND_COLORS,
+  mediaKind,
   nodePreview,
   safeHref,
   TYPE_FIELDS,
   typeLabel,
+  type AnimationRow,
+  type Asset,
+  type LinkRef,
   type StoryNode,
 } from '../types'
 
@@ -23,17 +27,19 @@ interface Choice {
   to: string
 }
 
-// Full-screen "playthrough": walk the board like an interactive story. Each node
-// is a scene; its outgoing connections are the choices. A node with no outgoing
-// connection is an ending. Read-only -- it never mutates the board.
+// Full-screen "playthrough": walk the board like an interactive story. Connections
+// are treated as two-way -- each object's choices are its connected neighbours
+// (minus the one just visited); a single-connection object is an ending. Read-only.
 export default function Playthrough({
   nodes,
   edges,
+  assets,
   startId,
   onClose,
 }: {
   nodes: StoryNode[]
   edges: PlayEdge[]
+  assets: Map<string, Asset[]>
   startId?: string
   onClose: () => void
 }) {
@@ -75,26 +81,29 @@ export default function Playthrough({
     [nodes, neighbors],
   )
 
-  // Where we begin: an explicitly-selected object wins; otherwise auto-start only
-  // when there's exactly one sensible entry; otherwise show the chooser (null).
   const initialChosen = useMemo<string | null>(() => {
     if (startId && byId.has(startId)) return startId
     return starts.length === 1 ? starts[0].id : null
   }, [startId, starts, byId])
 
-  // A chooser is shown (and reachable via "play again"/back) only when there's a
-  // real choice of entry point.
   const canChoose = !startId && starts.length > 1
 
   const [chosen, setChosen] = useState<string | null>(initialChosen)
   const [current, setCurrent] = useState<string | undefined>(initialChosen ?? undefined)
   const [history, setHistory] = useState<string[]>([])
+  const [closing, setClosing] = useState(false)
 
   useEffect(() => {
     setChosen(initialChosen)
     setCurrent(initialChosen ?? undefined)
     setHistory([])
   }, [initialChosen])
+
+  // Fade out before unmounting so leaving feels as smooth as arriving.
+  const requestClose = useCallback(() => {
+    setClosing(true)
+    window.setTimeout(onClose, 160)
+  }, [onClose])
 
   const begin = useCallback((id: string) => {
     setChosen(id)
@@ -133,7 +142,7 @@ export default function Playthrough({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') return onClose()
+      if (e.key === 'Escape') return requestClose()
       if (chosen === null) {
         if (/^[1-9]$/.test(e.key)) {
           const pick = starts[Number(e.key) - 1]
@@ -165,7 +174,7 @@ export default function Playthrough({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [chosen, choices, history.length, canChoose, starts, back, begin, go, onClose])
+  }, [chosen, choices, history.length, canChoose, starts, back, begin, go, requestClose])
 
   const trail = useMemo(
     () =>
@@ -177,12 +186,16 @@ export default function Playthrough({
   )
 
   return (
-    <div className="pt-overlay" role="dialog" aria-label="Playthrough">
+    <div
+      className={'pt-overlay' + (closing ? ' pt-overlay--closing' : '')}
+      role="dialog"
+      aria-label="Playthrough"
+    >
       <div className="pt-bar">
         <span className="pt-bar__title">
           <PlayGlyph /> Playthrough
         </span>
-        <button className="pt-x" onClick={onClose} aria-label="Exit playthrough" title="Exit (Esc)">
+        <button className="pt-x" onClick={requestClose} aria-label="Exit playthrough" title="Exit (Esc)">
           <CloseGlyph />
         </button>
       </div>
@@ -200,16 +213,22 @@ export default function Playthrough({
 
       <div className="pt-stage">
         {chosen === null ? (
-          <Chooser starts={starts} onPick={begin} onClose={onClose} />
+          <Chooser starts={starts} onPick={begin} onClose={requestClose} />
         ) : !node ? (
           <div className="pt-empty">
             <p>This object no longer exists.</p>
-            <button className="pt-btn" onClick={onClose}>
+            <button className="pt-btn" onClick={requestClose}>
               Close
             </button>
           </div>
         ) : (
-          <Scene node={node} choices={choices} onChoose={go} />
+          <Scene
+            key={current}
+            node={node}
+            assets={assets.get(node.id) ?? []}
+            choices={choices}
+            onChoose={go}
+          />
         )}
       </div>
 
@@ -297,10 +316,12 @@ function Chooser({
 
 function Scene({
   node,
+  assets,
   choices,
   onChoose,
 }: {
   node: StoryNode
+  assets: Asset[]
   choices: Choice[]
   onChoose: (id: string) => void
 }) {
@@ -312,6 +333,14 @@ function Scene({
     .filter((x): x is { d: (typeof TYPE_FIELDS)[string][number]; v: string } =>
       typeof x.v === 'string' && x.v.trim().length > 0,
     )
+  const animations = (
+    Array.isArray(node.content?.animations) ? (node.content.animations as AnimationRow[]) : []
+  ).filter((a) => a && (a.id?.trim?.() || a.name?.trim?.()))
+  const refs = (
+    Array.isArray(node.content?.references) ? (node.content.references as LinkRef[]) : []
+  ).filter((r) => r && r.url)
+  const playable = assets.filter((a) => a.url)
+  const hasAny = fields.length || animations.length || refs.length || playable.length
 
   return (
     <div className="pt-card">
@@ -337,9 +366,63 @@ function Scene({
               </div>
             ),
           )}
-          {!fields.length && (
-            <p className="pt-field__body pt-dim">(no details on this object)</p>
+
+          {animations.length > 0 && (
+            <div className="pt-field">
+              <div className="pt-field__label">Animations</div>
+              <ul className="pt-anim">
+                {animations.map((a, i) => (
+                  <li key={i}>
+                    {a.id && <code className="pt-anim__id">{a.id}</code>}
+                    {a.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
+
+          {refs.length > 0 && (
+            <div className="pt-field">
+              <div className="pt-field__label">References</div>
+              {refs.map((r, i) => (
+                <a
+                  key={i}
+                  className="pt-link-card"
+                  href={safeHref(r.url)}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  {r.image && (
+                    <img
+                      className="pt-link-card__img"
+                      src={r.image}
+                      alt=""
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                      }}
+                    />
+                  )}
+                  <span className="pt-link-card__body">
+                    <span className="pt-link-card__title">{r.title || r.url}</span>
+                    <span className="pt-link-card__site">{r.site_name || r.url}</span>
+                  </span>
+                </a>
+              ))}
+            </div>
+          )}
+
+          {playable.length > 0 && (
+            <div className="pt-field">
+              <div className="pt-field__label">Media</div>
+              <div className="pt-assets">
+                {playable.map((a) => (
+                  <AssetView key={a.id} asset={a} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!hasAny && <p className="pt-field__body pt-dim">(no details on this object)</p>}
         </>
       )}
 
@@ -356,6 +439,42 @@ function Scene({
       )}
       {choices.length === 0 && <div className="pt-end">The end</div>}
     </div>
+  )
+}
+
+// One attached media asset, rendered playable by kind.
+function AssetView({ asset }: { asset: Asset }) {
+  const url = asset.url as string
+  const k = mediaKind(asset)
+  if (k === 'image') return <img className="pt-media-img" src={url} alt={asset.filename} />
+  if (k === 'video')
+    return (
+      <video
+        className="pt-media-video"
+        src={url}
+        poster={asset.thumbnail_url || undefined}
+        controls
+        preload="metadata"
+      />
+    )
+  if (k === 'audio')
+    return (
+      <div className="pt-media-audio">
+        {asset.thumbnail_url && <img className="pt-media-audio__cover" src={asset.thumbnail_url} alt="" />}
+        <audio src={url} controls preload="metadata" />
+      </div>
+    )
+  return (
+    <a
+      className="pt-media-file"
+      href={safeHref(url)}
+      target="_blank"
+      rel="noreferrer noopener"
+      download={asset.filename}
+    >
+      <span className="pt-media-file__icon">↓</span>
+      {asset.filename}
+    </a>
   )
 }
 

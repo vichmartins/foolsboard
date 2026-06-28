@@ -1411,6 +1411,14 @@
     opacity: 1;
   }
 }
+.pt-overlay--closing {
+  animation: pt-fade-out 0.16s ease forwards;
+}
+@keyframes pt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
 .pt-bar {
   display: flex;
   align-items: center;
@@ -1451,13 +1459,19 @@
   flex: 1;
   overflow-y: auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
   padding: 24px 18px;
 }
+/* margin-block:auto centers the card when it fits, and lets it scroll from the
+   top (no clipping) when it's taller than the stage -- e.g. a long chooser. */
 .pt-card {
   width: min(640px, 100%);
+  margin-block: auto;
   animation: pt-card-in 0.22s ease forwards;
+}
+.pt-empty {
+  margin-block: auto;
 }
 @keyframes pt-card-in {
   from {
@@ -1550,10 +1564,29 @@
   gap: 3px;
   min-width: 0;
 }
+.pt-link-card__title {
+  color: var(--text);
+}
 .pt-link-card__site {
   font-size: 13px;
   color: var(--text-dim);
   word-break: break-all;
+}
+.pt-anim {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text);
+  line-height: 1.7;
+}
+.pt-anim__id {
+  margin-right: 8px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.pt-assets {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 .pt-meta {
   font-size: 14px;
