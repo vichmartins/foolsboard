@@ -1383,7 +1383,8 @@
 }
 /* The export icon is a stroke/outline glyph, not a filled one -- keep it from
    being filled solid by the rule above. */
-.react-flow__controls-button.rf-export-btn svg {
+.react-flow__controls-button.rf-export-btn svg,
+.react-flow__controls-button.rf-icon-btn svg {
   fill: none;
   stroke: currentColor;
 }

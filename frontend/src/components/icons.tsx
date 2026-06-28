@@ -56,6 +56,48 @@ export function PlusIcon() {
   )
 }
 
+export function MinusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  )
+}
+
+// Corner brackets = fit the board to the screen.
+export function FitViewIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 9V5a1 1 0 0 1 1-1h4" />
+      <path d="M20 9V5a1 1 0 0 0-1-1h-4" />
+      <path d="M4 15v4a1 1 0 0 0 1 1h4" />
+      <path d="M20 15v4a1 1 0 0 1-1 1h-4" />
+    </svg>
+  )
+}
+
+export function LockIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  )
+}
+
+export function UnlockIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 7.5-2" />
+    </svg>
+  )
+}
+
 export function MergeIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"

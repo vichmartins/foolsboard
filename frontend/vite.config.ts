@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { createLogger, defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -12,6 +13,13 @@ const baseError = quietLogger.error.bind(quietLogger)
 quietLogger.error = (msg, options) => {
   if (typeof msg === 'string' && msg.includes('ws proxy')) return
   baseError(msg, options)
+}
+// Drop Vite's own "VITE vX ready in …" startup line -- we print a foolsboard
+// banner instead (see brandBanner). Everything else still logs.
+const baseInfo = quietLogger.info.bind(quietLogger)
+quietLogger.info = (msg, options) => {
+  if (typeof msg === 'string' && /vite/i.test(msg) && /ready in/.test(msg)) return
+  baseInfo(msg, options)
 }
 
 const pkg = JSON.parse(
@@ -35,11 +43,53 @@ const emitVersion: Plugin = {
   },
 }
 
+// __APP_VERSION__/__CHANGELOG__ are injected via `define` when the dev server
+// starts, so editing CHANGELOG.md or package.json afterwards wouldn't reach the
+// "What's New" dialog until a manual restart. In dev, watch those files and restart
+// the server (which re-reads them) so What's New stays current. No effect on builds.
+const norm = (p: string) => p.replace(/\\/g, '/')
+const watchMeta: Plugin = {
+  name: 'watch-meta-restart',
+  apply: 'serve',
+  configureServer(server) {
+    const watched = [
+      fileURLToPath(new URL('../CHANGELOG.md', import.meta.url)),
+      fileURLToPath(new URL('./package.json', import.meta.url)),
+    ].map(norm)
+    server.watcher.add(watched)
+    server.watcher.on('change', (file) => {
+      if (watched.includes(norm(file))) void server.restart()
+    })
+  },
+}
+
+// Replace Vite's startup banner with a branded foolsboard one (then its usual URL
+// list). Dev only -- production serves static files, no terminal.
+const brandBanner: Plugin = {
+  name: 'foolsboard-banner',
+  apply: 'serve',
+  configureServer(server) {
+    const printUrls = server.printUrls.bind(server)
+    server.printUrls = () => {
+      const M = '\x1b[38;5;213m'
+      const B = '\x1b[1m'
+      const D = '\x1b[2m'
+      const R = '\x1b[0m'
+      console.log(
+        `\n  ${B}${M}fools${R}${B}board${R}  ${D}v${pkg.version}${R}\n` +
+          `  ${D}branching storyboards${R}\n`,
+      )
+      printUrls()
+    }
+  },
+}
+
 // Dev server proxies API + media calls to the FastAPI backend so the browser
 // talks to a single origin (no CORS juggling during development).
 export default defineConfig({
   customLogger: quietLogger,
-  plugins: [react(), emitVersion],
+  clearScreen: false, // keep our banner from being wiped on (re)start
+  plugins: [react(), emitVersion, watchMeta, brandBanner],
   // Bake the build version into the bundle for the update check.
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
