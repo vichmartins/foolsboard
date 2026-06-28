@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createLogger, defineConfig, type Plugin } from 'vite'
@@ -108,6 +109,13 @@ export default defineConfig({
   customLogger: quietLogger,
   clearScreen: false, // keep our banner from being wiped on (re)start
   plugins: [react(), emitVersion, watchMeta, brandBanner],
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+    css: false,
+    restoreMocks: true,
+  },
   // Bake the build version into the bundle for the update check.
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
