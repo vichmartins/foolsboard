@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.88.10
+
+- improve: Startup banner title now uses the bolder “chunky” figlet font (violet
+  “fools”, near-white “board”).
+
+
 ## v0.88.9
 
 - improve: New startup banner — the “foolsboard” title rendered in a clean figlet
