@@ -229,6 +229,12 @@ function CanvasInner({
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [playOpen, setPlayOpen] = useState(false)
+  // Where playthrough begins: set by "Play from here" (a specific object), else
+  // null so it falls back to the current selection / the start chooser.
+  const [playStart, setPlayStart] = useState<string | null>(null)
+  // The object a context menu was opened on (for "Play from here"); null for the
+  // multi-selection menu.
+  const [menuNodeId, setMenuNodeId] = useState<string | null>(null)
 
   // Smoothly track remote node moves by easing each node's *position* toward its
   // latest target every frame -- so React Flow recomputes the node and its edges
@@ -1177,6 +1183,7 @@ function CanvasInner({
       if (!isSelected) {
         setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === node.id })))
       }
+      setMenuNodeId(node.id)
       setNodeMenu({ x: event.clientX, y: event.clientY })
     },
     [getNodes],
@@ -1186,6 +1193,7 @@ function CanvasInner({
   // whole selection). React Flow's overlay intercepts the per-node handler.
   const onSelectionContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault()
+    setMenuNodeId(null) // multi-selection: "Play from here" doesn't apply
     setNodeMenu({ x: event.clientX, y: event.clientY })
   }, [])
 
@@ -1713,7 +1721,10 @@ function CanvasInner({
         <Controls>
           <ControlButton
             className="rf-play-btn"
-            onClick={() => setPlayOpen(true)}
+            onClick={() => {
+              setPlayStart(null)
+              setPlayOpen(true)
+            }}
             title="Play through the story"
           >
             <PlayIcon />
@@ -1755,7 +1766,7 @@ function CanvasInner({
             target_id: e.target,
             label: (e.label as string | undefined) ?? null,
           }))}
-          startId={selectedId ?? undefined}
+          startId={playStart ?? selectedId ?? undefined}
           onClose={() => setPlayOpen(false)}
         />
       )}
@@ -1839,6 +1850,18 @@ function CanvasInner({
           y={nodeMenu.y}
           onClose={() => setNodeMenu(null)}
           items={[
+            ...(menuNodeId
+              ? [
+                  {
+                    label: 'Play from here',
+                    mnemonic: 'y',
+                    onClick: () => {
+                      setPlayStart(menuNodeId)
+                      setPlayOpen(true)
+                    },
+                  },
+                ]
+              : []),
             { label: 'Copy', mnemonic: 'C', onClick: () => doCopy() },
             { label: 'Cut', mnemonic: 't', onClick: () => void doCut() },
             { label: 'Duplicate', mnemonic: 'D', onClick: () => void doDuplicate() },
