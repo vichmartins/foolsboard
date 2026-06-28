@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.88.2
+
+- improve: Each canvas control button’s tooltip now shows its keyboard shortcut —
+  Zoom in (`+`), Zoom out (`-`), Fit to screen (`F`), Play (`P`), Export (`E`). The
+  zoom / fit / lock buttons are now custom-rendered to carry the hints (lock
+  behaviour is unchanged); buttons without a shortcut just show their name.
+
+
 ## v0.88.1
 
 - feat: Keyboard shortcuts for the canvas view controls — `+` / `=` zoom in, `-`

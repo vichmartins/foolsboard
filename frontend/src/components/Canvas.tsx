@@ -20,7 +20,15 @@ import {
   type NodeChange,
 } from '@xyflow/react'
 import { toPng } from 'html-to-image'
-import { ImageIcon, PlayIcon } from './icons'
+import {
+  FitViewIcon,
+  ImageIcon,
+  LockIcon,
+  MinusIcon,
+  PlayIcon,
+  PlusIcon,
+  UnlockIcon,
+} from './icons'
 import Playthrough from './Playthrough'
 import '@xyflow/react/dist/style.css'
 
@@ -231,6 +239,9 @@ function CanvasInner({
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [playOpen, setPlayOpen] = useState(false)
+  // Canvas lock (replaces React Flow's built-in interactive button so its tooltip
+  // can match our styling): when locked, objects can't be moved/selected/linked.
+  const [locked, setLocked] = useState(false)
   // Where playthrough begins: set by "Play from here" (a specific object), else
   // null so it falls back to the current selection / the start chooser.
   const [playStart, setPlayStart] = useState<string | null>(null)
@@ -1765,6 +1776,9 @@ function CanvasInner({
         edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
+        nodesDraggable={!locked}
+        nodesConnectable={!locked}
+        elementsSelectable={!locked}
         connectionMode={ConnectionMode.Loose}
         deleteKeyCode={['Delete', 'Backspace']}
         onNodesChange={onNodesChange}
@@ -1797,7 +1811,39 @@ function CanvasInner({
         onlyRenderVisibleElements
       >
         <Background gap={20} />
-        <Controls>
+        <Controls showZoom={false} showFitView={false} showInteractive={false}>
+          <ControlButton
+            className="rf-icon-btn"
+            onClick={() => zoomIn({ duration: 150 })}
+            title="Zoom in — +"
+            aria-label="Zoom in"
+          >
+            <PlusIcon />
+          </ControlButton>
+          <ControlButton
+            className="rf-icon-btn"
+            onClick={() => zoomOut({ duration: 150 })}
+            title="Zoom out — −"
+            aria-label="Zoom out"
+          >
+            <MinusIcon />
+          </ControlButton>
+          <ControlButton
+            className="rf-icon-btn"
+            onClick={() => fitView({ padding: 0.2, duration: 300 })}
+            title="Fit to screen — F"
+            aria-label="Fit view"
+          >
+            <FitViewIcon />
+          </ControlButton>
+          <ControlButton
+            className="rf-icon-btn"
+            onClick={() => setLocked((v) => !v)}
+            title={locked ? 'Unlock the canvas' : 'Lock the canvas (prevent moving objects)'}
+            aria-label="Toggle canvas lock"
+          >
+            {locked ? <LockIcon /> : <UnlockIcon />}
+          </ControlButton>
           <ControlButton
             className="rf-play-btn"
             onClick={() => {
