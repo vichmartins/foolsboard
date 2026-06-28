@@ -76,24 +76,22 @@ const brandBanner: Plugin = {
       const BOLD = '\x1b[1m'
       const D = '\x1b[2m'
       const R = '\x1b[0m'
-      const FONT: Record<string, string[]> = {
-        f: ['▄██', '██▄', '█  ', '█  '],
-        o: ['███', '█ █', '█ █', '███'],
-        l: ['█  ', '█  ', '█  ', '███'],
-        s: ['▄██', '██▄', '▄▄█', '██▀'],
-        b: ['█  ', '██▄', '█ █', '███'],
-        a: ['▄█▄', '█ █', '███', '█ █'],
-        r: ['██▄', '█ █', '█  ', '█  '],
-        d: ['  █', '▄██', '█ █', '███'],
-      }
-      const row = (w: string, i: number) =>
-        w
-          .split('')
-          .map((c) => FONT[c][i])
-          .join(' ')
+      // "foolsboard" in figlet "small", split so each half is coloured.
+      const fools = [
+        '  __          _    ',
+        ' / _|___  ___| |___',
+        '|  _/ _ \\/ _ \\ (_-<',
+        '|_| \\___/\\___/_/__/',
+      ]
+      const board = [
+        ' _                      _ ',
+        '| |__  ___  __ _ _ _ __| |',
+        "| '_ \\/ _ \\/ _` | '_/ _` |",
+        '|_.__/\\___/\\__,_|_| \\__,_|',
+      ]
       const lines = ['']
       for (let i = 0; i < 4; i++) {
-        lines.push(`  ${BOLD}${V}${row('fools', i)}${R} ${BOLD}${W}${row('board', i)}${R}`)
+        lines.push(`  ${BOLD}${V}${fools[i]}${R}${BOLD}${W}${board[i]}${R}`)
       }
       lines.push(`  ${D}branching storyboards  ·  v${pkg.version}${R}`, '')
       console.log(lines.join('\n'))

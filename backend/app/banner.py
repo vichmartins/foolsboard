@@ -18,21 +18,19 @@ _B = "\033[1m" if _tty else ""
 _D = "\033[2m" if _tty else ""
 _R = "\033[0m" if _tty else ""
 
-# 4-row block-shadow font for the "foolsboard" title.
-_FONT = {
-    "f": ["▄██", "██▄", "█  ", "█  "],
-    "o": ["███", "█ █", "█ █", "███"],
-    "l": ["█  ", "█  ", "█  ", "███"],
-    "s": ["▄██", "██▄", "▄▄█", "██▀"],
-    "b": ["█  ", "██▄", "█ █", "███"],
-    "a": ["▄█▄", "█ █", "███", "█ █"],
-    "r": ["██▄", "█ █", "█  ", "█  "],
-    "d": ["  █", "▄██", "█ █", "███"],
-}
-
-
-def _row(word: str, i: int) -> str:
-    return " ".join(_FONT[c][i] for c in word)
+# "foolsboard" in the figlet "small" font, split so each half can be colored.
+_FOOLS = [
+    "  __          _    ",
+    " / _|___  ___| |___",
+    "|  _/ _ \\/ _ \\ (_-<",
+    "|_| \\___/\\___/_/__/",
+]
+_BOARD = [
+    " _                      _ ",
+    "| |__  ___  __ _ _ _ __| |",
+    "| '_ \\/ _ \\/ _` | '_/ _` |",
+    "|_.__/\\___/\\__,_|_| \\__,_|",
+]
 
 
 def _read_version() -> str:
@@ -55,7 +53,7 @@ def print_logo() -> None:
     ver = f"  ·  v{_VERSION}" if _VERSION else ""
     lines = [""]
     for i in range(4):
-        lines.append(f"  {_B}{_V}{_row('fools', i)}{_R} {_B}{_W}{_row('board', i)}{_R}")
+        lines.append(f"  {_B}{_V}{_FOOLS[i]}{_R}{_B}{_W}{_BOARD[i]}{_R}")
     lines.append(f"  {_D}branching storyboards{ver}{_R}")
     lines.append("")
     print("\n".join(lines), flush=True)

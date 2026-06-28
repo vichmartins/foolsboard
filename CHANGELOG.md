@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.88.9
+
+- improve: New startup banner — the “foolsboard” title rendered in a clean figlet
+  font (violet “fools”, near-white “board”). Art is baked in (no runtime
+  dependency).
+
+
 ## v0.88.8
 
 - improve: Startup banner is now an ASCII “foolsboard” title (block-shadow letters,
