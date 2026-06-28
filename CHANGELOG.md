@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.88.12
+
+- improve: Board export now streams each media file into the zip in blocks instead
+  of reading the whole file into memory, so exporting boards with large videos no
+  longer causes a per-file RAM spike.
+
+
 ## v0.88.11
 
 - improve: Startup banner title now uses the classic “standard” figlet font (violet
