@@ -1,9 +1,9 @@
 """Branded startup banner for the foolsboard backend.
 
-`print_logo()` draws the full ASCII wordmark (the dev launcher uses it once at the
-top). `print_ready()` is a one-line brand marker printed from the app lifespan, so
-production logs (journald) get branding too. Colors are emitted only to an
-interactive terminal -- prod logs get clean, escape-free text.
+`print_logo()` draws a line-art lightning bolt beside the wordmark (the dev
+launcher prints it once at the top). `print_ready()` is a one-line brand marker
+from the app lifespan, so production logs (journald) get branding too. Colors are
+emitted only to an interactive terminal -- prod logs get clean, escape-free text.
 """
 from __future__ import annotations
 
@@ -12,11 +12,14 @@ import sys
 from pathlib import Path
 
 _tty = sys.stdout.isatty()
-_M = "\033[38;5;213m" if _tty else ""  # magenta ("fools")
-_W = "\033[97m" if _tty else ""        # bright white ("board")
+_V = "\033[38;5;99m" if _tty else ""   # violet, ~ the logo's #863bff
+_W = "\033[38;5;253m" if _tty else ""  # near-white ("board")
 _B = "\033[1m" if _tty else ""
 _D = "\033[2m" if _tty else ""
 _R = "\033[0m" if _tty else ""
+
+# Line-art lightning bolt (the logo mark), drawn with pipes/slashes.
+_BOLT = [" ___ ", "|  / ", "| /  ", "|/__ ", " __/ ", "/    "]
 
 
 def _read_version() -> str:
@@ -34,39 +37,28 @@ def _read_version() -> str:
 
 _VERSION = _read_version()  # cached at import -- no per-reload file read
 
-# The logo's angular "bolt" mark, as a 5-row glyph beside the wordmark.
-_MARK = ["████  ", "  ███ ", "█████ ", " ███  ", "  ██  "]
-
-# 5-row block letters (each exactly 5 cols wide).
-_GLYPHS = {
-    "F": ["█████", "█    ", "████ ", "█    ", "█    "],
-    "O": ["█████", "█   █", "█   █", "█   █", "█████"],
-    "L": ["█    ", "█    ", "█    ", "█    ", "█████"],
-    "S": ["█████", "█    ", "█████", "    █", "█████"],
-    "B": ["████ ", "█   █", "████ ", "█   █", "████ "],
-    "A": ["█████", "█   █", "█████", "█   █", "█   █"],
-    "R": ["████ ", "█   █", "████ ", "█  █ ", "█   █"],
-    "D": ["████ ", "█   █", "█   █", "█   █", "████ "],
-}
-
-
-def _word(letters: str, i: int) -> str:
-    return " ".join(_GLYPHS[c][i] for c in letters)
-
 
 def print_logo() -> None:
-    lines = [""]
-    for i in range(5):
-        lines.append(
-            f"  {_B}{_M}{_MARK[i]}{_R}   {_B}{_M}{_word('FOOLS', i)}{_R}  "
-            f"{_B}{_W}{_word('BOARD', i)}{_R}"
-        )
+    fools, board = "f o o l s", "b o a r d"
+    rule = "─" * len(f"{fools} {board}")
     ver = f"  ·  v{_VERSION}" if _VERSION else ""
-    lines.append(f"  {_D}branching storyboards{ver}{_R}")
-    lines.append("")
+
+    def bolt(i: int) -> str:
+        return f"{_B}{_V}{_BOLT[i]}{_R}"
+
+    lines = [
+        "",
+        f"  {bolt(0)}",
+        f"  {bolt(1)}",
+        f"  {bolt(2)}   {_B}{_V}{fools}{_R} {_B}{_W}{board}{_R}",
+        f"  {bolt(3)}   {_D}{rule}{_R}",
+        f"  {bolt(4)}   {_D}branching storyboards{ver}{_R}",
+        f"  {bolt(5)}",
+        "",
+    ]
     print("\n".join(lines), flush=True)
 
 
 def print_ready() -> None:
     ver = f" {_D}v{_VERSION}{_R}" if _VERSION else ""
-    print(f"  {_B}{_M}fools{_R}{_B}board{_R}{ver} {_D}· ready{_R}", flush=True)
+    print(f"  {_B}{_V}fools{_R}{_B}board{_R}{ver} {_D}· ready{_R}", flush=True)

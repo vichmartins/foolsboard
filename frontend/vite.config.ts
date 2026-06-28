@@ -71,35 +71,28 @@ const brandBanner: Plugin = {
   configureServer(server) {
     const printUrls = server.printUrls.bind(server)
     server.printUrls = () => {
-      const M = '\x1b[38;5;213m'
-      const W = '\x1b[97m'
+      const V = '\x1b[38;5;99m' // violet, ~ the logo's #863bff
+      const W = '\x1b[38;5;253m'
       const BOLD = '\x1b[1m'
       const D = '\x1b[2m'
       const R = '\x1b[0m'
-      const G: Record<string, string[]> = {
-        F: ['█████', '█    ', '████ ', '█    ', '█    '],
-        O: ['█████', '█   █', '█   █', '█   █', '█████'],
-        L: ['█    ', '█    ', '█    ', '█    ', '█████'],
-        S: ['█████', '█    ', '█████', '    █', '█████'],
-        B: ['████ ', '█   █', '████ ', '█   █', '████ '],
-        A: ['█████', '█   █', '█████', '█   █', '█   █'],
-        R: ['████ ', '█   █', '████ ', '█  █ ', '█   █'],
-        D: ['████ ', '█   █', '█   █', '█   █', '████ '],
-      }
-      const word = (s: string, i: number) =>
-        s
-          .split('')
-          .map((c) => G[c][i])
-          .join(' ')
-      const mark = ['████  ', '  ███ ', '█████ ', ' ███  ', '  ██  ']
-      const lines: string[] = ['']
-      for (let i = 0; i < 5; i++) {
-        lines.push(
-          `  ${BOLD}${M}${mark[i]}${R}   ${BOLD}${M}${word('FOOLS', i)}${R}  ${BOLD}${W}${word('BOARD', i)}${R}`,
-        )
-      }
-      lines.push(`  ${D}branching storyboards  ·  v${pkg.version}${R}`, '')
-      console.log(lines.join('\n'))
+      const bolt = [' ___ ', '|  / ', '| /  ', '|/__ ', ' __/ ', '/    ']
+      const b = (i: number) => `${BOLD}${V}${bolt[i]}${R}`
+      const fools = 'f o o l s'
+      const board = 'b o a r d'
+      const rule = '─'.repeat(`${fools} ${board}`.length)
+      console.log(
+        [
+          '',
+          `  ${b(0)}`,
+          `  ${b(1)}`,
+          `  ${b(2)}   ${BOLD}${V}${fools}${R} ${BOLD}${W}${board}${R}`,
+          `  ${b(3)}   ${D}${rule}${R}`,
+          `  ${b(4)}   ${D}branching storyboards  ·  v${pkg.version}${R}`,
+          `  ${b(5)}`,
+          '',
+        ].join('\n'),
+      )
       printUrls()
     }
   },

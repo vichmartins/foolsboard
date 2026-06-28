@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.88.7
+
+- improve: Redesigned the startup banner — a line-art lightning-bolt mark (drawn
+  with pipes and slashes) beside a letter-spaced “foolsboard” wordmark and a rule,
+  in the logo’s violet. Replaces the crude solid-block version.
+
+
 ## v0.88.6
 
 - improve: The startup banner now includes the logo’s angular bolt mark beside the
