@@ -92,6 +92,7 @@ export default function Playthrough({
   const [current, setCurrent] = useState<string | undefined>(initialChosen ?? undefined)
   const [history, setHistory] = useState<string[]>([])
   const [closing, setClosing] = useState(false)
+  const [lightbox, setLightbox] = useState<string | null>(null)
 
   useEffect(() => {
     setChosen(initialChosen)
@@ -142,6 +143,13 @@ export default function Playthrough({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (lightbox) {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          setLightbox(null)
+        }
+        return
+      }
       if (e.key === 'Escape') return requestClose()
       if (chosen === null) {
         if (/^[1-9]$/.test(e.key)) {
@@ -174,7 +182,7 @@ export default function Playthrough({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [chosen, choices, history.length, canChoose, starts, back, begin, go, requestClose])
+  }, [chosen, choices, history.length, canChoose, starts, back, begin, go, requestClose, lightbox])
 
   const trail = useMemo(
     () =>
@@ -228,9 +236,16 @@ export default function Playthrough({
             assets={assets.get(node.id) ?? []}
             choices={choices}
             onChoose={go}
+            onZoom={setLightbox}
           />
         )}
       </div>
+
+      {lightbox && (
+        <div className="pt-lightbox" onClick={() => setLightbox(null)} role="dialog" aria-label="Image">
+          <img src={lightbox} alt="" draggable={false} />
+        </div>
+      )}
 
       {chosen !== null && node && (
         <div className="pt-foot">
@@ -319,11 +334,13 @@ function Scene({
   assets,
   choices,
   onChoose,
+  onZoom,
 }: {
   node: StoryNode
   assets: Asset[]
   choices: Choice[]
   onChoose: (id: string) => void
+  onZoom: (url: string) => void
 }) {
   const accent = KIND_COLORS[node.type] ?? 'var(--text-dim)'
   const media = isMediaNodeType(node.type)
@@ -350,7 +367,7 @@ function Scene({
       <h2 className="pt-title">{node.title || 'Untitled'}</h2>
 
       {media ? (
-        <MediaBlock node={node} />
+        <MediaBlock node={node} onZoom={onZoom} />
       ) : (
         <>
           {fields.map(({ d, v }) =>
@@ -397,6 +414,7 @@ function Scene({
                       className="pt-link-card__img"
                       src={r.image}
                       alt=""
+                      draggable={false}
                       onError={(e) => {
                         e.currentTarget.style.display = 'none'
                       }}
@@ -416,7 +434,7 @@ function Scene({
               <div className="pt-field__label">Media</div>
               <div className="pt-assets">
                 {playable.map((a) => (
-                  <AssetView key={a.id} asset={a} />
+                  <AssetView key={a.id} asset={a} onZoom={onZoom} />
                 ))}
               </div>
             </div>
@@ -443,10 +461,19 @@ function Scene({
 }
 
 // One attached media asset, rendered playable by kind.
-function AssetView({ asset }: { asset: Asset }) {
+function AssetView({ asset, onZoom }: { asset: Asset; onZoom: (url: string) => void }) {
   const url = asset.url as string
   const k = mediaKind(asset)
-  if (k === 'image') return <img className="pt-media-img" src={url} alt={asset.filename} />
+  if (k === 'image')
+    return (
+      <img
+        className="pt-media-img"
+        src={url}
+        alt={asset.filename}
+        draggable={false}
+        onClick={() => onZoom(url)}
+      />
+    )
   if (k === 'video')
     return (
       <video
@@ -460,7 +487,9 @@ function AssetView({ asset }: { asset: Asset }) {
   if (k === 'audio')
     return (
       <div className="pt-media-audio">
-        {asset.thumbnail_url && <img className="pt-media-audio__cover" src={asset.thumbnail_url} alt="" />}
+        {asset.thumbnail_url && (
+          <img className="pt-media-audio__cover" src={asset.thumbnail_url} alt="" draggable={false} />
+        )}
         <audio src={url} controls preload="metadata" />
       </div>
     )
@@ -480,7 +509,7 @@ function AssetView({ asset }: { asset: Asset }) {
 
 // Render a media/link object inline (image, video, audio player, file, or a link
 // preview) -- everything needed lives in the node's content, like MediaNodeCard.
-function MediaBlock({ node }: { node: StoryNode }) {
+function MediaBlock({ node, onZoom }: { node: StoryNode; onZoom: (url: string) => void }) {
   const c = node.content ?? {}
   const str = (k: string) => (typeof c[k] === 'string' ? (c[k] as string) : '')
   const url = str('url')
@@ -495,6 +524,7 @@ function MediaBlock({ node }: { node: StoryNode }) {
             className="pt-link-card__img"
             src={image}
             alt=""
+            draggable={false}
             onError={(e) => {
               e.currentTarget.style.display = 'none'
             }}
@@ -513,7 +543,16 @@ function MediaBlock({ node }: { node: StoryNode }) {
   const thumb = str('thumbnailUrl')
   const filename = str('filename') || node.title || 'file'
 
-  if (mk === 'image') return <img className="pt-media-img" src={url} alt={filename} />
+  if (mk === 'image')
+    return (
+      <img
+        className="pt-media-img"
+        src={url}
+        alt={filename}
+        draggable={false}
+        onClick={() => onZoom(url)}
+      />
+    )
   if (mk === 'video')
     return (
       <video className="pt-media-video" src={url} poster={thumb || undefined} controls preload="metadata" />
@@ -521,7 +560,7 @@ function MediaBlock({ node }: { node: StoryNode }) {
   if (mk === 'audio')
     return (
       <div className="pt-media-audio">
-        {thumb && <img className="pt-media-audio__cover" src={thumb} alt="" />}
+        {thumb && <img className="pt-media-audio__cover" src={thumb} alt="" draggable={false} />}
         <audio src={url} controls preload="metadata" />
       </div>
     )

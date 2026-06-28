@@ -258,6 +258,13 @@ function CanvasInner({
     },
     [boardId],
   )
+  // The window-level drag handlers below must ignore drags while the playthrough
+  // overlay is open, or dragging an image inside the reader leaves the canvas's
+  // "drop to place" overlay stuck on.
+  const playOpenRef = useRef(false)
+  useEffect(() => {
+    playOpenRef.current = playOpen
+  }, [playOpen])
 
   // Smoothly track remote node moves by easing each node's *position* toward its
   // latest target every frame -- so React Flow recomputes the node and its edges
@@ -1515,13 +1522,13 @@ function CanvasInner({
       clearDraggedNode()
     }
     const onEnter = (e: DragEvent) => {
-      if (!droppable(e)) return
+      if (playOpenRef.current || !droppable(e)) return
       e.preventDefault()
       dragDepthRef.current += 1
       setDragKind('ready')
     }
     const onOver = (e: DragEvent) => {
-      if (!droppable(e)) return
+      if (playOpenRef.current || !droppable(e)) return
       e.preventDefault() // required to allow a drop
       // Only set dropEffect for our own asset drags (effectAllowed='copy'), which
       // the gallery cancel relies on. Do NOT set it for OS file drags: forcing
@@ -1530,11 +1537,15 @@ function CanvasInner({
       if ((assetDrag() || nodeDrag()) && e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
     }
     const onLeave = (e: DragEvent) => {
-      if (!droppable(e)) return
+      if (playOpenRef.current || !droppable(e)) return
       dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
       if (dragDepthRef.current === 0) setDragKind('none')
     }
     const onDrop = (e: DragEvent) => {
+      if (playOpenRef.current) {
+        e.preventDefault() // swallow the drop so the browser doesn't open the file
+        return
+      }
       const dt = e.dataTransfer
       // Real OS files are detected directly from the drop (dt.files only has
       // content on drop). Checking them here -- not via externalDrag's
@@ -1829,7 +1840,7 @@ function CanvasInner({
         />
       )}
 
-      {dragKind !== 'none' && (
+      {dragKind !== 'none' && !playOpen && (
         <div className="drop-overlay drop-overlay--ready">
           <div className="drop-overlay__card">
             <div className="drop-overlay__icon">⬆</div>

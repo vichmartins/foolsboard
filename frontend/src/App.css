@@ -1505,9 +1505,15 @@
 .pt-media-video {
   display: block;
   max-width: 100%;
+  width: auto;
+  height: auto;
   max-height: 52vh;
+  object-fit: contain;
   border-radius: 12px;
   margin: 4px 0;
+}
+.pt-media-img {
+  cursor: zoom-in;
 }
 .pt-media-audio {
   display: flex;
@@ -1586,7 +1592,25 @@
 .pt-assets {
   display: flex;
   flex-direction: column;
+  align-items: flex-start; /* don't stretch images to full width (distorts aspect) */
   gap: 12px;
+}
+.pt-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+  animation: pt-fade 0.15s ease forwards;
+}
+.pt-lightbox img {
+  max-width: 92vw;
+  max-height: 92vh;
+  object-fit: contain;
+  border-radius: 8px;
 }
 .pt-meta {
   font-size: 14px;
