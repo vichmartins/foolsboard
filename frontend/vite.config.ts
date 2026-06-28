@@ -75,10 +75,17 @@ const brandBanner: Plugin = {
       const B = '\x1b[1m'
       const D = '\x1b[2m'
       const R = '\x1b[0m'
-      console.log(
-        `\n  ${B}${M}fools${R}${B}board${R}  ${D}v${pkg.version}${R}\n` +
-          `  ${D}branching storyboards${R}\n`,
+      const art = ['  ◆◇◆', '  ◇◆◇']
+      const mid = [`foolsboard  v${pkg.version}`, 'branching storyboards']
+      const w = Math.max(...mid.map((m) => m.length))
+      const l0 = `${M}${art[0]}${R}   ${mid[0].padEnd(w)}   ${M}${art[0].slice(2)}${R}`
+        .replace('foolsboard', `${B}${M}fools${R}${B}board${R}`)
+        .replace(`v${pkg.version}`, `${D}v${pkg.version}${R}`)
+      const l1 = `${M}${art[1]}${R}   ${mid[1].padEnd(w)}   ${M}${art[1].slice(2)}${R}`.replace(
+        'branching storyboards',
+        `${D}branching storyboards${R}`,
       )
+      console.log(`\n${l0}\n${l1}\n`)
       printUrls()
     }
   },

@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.88.4
+
+- improve: Cleaner, more branded dev startup. The backend banner now has ASCII
+  flourishes on both sides, and `python -m app` hides uvicorn’s lifecycle lines
+  (“Uvicorn running on…”, the reloader/WatchFiles notices) while keeping request
+  logs. The dev frontend no longer prints npm’s “> vite” echo and shows the matching
+  banner.
+
+
 ## v0.88.3
 
 - improve: Branded startup banner. The backend prints a “foolsboard” banner when it
