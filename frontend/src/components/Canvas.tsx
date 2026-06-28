@@ -20,7 +20,8 @@ import {
   type NodeChange,
 } from '@xyflow/react'
 import { toPng } from 'html-to-image'
-import { ImageIcon } from './icons'
+import { ImageIcon, PlayIcon } from './icons'
+import Playthrough from './Playthrough'
 import '@xyflow/react/dist/style.css'
 
 import * as api from '../api'
@@ -227,6 +228,43 @@ function CanvasInner({
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [playOpen, setPlayOpen] = useState(false)
+  // Where playthrough begins: set by "Play from here" (a specific object), else
+  // null so it falls back to the current selection / the start chooser.
+  const [playStart, setPlayStart] = useState<string | null>(null)
+  // The object a context menu was opened on (for "Play from here"); null for the
+  // multi-selection menu.
+  const [menuNodeId, setMenuNodeId] = useState<string | null>(null)
+  // Attached media per object (node_id -> assets), loaded when playthrough opens
+  // so the reader can show images/video/audio that live on story objects.
+  const [playAssets, setPlayAssets] = useState<Map<string, Asset[]>>(new Map())
+
+  const openPlaythrough = useCallback(
+    (start: string | null) => {
+      setPlayStart(start)
+      setPlayOpen(true)
+      api
+        .listBoardAssets(boardId)
+        .then((list) => {
+          const m = new Map<string, Asset[]>()
+          for (const a of list) {
+            const arr = m.get(a.node_id) ?? []
+            arr.push(a)
+            m.set(a.node_id, arr)
+          }
+          setPlayAssets(m)
+        })
+        .catch(() => setPlayAssets(new Map()))
+    },
+    [boardId],
+  )
+  // The window-level drag handlers below must ignore drags while the playthrough
+  // overlay is open, or dragging an image inside the reader leaves the canvas's
+  // "drop to place" overlay stuck on.
+  const playOpenRef = useRef(false)
+  useEffect(() => {
+    playOpenRef.current = playOpen
+  }, [playOpen])
 
   // Smoothly track remote node moves by easing each node's *position* toward its
   // latest target every frame -- so React Flow recomputes the node and its edges
@@ -1175,6 +1213,7 @@ function CanvasInner({
       if (!isSelected) {
         setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === node.id })))
       }
+      setMenuNodeId(node.id)
       setNodeMenu({ x: event.clientX, y: event.clientY })
     },
     [getNodes],
@@ -1184,6 +1223,7 @@ function CanvasInner({
   // whole selection). React Flow's overlay intercepts the per-node handler.
   const onSelectionContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault()
+    setMenuNodeId(null) // multi-selection: "Play from here" doesn't apply
     setNodeMenu({ x: event.clientX, y: event.clientY })
   }, [])
 
@@ -1482,13 +1522,13 @@ function CanvasInner({
       clearDraggedNode()
     }
     const onEnter = (e: DragEvent) => {
-      if (!droppable(e)) return
+      if (playOpenRef.current || !droppable(e)) return
       e.preventDefault()
       dragDepthRef.current += 1
       setDragKind('ready')
     }
     const onOver = (e: DragEvent) => {
-      if (!droppable(e)) return
+      if (playOpenRef.current || !droppable(e)) return
       e.preventDefault() // required to allow a drop
       // Only set dropEffect for our own asset drags (effectAllowed='copy'), which
       // the gallery cancel relies on. Do NOT set it for OS file drags: forcing
@@ -1497,11 +1537,15 @@ function CanvasInner({
       if ((assetDrag() || nodeDrag()) && e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
     }
     const onLeave = (e: DragEvent) => {
-      if (!droppable(e)) return
+      if (playOpenRef.current || !droppable(e)) return
       dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
       if (dragDepthRef.current === 0) setDragKind('none')
     }
     const onDrop = (e: DragEvent) => {
+      if (playOpenRef.current) {
+        e.preventDefault() // swallow the drop so the browser doesn't open the file
+        return
+      }
       const dt = e.dataTransfer
       // Real OS files are detected directly from the drop (dt.files only has
       // content on drop). Checking them here -- not via externalDrag's
@@ -1710,6 +1754,18 @@ function CanvasInner({
         <Background gap={20} />
         <Controls>
           <ControlButton
+            className="rf-play-btn"
+            onClick={() => {
+              // Start from the highlighted object (single-click select) when exactly
+              // one is selected; otherwise open the start chooser.
+              const sel = getNodes().filter((n) => n.selected)
+              openPlaythrough(sel.length === 1 ? sel[0].id : null)
+            }}
+            title="Play through the story (from the selected object, if any)"
+          >
+            <PlayIcon />
+          </ControlButton>
+          <ControlButton
             className="rf-export-btn"
             onClick={exportImage}
             title="Export board as image (PNG)"
@@ -1737,6 +1793,20 @@ function CanvasInner({
       )}
 
       {lockMsg && <div className="toast">{lockMsg}</div>}
+
+      {playOpen && (
+        <Playthrough
+          nodes={nodes.map((n) => n.data.story as StoryNode).filter(Boolean)}
+          edges={edges.map((e) => ({
+            source_id: e.source,
+            target_id: e.target,
+            label: (e.label as string | undefined) ?? null,
+          }))}
+          startId={playStart ?? selectedId ?? undefined}
+          assets={playAssets}
+          onClose={() => setPlayOpen(false)}
+        />
+      )}
 
       {editorStory && (
         <ContextPanel
@@ -1775,7 +1845,7 @@ function CanvasInner({
         />
       )}
 
-      {dragKind !== 'none' && (
+      {dragKind !== 'none' && !playOpen && (
         <div className="drop-overlay drop-overlay--ready">
           <div className="drop-overlay__card">
             <div className="drop-overlay__icon">⬆</div>
@@ -1826,6 +1896,9 @@ function CanvasInner({
               : []),
             ...(selMediaDl
               ? [{ label: 'Download', mnemonic: 'w', onClick: () => downloadAsset(selMediaDl) }]
+              : []),
+            ...(menuNodeId
+              ? [{ label: 'Play from here', mnemonic: 'y', onClick: () => openPlaythrough(menuNodeId) }]
               : []),
             { label: 'Delete', mnemonic: 'l', onClick: () => doDelete() },
           ]}

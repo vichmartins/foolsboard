@@ -152,6 +152,15 @@ export function TemplateIcon() {
   )
 }
 
+// A play triangle = step through the board as an interactive story.
+export function PlayIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M8 5.5v13a1 1 0 0 0 1.52.85l10.5-6.5a1 1 0 0 0 0-1.7L9.52 4.65A1 1 0 0 0 8 5.5z" />
+    </svg>
+  )
+}
+
 // A framed picture = exporting the board as an image.
 export function ImageIcon() {
   return (

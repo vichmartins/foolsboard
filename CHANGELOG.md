@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.88.0
+
+- feat: **Playthrough mode** — a full-screen reader that walks your board like an
+  interactive story. Press the ▶ button in the canvas controls to start. Each
+  object becomes a scene; its outgoing connections become the choices (labelled by
+  the connection, or by the destination object when a connection has no label); an
+  object with no outgoing connection is an ending. Read-only — it never changes the
+  board. Number keys pick a path, ← goes back, Esc exits.
+
+
 ## v0.87.5
 
 - improve: Hardened board-bundle import — oversized assets are now rejected up
