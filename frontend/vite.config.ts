@@ -14,6 +14,13 @@ quietLogger.error = (msg, options) => {
   if (typeof msg === 'string' && msg.includes('ws proxy')) return
   baseError(msg, options)
 }
+// Drop Vite's own "VITE vX ready in …" startup line -- we print a foolsboard
+// banner instead (see brandBanner). Everything else still logs.
+const baseInfo = quietLogger.info.bind(quietLogger)
+quietLogger.info = (msg, options) => {
+  if (typeof msg === 'string' && /vite/i.test(msg) && /ready in/.test(msg)) return
+  baseInfo(msg, options)
+}
 
 const pkg = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
@@ -56,11 +63,33 @@ const watchMeta: Plugin = {
   },
 }
 
+// Replace Vite's startup banner with a branded foolsboard one (then its usual URL
+// list). Dev only -- production serves static files, no terminal.
+const brandBanner: Plugin = {
+  name: 'foolsboard-banner',
+  apply: 'serve',
+  configureServer(server) {
+    const printUrls = server.printUrls.bind(server)
+    server.printUrls = () => {
+      const M = '\x1b[38;5;213m'
+      const B = '\x1b[1m'
+      const D = '\x1b[2m'
+      const R = '\x1b[0m'
+      console.log(
+        `\n  ${B}${M}fools${R}${B}board${R}  ${D}v${pkg.version}${R}\n` +
+          `  ${D}branching storyboards${R}\n`,
+      )
+      printUrls()
+    }
+  },
+}
+
 // Dev server proxies API + media calls to the FastAPI backend so the browser
 // talks to a single origin (no CORS juggling during development).
 export default defineConfig({
   customLogger: quietLogger,
-  plugins: [react(), emitVersion, watchMeta],
+  clearScreen: false, // keep our banner from being wiped on (re)start
+  plugins: [react(), emitVersion, watchMeta, brandBanner],
   // Bake the build version into the bundle for the update check.
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
