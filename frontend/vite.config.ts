@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { createLogger, defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -35,11 +36,31 @@ const emitVersion: Plugin = {
   },
 }
 
+// __APP_VERSION__/__CHANGELOG__ are injected via `define` when the dev server
+// starts, so editing CHANGELOG.md or package.json afterwards wouldn't reach the
+// "What's New" dialog until a manual restart. In dev, watch those files and restart
+// the server (which re-reads them) so What's New stays current. No effect on builds.
+const norm = (p: string) => p.replace(/\\/g, '/')
+const watchMeta: Plugin = {
+  name: 'watch-meta-restart',
+  apply: 'serve',
+  configureServer(server) {
+    const watched = [
+      fileURLToPath(new URL('../CHANGELOG.md', import.meta.url)),
+      fileURLToPath(new URL('./package.json', import.meta.url)),
+    ].map(norm)
+    server.watcher.add(watched)
+    server.watcher.on('change', (file) => {
+      if (watched.includes(norm(file))) void server.restart()
+    })
+  },
+}
+
 // Dev server proxies API + media calls to the FastAPI backend so the browser
 // talks to a single origin (no CORS juggling during development).
 export default defineConfig({
   customLogger: quietLogger,
-  plugins: [react(), emitVersion],
+  plugins: [react(), emitVersion, watchMeta],
   // Bake the build version into the bundle for the update check.
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
