@@ -4,6 +4,7 @@
   "version": "0.88.11",
   "type": "module",
   "scripts": {
+    "foolsboard": "vite",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

@@ -9,17 +9,19 @@ Run the two halves in separate terminals.
 **Backend** — from `backend/` (uses the project venv):
 
 ```powershell
-.\.venv\Scripts\python -m app
+.\.venv\Scripts\python -m foolsboard
 ```
 
 Serves `http://127.0.0.1:8000` with auto-reload and the startup banner.
-Equivalent older form: `.\.venv\Scripts\python -m uvicorn app.main:app --reload`.
+(`python -m app` and `python -m uvicorn app.main:app --reload` also work.)
 
 **Frontend** — from `frontend/`:
 
 ```powershell
-npm run dev
+npm run foolsboard
 ```
+
+(`npm run dev` is kept as an alias.)
 
 Serves `http://localhost:5173` (plus LAN IPs for multi-device testing). It proxies
 `/api` and `/media` to the backend, so start the backend too or you'll see
