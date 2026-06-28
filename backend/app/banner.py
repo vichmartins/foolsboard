@@ -18,8 +18,21 @@ _B = "\033[1m" if _tty else ""
 _D = "\033[2m" if _tty else ""
 _R = "\033[0m" if _tty else ""
 
-# Line-art lightning bolt (the logo mark), drawn with pipes/slashes.
-_BOLT = [" ___ ", "|  / ", "| /  ", "|/__ ", " __/ ", "/    "]
+# 4-row block-shadow font for the "foolsboard" title.
+_FONT = {
+    "f": ["▄██", "██▄", "█  ", "█  "],
+    "o": ["███", "█ █", "█ █", "███"],
+    "l": ["█  ", "█  ", "█  ", "███"],
+    "s": ["▄██", "██▄", "▄▄█", "██▀"],
+    "b": ["█  ", "██▄", "█ █", "███"],
+    "a": ["▄█▄", "█ █", "███", "█ █"],
+    "r": ["██▄", "█ █", "█  ", "█  "],
+    "d": ["  █", "▄██", "█ █", "███"],
+}
+
+
+def _row(word: str, i: int) -> str:
+    return " ".join(_FONT[c][i] for c in word)
 
 
 def _read_version() -> str:
@@ -39,23 +52,12 @@ _VERSION = _read_version()  # cached at import -- no per-reload file read
 
 
 def print_logo() -> None:
-    fools, board = "f o o l s", "b o a r d"
-    rule = "─" * len(f"{fools} {board}")
     ver = f"  ·  v{_VERSION}" if _VERSION else ""
-
-    def bolt(i: int) -> str:
-        return f"{_B}{_V}{_BOLT[i]}{_R}"
-
-    lines = [
-        "",
-        f"  {bolt(0)}",
-        f"  {bolt(1)}",
-        f"  {bolt(2)}   {_B}{_V}{fools}{_R} {_B}{_W}{board}{_R}",
-        f"  {bolt(3)}   {_D}{rule}{_R}",
-        f"  {bolt(4)}   {_D}branching storyboards{ver}{_R}",
-        f"  {bolt(5)}",
-        "",
-    ]
+    lines = [""]
+    for i in range(4):
+        lines.append(f"  {_B}{_V}{_row('fools', i)}{_R} {_B}{_W}{_row('board', i)}{_R}")
+    lines.append(f"  {_D}branching storyboards{ver}{_R}")
+    lines.append("")
     print("\n".join(lines), flush=True)
 
 

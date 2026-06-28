@@ -1,7 +1,7 @@
 {
   "name": "foolsboard",
   "private": true,
-  "version": "0.88.7",
+  "version": "0.88.8",
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.88.8
+
+- improve: Startup banner is now an ASCII “foolsboard” title (block-shadow letters,
+  no separate glyph), in the logo’s violet (“fools”) and near-white (“board”).
+
+
 ## v0.88.7
 
 - improve: Redesigned the startup banner — a line-art lightning-bolt mark (drawn

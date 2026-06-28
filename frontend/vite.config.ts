@@ -76,23 +76,27 @@ const brandBanner: Plugin = {
       const BOLD = '\x1b[1m'
       const D = '\x1b[2m'
       const R = '\x1b[0m'
-      const bolt = [' ___ ', '|  / ', '| /  ', '|/__ ', ' __/ ', '/    ']
-      const b = (i: number) => `${BOLD}${V}${bolt[i]}${R}`
-      const fools = 'f o o l s'
-      const board = 'b o a r d'
-      const rule = '─'.repeat(`${fools} ${board}`.length)
-      console.log(
-        [
-          '',
-          `  ${b(0)}`,
-          `  ${b(1)}`,
-          `  ${b(2)}   ${BOLD}${V}${fools}${R} ${BOLD}${W}${board}${R}`,
-          `  ${b(3)}   ${D}${rule}${R}`,
-          `  ${b(4)}   ${D}branching storyboards  ·  v${pkg.version}${R}`,
-          `  ${b(5)}`,
-          '',
-        ].join('\n'),
-      )
+      const FONT: Record<string, string[]> = {
+        f: ['▄██', '██▄', '█  ', '█  '],
+        o: ['███', '█ █', '█ █', '███'],
+        l: ['█  ', '█  ', '█  ', '███'],
+        s: ['▄██', '██▄', '▄▄█', '██▀'],
+        b: ['█  ', '██▄', '█ █', '███'],
+        a: ['▄█▄', '█ █', '███', '█ █'],
+        r: ['██▄', '█ █', '█  ', '█  '],
+        d: ['  █', '▄██', '█ █', '███'],
+      }
+      const row = (w: string, i: number) =>
+        w
+          .split('')
+          .map((c) => FONT[c][i])
+          .join(' ')
+      const lines = ['']
+      for (let i = 0; i < 4; i++) {
+        lines.push(`  ${BOLD}${V}${row('fools', i)}${R} ${BOLD}${W}${row('board', i)}${R}`)
+      }
+      lines.push(`  ${D}branching storyboards  ·  v${pkg.version}${R}`, '')
+      console.log(lines.join('\n'))
       printUrls()
     }
   },
