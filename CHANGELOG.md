@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.88.11
+
+- improve: Startup banner title now uses the classic “standard” figlet font (violet
+  “fools”, near-white “board”).
+
+
 ## v0.88.10
 
 - improve: Startup banner title now uses the bolder “chunky” figlet font (violet

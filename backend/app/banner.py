@@ -20,16 +20,18 @@ _R = "\033[0m" if _tty else ""
 
 # "foolsboard" in the figlet "small" font, split so each half can be colored.
 _FOOLS = [
-    "  ___               __        ",
-    ".'  _|.-----.-----.|  |.-----.",
-    "|   _||  _  |  _  ||  ||__ --|",
-    "|__|  |_____|_____||__||_____|",
+    "  __             _     ",
+    " / _| ___   ___ | |___ ",
+    "| |_ / _ \\ / _ \\| / __|",
+    "|  _| (_) | (_) | \\__ \\",
+    "|_|  \\___/ \\___/|_|___/",
 ]
 _BOARD = [
-    " __                        __ ",
-    "|  |--.-----.---.-.----.--|  |",
-    "|  _  |  _  |  _  |   _|  _  |",
-    "|_____|_____|___._|__| |_____|",
+    " _                         _ ",
+    "| |__   ___   __ _ _ __ __| |",
+    "| '_ \\ / _ \\ / _` | '__/ _` |",
+    "| |_) | (_) | (_| | | | (_| |",
+    "|_.__/ \\___/ \\__,_|_|  \\__,_|",
 ]
 
 
@@ -52,7 +54,7 @@ _VERSION = _read_version()  # cached at import -- no per-reload file read
 def print_logo() -> None:
     ver = f"  ·  v{_VERSION}" if _VERSION else ""
     lines = [""]
-    for i in range(4):
+    for i in range(len(_FOOLS)):
         lines.append(f"  {_B}{_V}{_FOOLS[i]}{_R}{_B}{_W}{_BOARD[i]}{_R}")
     lines.append(f"  {_D}branching storyboards{ver}{_R}")
     lines.append("")
