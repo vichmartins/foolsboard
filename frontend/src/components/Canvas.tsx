@@ -1755,8 +1755,13 @@ function CanvasInner({
         <Controls>
           <ControlButton
             className="rf-play-btn"
-            onClick={() => openPlaythrough(null)}
-            title="Play through the story"
+            onClick={() => {
+              // Start from the highlighted object (single-click select) when exactly
+              // one is selected; otherwise open the start chooser.
+              const sel = getNodes().filter((n) => n.selected)
+              openPlaythrough(sel.length === 1 ? sel[0].id : null)
+            }}
+            title="Play through the story (from the selected object, if any)"
           >
             <PlayIcon />
           </ControlButton>
