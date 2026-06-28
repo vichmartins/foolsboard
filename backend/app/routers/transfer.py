@@ -263,12 +263,19 @@ def export_boards(
                 yield chunk
             for arc, key in media:
                 try:
-                    with storage.open(key) as fh:
-                        data = fh.read()
+                    src = storage.open(key)
                 except FileNotFoundError:
                     continue  # bytes gone; manifest still references the entry
-                # Media is already compressed -- store it as-is, no re-deflate.
-                zf.writestr(arc, data, zipfile.ZIP_STORED)
+                # Stream the file into the zip in blocks, draining the buffer as we
+                # go, so a large video never sits in RAM all at once. Media is
+                # already compressed -- store it as-is (ZIP_STORED), no re-deflate.
+                info = zipfile.ZipInfo(arc)
+                info.compress_type = zipfile.ZIP_STORED
+                with src, zf.open(info, "w") as dest:
+                    while block := src.read(1024 * 1024):
+                        dest.write(block)
+                        if chunk := buf.drain():
+                            yield chunk
                 if chunk := buf.drain():
                     yield chunk
         if chunk := buf.drain():
