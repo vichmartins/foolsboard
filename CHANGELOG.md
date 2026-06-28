@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.88.6
+
+- improve: The startup banner now includes the logo’s angular bolt mark beside the
+  ASCII “foolsboard” wordmark (backend dev console + dev frontend).
+
+
 ## v0.88.5
 
 - fix: Restored the backend’s full startup/runtime logs (the previous build trimmed

@@ -91,9 +91,12 @@ const brandBanner: Plugin = {
           .split('')
           .map((c) => G[c][i])
           .join(' ')
+      const mark = ['████  ', '  ███ ', '█████ ', ' ███  ', '  ██  ']
       const lines: string[] = ['']
       for (let i = 0; i < 5; i++) {
-        lines.push(`  ${BOLD}${M}${word('FOOLS', i)}${R}  ${BOLD}${W}${word('BOARD', i)}${R}`)
+        lines.push(
+          `  ${BOLD}${M}${mark[i]}${R}   ${BOLD}${M}${word('FOOLS', i)}${R}  ${BOLD}${W}${word('BOARD', i)}${R}`,
+        )
       }
       lines.push(`  ${D}branching storyboards  ·  v${pkg.version}${R}`, '')
       console.log(lines.join('\n'))

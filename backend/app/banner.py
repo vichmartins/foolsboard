@@ -34,6 +34,9 @@ def _read_version() -> str:
 
 _VERSION = _read_version()  # cached at import -- no per-reload file read
 
+# The logo's angular "bolt" mark, as a 5-row glyph beside the wordmark.
+_MARK = ["████  ", "  ███ ", "█████ ", " ███  ", "  ██  "]
+
 # 5-row block letters (each exactly 5 cols wide).
 _GLYPHS = {
     "F": ["█████", "█    ", "████ ", "█    ", "█    "],
@@ -54,7 +57,10 @@ def _word(letters: str, i: int) -> str:
 def print_logo() -> None:
     lines = [""]
     for i in range(5):
-        lines.append(f"  {_B}{_M}{_word('FOOLS', i)}{_R}  {_B}{_W}{_word('BOARD', i)}{_R}")
+        lines.append(
+            f"  {_B}{_M}{_MARK[i]}{_R}   {_B}{_M}{_word('FOOLS', i)}{_R}  "
+            f"{_B}{_W}{_word('BOARD', i)}{_R}"
+        )
     ver = f"  ·  v{_VERSION}" if _VERSION else ""
     lines.append(f"  {_D}branching storyboards{ver}{_R}")
     lines.append("")
