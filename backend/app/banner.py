@@ -1,8 +1,9 @@
 """Branded startup banner for the foolsboard backend.
 
-Printed from the app lifespan, so it shows whether you launch via `python -m app`,
-plain uvicorn, or systemd in production (where it lands in the journal). Colors are
-emitted only to an interactive terminal -- prod logs get clean, escape-free text.
+`print_logo()` draws the full ASCII wordmark (the dev launcher uses it once at the
+top). `print_ready()` is a one-line brand marker printed from the app lifespan, so
+production logs (journald) get branding too. Colors are emitted only to an
+interactive terminal -- prod logs get clean, escape-free text.
 """
 from __future__ import annotations
 
@@ -11,16 +12,14 @@ import sys
 from pathlib import Path
 
 _tty = sys.stdout.isatty()
-_MAGENTA = "\033[38;5;213m" if _tty else ""
-_BOLD = "\033[1m" if _tty else ""
-_DIM = "\033[2m" if _tty else ""
-_RESET = "\033[0m" if _tty else ""
+_M = "\033[38;5;213m" if _tty else ""  # magenta ("fools")
+_W = "\033[97m" if _tty else ""        # bright white ("board")
+_B = "\033[1m" if _tty else ""
+_D = "\033[2m" if _tty else ""
+_R = "\033[0m" if _tty else ""
 
-_ART = ("  ◆◇◆", "  ◇◆◇")  # flanks the wordmark on both sides
 
-
-def _version() -> str:
-    """Best-effort app version (single source of truth is frontend/package.json)."""
+def _read_version() -> str:
     here = Path(__file__).resolve()
     for cand in (
         here.parents[2] / "frontend" / "package.json",
@@ -33,25 +32,35 @@ def _version() -> str:
     return ""
 
 
-def _banner_lines() -> list[str]:
-    v = _version()
-    mid = [f"foolsboard  v{v}" if v else "foolsboard", "branching storyboards"]
-    width = max(len(m) for m in mid)
-    lines = [
-        f"{_MAGENTA}{_ART[i]}{_RESET}   {m.ljust(width)}   {_MAGENTA}{_ART[i][2:]}{_RESET}"
-        for i, m in enumerate(mid)
-    ]
-    # Colorize the wordmark / version / subtitle inside the (still plain) middle text.
-    lines[0] = lines[0].replace(
-        "foolsboard", f"{_BOLD}{_MAGENTA}fools{_RESET}{_BOLD}board{_RESET}"
-    )
-    if v:
-        lines[0] = lines[0].replace(f"v{v}", f"{_DIM}v{v}{_RESET}")
-    lines[1] = lines[1].replace(
-        "branching storyboards", f"{_DIM}branching storyboards{_RESET}"
-    )
-    return lines
+_VERSION = _read_version()  # cached at import -- no per-reload file read
+
+# 5-row block letters (each exactly 5 cols wide).
+_GLYPHS = {
+    "F": ["█████", "█    ", "████ ", "█    ", "█    "],
+    "O": ["█████", "█   █", "█   █", "█   █", "█████"],
+    "L": ["█    ", "█    ", "█    ", "█    ", "█████"],
+    "S": ["█████", "█    ", "█████", "    █", "█████"],
+    "B": ["████ ", "█   █", "████ ", "█   █", "████ "],
+    "A": ["█████", "█   █", "█████", "█   █", "█   █"],
+    "R": ["████ ", "█   █", "████ ", "█  █ ", "█   █"],
+    "D": ["████ ", "█   █", "█   █", "█   █", "████ "],
+}
 
 
-def print_banner() -> None:
-    print("\n" + "\n".join(_banner_lines()) + "\n", flush=True)
+def _word(letters: str, i: int) -> str:
+    return " ".join(_GLYPHS[c][i] for c in letters)
+
+
+def print_logo() -> None:
+    lines = [""]
+    for i in range(5):
+        lines.append(f"  {_B}{_M}{_word('FOOLS', i)}{_R}  {_B}{_W}{_word('BOARD', i)}{_R}")
+    ver = f"  ·  v{_VERSION}" if _VERSION else ""
+    lines.append(f"  {_D}branching storyboards{ver}{_R}")
+    lines.append("")
+    print("\n".join(lines), flush=True)
+
+
+def print_ready() -> None:
+    ver = f" {_D}v{_VERSION}{_R}" if _VERSION else ""
+    print(f"  {_B}{_M}fools{_R}{_B}board{_R}{ver} {_D}· ready{_R}", flush=True)

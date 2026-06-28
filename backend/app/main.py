@@ -27,7 +27,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from sqlalchemy import delete, select, update
 from starlette.concurrency import run_in_threadpool
 
-from .banner import print_banner
+from .banner import print_ready
 from .config import settings
 from .database import SessionLocal
 from .models import Asset, ErrorLog, RequestLog, User
@@ -50,7 +50,7 @@ from .security import decode_token
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
-    print_banner()
+    print_ready()
     # One-time maintenance/backfills run in a single background thread so they
     # never delay the server from accepting connections, and each is isolated so
     # one failure can't abort the rest or startup. See _run_startup_jobs.

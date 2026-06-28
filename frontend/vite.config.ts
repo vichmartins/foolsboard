@@ -72,20 +72,31 @@ const brandBanner: Plugin = {
     const printUrls = server.printUrls.bind(server)
     server.printUrls = () => {
       const M = '\x1b[38;5;213m'
-      const B = '\x1b[1m'
+      const W = '\x1b[97m'
+      const BOLD = '\x1b[1m'
       const D = '\x1b[2m'
       const R = '\x1b[0m'
-      const art = ['  ◆◇◆', '  ◇◆◇']
-      const mid = [`foolsboard  v${pkg.version}`, 'branching storyboards']
-      const w = Math.max(...mid.map((m) => m.length))
-      const l0 = `${M}${art[0]}${R}   ${mid[0].padEnd(w)}   ${M}${art[0].slice(2)}${R}`
-        .replace('foolsboard', `${B}${M}fools${R}${B}board${R}`)
-        .replace(`v${pkg.version}`, `${D}v${pkg.version}${R}`)
-      const l1 = `${M}${art[1]}${R}   ${mid[1].padEnd(w)}   ${M}${art[1].slice(2)}${R}`.replace(
-        'branching storyboards',
-        `${D}branching storyboards${R}`,
-      )
-      console.log(`\n${l0}\n${l1}\n`)
+      const G: Record<string, string[]> = {
+        F: ['█████', '█    ', '████ ', '█    ', '█    '],
+        O: ['█████', '█   █', '█   █', '█   █', '█████'],
+        L: ['█    ', '█    ', '█    ', '█    ', '█████'],
+        S: ['█████', '█    ', '█████', '    █', '█████'],
+        B: ['████ ', '█   █', '████ ', '█   █', '████ '],
+        A: ['█████', '█   █', '█████', '█   █', '█   █'],
+        R: ['████ ', '█   █', '████ ', '█  █ ', '█   █'],
+        D: ['████ ', '█   █', '█   █', '█   █', '████ '],
+      }
+      const word = (s: string, i: number) =>
+        s
+          .split('')
+          .map((c) => G[c][i])
+          .join(' ')
+      const lines: string[] = ['']
+      for (let i = 0; i < 5; i++) {
+        lines.push(`  ${BOLD}${M}${word('FOOLS', i)}${R}  ${BOLD}${W}${word('BOARD', i)}${R}`)
+      }
+      lines.push(`  ${D}branching storyboards  ·  v${pkg.version}${R}`, '')
+      console.log(lines.join('\n'))
       printUrls()
     }
   },

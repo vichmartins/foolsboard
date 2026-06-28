@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.88.5
+
+- fix: Restored the backend’s full startup/runtime logs (the previous build trimmed
+  too much). All of uvicorn’s lifecycle + request logs are back.
+- improve: Real ASCII-art “foolsboard” wordmark banner at startup (backend dev
+  console + dev frontend). The big logo prints once at launch; production logs get a
+  concise one-line brand marker.
+
+
 ## v0.88.4
 
 - improve: Cleaner, more branded dev startup. The backend banner now has ASCII
