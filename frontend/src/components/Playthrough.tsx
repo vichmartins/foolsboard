@@ -39,54 +39,41 @@ export default function Playthrough({
 }) {
   const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes])
 
-  // Each node -> its choices (an outgoing connection, labelled by the connection
-  // or, when unlabelled, by the destination's title).
-  const outgoing = useMemo(() => {
+  // Undirected adjacency: connections are two-way, so each object knows every
+  // object it's linked to, with the connection's label (or the neighbour's title
+  // when the connection is unlabelled). Self-links are ignored.
+  const neighbors = useMemo(() => {
     const m = new Map<string, Choice[]>()
+    const add = (from: string, to: string, label: string) => {
+      const list = m.get(from) ?? []
+      if (!list.some((c) => c.to === to)) list.push({ to, label })
+      m.set(from, list)
+    }
     for (const e of edges) {
-      const target = byId.get(e.target_id)
-      if (!byId.has(e.source_id) || !target) continue
-      const label = (e.label && e.label.trim()) || target.title.trim() || 'Continue'
-      const list = m.get(e.source_id) ?? []
-      list.push({ label, to: e.target_id })
-      m.set(e.source_id, list)
+      if (e.source_id === e.target_id) continue
+      const s = byId.get(e.source_id)
+      const t = byId.get(e.target_id)
+      if (!s || !t) continue
+      const lbl = e.label && e.label.trim()
+      add(e.source_id, e.target_id, lbl || t.title.trim() || 'Continue')
+      add(e.target_id, e.source_id, lbl || s.title.trim() || 'Continue')
     }
     return m
   }, [edges, byId])
 
-  // How many nodes are reachable from a node (so the "main" story -- the entry
-  // point that leads to the most -- sorts first in the chooser).
-  const reachFrom = useCallback(
-    (id: string) => {
-      const seen = new Set<string>([id])
-      const queue = [id]
-      while (queue.length) {
-        const cur = queue.shift() as string
-        for (const c of outgoing.get(cur) ?? []) {
-          if (!seen.has(c.to)) {
-            seen.add(c.to)
-            queue.push(c.to)
-          }
-        }
-      }
-      return seen.size
-    },
-    [outgoing],
+  // Any connected object can be a starting point (most-connected first, then
+  // alphabetical). Loose objects with no connections are excluded.
+  const starts = useMemo(
+    () =>
+      nodes
+        .filter((n) => (neighbors.get(n.id)?.length ?? 0) > 0)
+        .sort(
+          (a, b) =>
+            (neighbors.get(b.id)?.length ?? 0) - (neighbors.get(a.id)?.length ?? 0) ||
+            a.title.localeCompare(b.title),
+        ),
+    [nodes, neighbors],
   )
-
-  // Candidate starting points: objects that actually lead somewhere. Prefer true
-  // beginnings (nothing points at them); fall back to any object with an outgoing
-  // connection. Loose objects (standalone media, unconnected notes) are excluded.
-  const starts = useMemo(() => {
-    const hasIncoming = new Set(edges.map((e) => e.target_id))
-    const leadsSomewhere = nodes.filter((n) => (outgoing.get(n.id)?.length ?? 0) > 0)
-    const roots = leadsSomewhere.filter((n) => !hasIncoming.has(n.id))
-    const pool = roots.length ? roots : leadsSomewhere
-    return pool
-      .map((n) => ({ n, reach: reachFrom(n.id) }))
-      .sort((a, b) => b.reach - a.reach)
-      .map((x) => x.n)
-  }, [nodes, edges, outgoing, reachFrom])
 
   // Where we begin: an explicitly-selected object wins; otherwise auto-start only
   // when there's exactly one sensible entry; otherwise show the chooser (null).
@@ -139,7 +126,10 @@ export default function Playthrough({
   }, [canChoose, toChooser])
 
   const node = current ? byId.get(current) : undefined
-  const choices = current ? outgoing.get(current) ?? [] : []
+  // Choices are every neighbour except the one we just came from (so you don't
+  // simply bounce back). No remaining neighbour = an ending.
+  const prev = history.length ? history[history.length - 1] : undefined
+  const choices = current ? (neighbors.get(current) ?? []).filter((c) => c.to !== prev) : []
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -278,7 +268,7 @@ function Chooser({
     <div className="pt-card">
       <h2 className="pt-title">Where would you like to start?</h2>
       <p className="pt-dim" style={{ marginTop: '-6px', marginBottom: '6px' }}>
-        These objects each begin a path through the board.
+        Pick any connected object to begin reading from.
       </p>
       <div className="pt-choices">
         {starts.map((n, i) => {
