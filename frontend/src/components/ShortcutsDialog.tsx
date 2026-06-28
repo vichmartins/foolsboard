@@ -21,6 +21,16 @@ const GROUPS: { title: string; items: Shortcut[] }[] = [
     ],
   },
   {
+    title: 'View',
+    items: [
+      { keys: ['+', '='], alt: true, desc: 'Zoom in' },
+      { keys: ['-'], desc: 'Zoom out' },
+      { keys: ['F'], desc: 'Fit board to screen' },
+      { keys: ['P'], desc: 'Play through the story (from selected, if any)' },
+      { keys: ['E'], desc: 'Export board as image (PNG)' },
+    ],
+  },
+  {
     title: 'Clipboard',
     items: [
       { keys: ['Ctrl', 'C'], desc: 'Copy selection' },

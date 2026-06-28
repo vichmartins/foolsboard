@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.88.1
+
+- feat: Keyboard shortcuts for the canvas view controls — `+` / `=` zoom in, `-`
+  zoom out, `F` fit board to screen, `P` play through the story (from the selected
+  object, if any), `E` export as image. Listed under a new “View” group in the
+  Keyboard Shortcuts dialog.
+
+
 ## v0.88.0
 
 - feat: **Playthrough mode** — a full-screen reader that walks your board like an
