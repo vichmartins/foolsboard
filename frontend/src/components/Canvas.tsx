@@ -177,6 +177,8 @@ function CanvasInner({
     getZoom,
     setCenter,
     fitView,
+    zoomIn,
+    zoomOut,
     deleteElements,
     getIntersectingNodes,
   } = useReactFlow()
@@ -1313,9 +1315,21 @@ function CanvasInner({
   }, [mergeSourceIds])
 
   // Global keyboard shortcuts (read latest action closures via a ref).
-  const actionsRef = useRef({ doCopy, doCut, doPaste, doDuplicate, undo, redo })
+  // Open the playthrough from the highlighted object (one selected) or the chooser.
+  const playFromSelection = useCallback(() => {
+    const sel = getNodes().filter((n) => n.selected)
+    openPlaythrough(sel.length === 1 ? sel[0].id : null)
+  }, [getNodes, openPlaythrough])
+
+  const actionsRef = useRef({
+    doCopy, doCut, doPaste, doDuplicate, undo, redo,
+    zoomIn, zoomOut, fitView, exportImage, playFromSelection,
+  })
   useEffect(() => {
-    actionsRef.current = { doCopy, doCut, doPaste, doDuplicate, undo, redo }
+    actionsRef.current = {
+      doCopy, doCut, doPaste, doDuplicate, undo, redo,
+      zoomIn, zoomOut, fitView, exportImage, playFromSelection,
+    }
   })
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1328,9 +1342,40 @@ function CanvasInner({
           t.isContentEditable)
       )
         return
+      if (playOpenRef.current) return // the playthrough reader handles its own keys
+      const a = actionsRef.current
+      // Plain (no-modifier) canvas shortcuts mirroring the control buttons.
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        switch (e.key) {
+          case '+':
+          case '=':
+            e.preventDefault()
+            a.zoomIn({ duration: 150 })
+            return
+          case '-':
+          case '_':
+            e.preventDefault()
+            a.zoomOut({ duration: 150 })
+            return
+          case 'f':
+          case 'F':
+            e.preventDefault()
+            a.fitView({ padding: 0.2, duration: 300 })
+            return
+          case 'p':
+          case 'P':
+            e.preventDefault()
+            a.playFromSelection()
+            return
+          case 'e':
+          case 'E':
+            e.preventDefault()
+            a.exportImage()
+            return
+        }
+      }
       if (!(e.ctrlKey || e.metaKey)) return
       const k = e.key.toLowerCase()
-      const a = actionsRef.current
       if (k === 'c') {
         a.doCopy()
       } else if (k === 'x') {
@@ -1761,14 +1806,14 @@ function CanvasInner({
               const sel = getNodes().filter((n) => n.selected)
               openPlaythrough(sel.length === 1 ? sel[0].id : null)
             }}
-            title="Play through the story (from the selected object, if any)"
+            title="Play through the story — P (from the selected object, if any)"
           >
             <PlayIcon />
           </ControlButton>
           <ControlButton
             className="rf-export-btn"
             onClick={exportImage}
-            title="Export board as image (PNG)"
+            title="Export board as image (PNG) — E"
           >
             <ImageIcon />
           </ControlButton>
