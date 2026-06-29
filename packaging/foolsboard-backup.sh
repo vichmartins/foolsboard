@@ -1,68 +1,109 @@
 #!/bin/sh
-# foolsboard backup -- dumps the database and archives the media directory into
-# /var/backups/foolsboard, then prunes copies older than the retention window.
+# foolsboard backup -- creates an incremental, deduplicated snapshot of the
+# database + media in a restic repository, then thins the chain per the
+# retention policy.
 #
-# Run automatically by foolsboard-backup.timer (daily). Safe to run by hand:
-#   sudo /opt/foolsboard/backup.sh
+# restic dedups across snapshots, so each run stores only what changed, yet
+# EVERY snapshot is a full, independently-restorable point in time (no fragile
+# base/increment chain). Runs as the foolsboard user -- the daily timer and the
+# admin "Run backup now" both use this user, so the repo has a single owner.
 #
-# Restore (example):
-#   pg_restore --clean --if-exists -d "<DATABASE_URL without +psycopg>" db-<TS>.dump
-#   tar xzf media-<TS>.tar.gz -C /var/lib/foolsboard
+#   sudo -u foolsboard /opt/foolsboard/backup.sh   # run by hand
+#   restic snapshots                                # list the chain
+#   sudo /opt/foolsboard/restore.sh                 # interactive restore
 set -eu
 
 ENV_FILE="${FOOLSBOARD_ENV_FILE:-/etc/foolsboard/foolsboard.env}"
 BACKUP_DIR="${FOOLSBOARD_BACKUP_DIR:-/var/backups/foolsboard}"
-RETENTION_DAYS="${FOOLSBOARD_BACKUP_RETENTION_DAYS:-14}"
+PWFILE="${FOOLSBOARD_RESTIC_PASSWORD_FILE:-/etc/foolsboard/restic-password}"
+# Retention: thin the chain to this many daily / weekly / monthly snapshots
+# (older ones are forgotten and their unreferenced data pruned). Overridable.
+KEEP_DAILY="${FOOLSBOARD_KEEP_DAILY:-7}"
+KEEP_WEEKLY="${FOOLSBOARD_KEEP_WEEKLY:-6}"
+KEEP_MONTHLY="${FOOLSBOARD_KEEP_MONTHLY:-12}"
 
 [ -f "$ENV_FILE" ] || { echo "backup: $ENV_FILE not found" >&2; exit 1; }
-# Load DATABASE_URL + STORAGE_LOCAL_DIR from the app's env (KEY=VALUE, sh-safe).
+[ -f "$PWFILE" ] || { echo "backup: restic password file $PWFILE not found" >&2; exit 1; }
+command -v restic >/dev/null 2>&1 || { echo "backup: restic is not installed" >&2; exit 1; }
+# Load DATABASE_URL + STORAGE_LOCAL_DIR (KEY=VALUE, sh-safe).
 # shellcheck disable=SC1090
 . "$ENV_FILE"
 
-mkdir -p "$BACKUP_DIR"
-TS="$(date +%Y%m%d-%H%M%S)"
+export RESTIC_REPOSITORY="${FOOLSBOARD_RESTIC_REPO:-$BACKUP_DIR/restic}"
+export RESTIC_PASSWORD_FILE="$PWFILE"
 
-# --- Database ---------------------------------------------------------------
-# Write to .tmp first so a failed/partial dump never replaces a good one.
+# First run: create the repository.
+if ! restic cat config >/dev/null 2>&1; then
+  echo "backup: initialising restic repository at $RESTIC_REPOSITORY"
+  restic init
+fi
+
+# --- Database -> a staging dump the snapshot will include -------------------
+STAGE="$BACKUP_DIR/.stage"
+mkdir -p "$STAGE"
+DUMP="$STAGE/database.dump"
+rm -f "$DUMP"
 case "${DATABASE_URL:-}" in
   postgres*|postgresql*)
     # pg_dump speaks a libpq URL; drop SQLAlchemy's "+psycopg" driver tag.
     PG_URL="$(printf '%s' "$DATABASE_URL" | sed 's/+psycopg//')"
-    pg_dump -Fc "$PG_URL" > "$BACKUP_DIR/db-$TS.dump.tmp"
-    mv "$BACKUP_DIR/db-$TS.dump.tmp" "$BACKUP_DIR/db-$TS.dump"
+    pg_dump -Fc "$PG_URL" > "$DUMP.tmp"
+    mv "$DUMP.tmp" "$DUMP"
     ;;
   sqlite*)
     DB_PATH="$(printf '%s' "$DATABASE_URL" | sed 's#^sqlite:////*#/#')"
-    [ -f "$DB_PATH" ] && cp "$DB_PATH" "$BACKUP_DIR/db-$TS.sqlite"
+    [ -f "$DB_PATH" ] && cp "$DB_PATH" "$DUMP" || \
+      echo "backup: sqlite file $DB_PATH not found, skipping DB" >&2
     ;;
   *)
     echo "backup: unrecognized DATABASE_URL, skipping DB dump" >&2
     ;;
 esac
 
-# --- Media ------------------------------------------------------------------
+# --- One snapshot: the media dir + the DB dump -----------------------------
 STORAGE="${STORAGE_LOCAL_DIR:-/var/lib/foolsboard/storage}"
-if [ -d "$STORAGE" ]; then
-  tar -czf "$BACKUP_DIR/media-$TS.tar.gz.tmp" \
-      -C "$(dirname "$STORAGE")" "$(basename "$STORAGE")"
-  mv "$BACKUP_DIR/media-$TS.tar.gz.tmp" "$BACKUP_DIR/media-$TS.tar.gz"
-fi
+set -- "$STAGE"
+[ -d "$STORAGE" ] && set -- "$STORAGE" "$@"
+restic backup --tag foolsboard --host foolsboard "$@"
 
-# --- Retention --------------------------------------------------------------
-find "$BACKUP_DIR" -maxdepth 1 -type f \
-  \( -name 'db-*' -o -name 'media-*' \) -mtime "+$RETENTION_DAYS" -delete
+# --- Retention: thin the chain, then prune unreferenced data ---------------
+restic forget --tag foolsboard \
+  --keep-daily "$KEEP_DAILY" --keep-weekly "$KEEP_WEEKLY" --keep-monthly "$KEEP_MONTHLY" \
+  --prune
 
-# --- Status (small, group-readable so the admin UI can show last-backup) -----
-LATEST_DB="$(ls -1t "$BACKUP_DIR"/db-* 2>/dev/null | head -1 || true)"
-LATEST_MEDIA="$(ls -1t "$BACKUP_DIR"/media-*.tar.gz 2>/dev/null | head -1 || true)"
-COUNT="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'db-*' | wc -l | tr -d ' ')"
-# Write via tmp+rename so it works whether the previous run was the root timer
-# or the app user -- rename only needs dir write (the dir is group-writable),
-# unlike truncating an existing file owned by the other user.
-cat > "$BACKUP_DIR/status.json.tmp" <<EOF
-{"last_run":"$TS","retention_days":$RETENTION_DAYS,"db_dump":"$(basename "${LATEST_DB:-}")","media_archive":"$(basename "${LATEST_MEDIA:-}")","db_backup_count":$COUNT}
-EOF
-chmod 0640 "$BACKUP_DIR/status.json.tmp" 2>/dev/null || true
-mv "$BACKUP_DIR/status.json.tmp" "$BACKUP_DIR/status.json"
+# The dump now lives inside the snapshot; don't leave it on disk.
+rm -f "$DUMP"
 
-echo "foolsboard backup complete: $TS (retention ${RETENTION_DAYS}d)"
+# --- Status (group-readable; powers the admin "last backup" view) ----------
+python3 - "$BACKUP_DIR/status.json" "$KEEP_DAILY" "$KEEP_WEEKLY" "$KEEP_MONTHLY" <<'PY'
+import datetime, json, os, subprocess, sys, tempfile
+
+out_path, kd, kw, km = sys.argv[1:5]
+
+def restic_json(*args):
+    r = subprocess.run(["restic", *args, "--json"], capture_output=True, text=True, check=True)
+    return json.loads(r.stdout)
+
+snaps = restic_json("snapshots")
+items = [{"id": s["short_id"], "time": s["time"]} for s in snaps][-50:]
+try:
+    repo_bytes = restic_json("stats", "--mode", "raw-data").get("total_size", 0)
+except Exception:
+    repo_bytes = 0
+
+status = {
+    "tool": "restic",
+    "last_run": datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d-%H%M%S"),
+    "snapshot_count": len(snaps),
+    "repo_bytes": repo_bytes,
+    "retention": f"{kd} daily / {kw} weekly / {km} monthly",
+    "snapshots": items,
+}
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(out_path))
+with os.fdopen(fd, "w") as f:
+    json.dump(status, f)
+os.chmod(tmp, 0o640)
+os.replace(tmp, out_path)
+PY
+
+echo "foolsboard backup complete (restic; keep ${KEEP_DAILY}d/${KEEP_WEEKLY}w/${KEEP_MONTHLY}m)"

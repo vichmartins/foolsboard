@@ -80,13 +80,34 @@ EOF
     systemctl enable foolsboard.service >/dev/null 2>&1 || true
     systemctl restart foolsboard.service
 
-    # 7. Backup directory + daily backup timer. setgid + group-writable so dumps
-    #    inherit the foolsboard group AND the app can run on-demand backups / show
-    #    status (the timer still runs as root). No sticky bit, so retention can
-    #    prune across owners.
+    # 7. Backup directory + daily backup timer. setgid + group-writable so the
+    #    restic repo (and the foolsboard user that owns it) live under one group;
+    #    both the timer and the app's "Run backup now" run as the foolsboard user.
     mkdir -p /var/backups/foolsboard
     chown root:"$SVC_USER" /var/backups/foolsboard
     chmod 2770 /var/backups/foolsboard
+
+    # restic repository password -- generated once, root:foolsboard 640 so the
+    # foolsboard user (timer + app) can read it. Preserved across upgrades.
+    PWFILE="$CONF_DIR/restic-password"
+    if [ ! -f "$PWFILE" ]; then
+      python3 -c 'import secrets; print(secrets.token_urlsafe(32))' > "$PWFILE"
+      chown root:"$SVC_USER" "$PWFILE"
+      chmod 640 "$PWFILE"
+    fi
+    # Initialise the restic repo as the foolsboard user (so it owns the files).
+    # Harmless if it already exists; backup.sh also self-inits as a fallback.
+    if command -v restic >/dev/null 2>&1; then
+      if ! runuser -u "$SVC_USER" -- env \
+            RESTIC_REPOSITORY=/var/backups/foolsboard/restic RESTIC_PASSWORD_FILE="$PWFILE" \
+            restic cat config >/dev/null 2>&1; then
+        runuser -u "$SVC_USER" -- env \
+          RESTIC_REPOSITORY=/var/backups/foolsboard/restic RESTIC_PASSWORD_FILE="$PWFILE" \
+          restic init >/dev/null 2>&1 || true
+      fi
+    fi
+
+    systemctl daemon-reload
     systemctl enable foolsboard-backup.timer >/dev/null 2>&1 || true
     systemctl start foolsboard-backup.timer || true
     ;;

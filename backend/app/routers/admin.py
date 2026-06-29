@@ -242,8 +242,8 @@ def list_log_actions(
 
 class BackupItem(BaseModel):
     name: str
-    kind: str  # "database" | "media"
-    size: int
+    kind: str  # "snapshot" (restic) | "database" | "media" (legacy)
+    size: int = 0
     created_at: datetime
 
 
@@ -251,24 +251,60 @@ class BackupStatus(BaseModel):
     dir: str
     exists: bool
     last_run: str | None = None
-    retention_days: int | None = None
+    retention: str | None = None  # restic keep policy, e.g. "7 daily / 6 weekly / 12 monthly"
+    retention_days: int | None = None  # legacy
     total_bytes: int = 0
     items: list[BackupItem] = []
 
 
-def _read_backup_status() -> BackupStatus:
-    """Read the nightly backup directory (written by foolsboard-backup.timer):
-    the dump/archive files + the status.json summary. The app can read this dir
-    because it's setgid root:foolsboard (see postinst)."""
-    bdir = Path(settings.backup_dir)
+def _parse_iso(t: str) -> datetime:
     try:
-        entries = list(bdir.iterdir())
-    except OSError:
+        return datetime.fromisoformat(t.replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.strptime(t[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+
+
+def _read_backup_status() -> BackupStatus:
+    """Summarise the backup directory for Admin > Storage. Reads status.json
+    (written by foolsboard-backup.sh). The app can read this dir because it's
+    setgid root:foolsboard (see postinst)."""
+    bdir = Path(settings.backup_dir)
+    if not bdir.exists():
         return BackupStatus(dir=str(bdir), exists=False)
 
-    items: list[BackupItem] = []
+    data: dict = {}
+    sp = bdir / "status.json"
+    if sp.is_file():
+        try:
+            data = json.loads(sp.read_text())
+        except (OSError, ValueError):
+            data = {}
+
+    # restic-based status (current scheme): each snapshot is a restore point.
+    if data.get("tool") == "restic":
+        items: list[BackupItem] = []
+        for s in data.get("snapshots", []):
+            try:
+                items.append(
+                    BackupItem(name=str(s["id"]), kind="snapshot", created_at=_parse_iso(s["time"]))
+                )
+            except (KeyError, ValueError, TypeError):
+                continue
+        items.sort(key=lambda i: i.created_at, reverse=True)
+        return BackupStatus(
+            dir=str(bdir),
+            exists=True,
+            last_run=data.get("last_run"),
+            retention=data.get("retention"),
+            total_bytes=int(data.get("repo_bytes", 0)),
+            items=items[:50],
+        )
+
+    # Legacy file-based status (pre-restic) -- kept so the view still works on a
+    # host that hasn't run a restic backup yet.
+    items = []
     total = 0
-    for p in entries:
+    for p in bdir.iterdir():
         if p.name.startswith("db-"):
             kind = "database"
         elif p.name.startswith("media-") and p.name.endswith(".tar.gz"):
@@ -282,30 +318,16 @@ def _read_backup_status() -> BackupStatus:
         total += st.st_size
         items.append(
             BackupItem(
-                name=p.name,
-                kind=kind,
-                size=st.st_size,
+                name=p.name, kind=kind, size=st.st_size,
                 created_at=datetime.fromtimestamp(st.st_mtime, tz=timezone.utc),
             )
         )
     items.sort(key=lambda i: i.created_at, reverse=True)
-
-    last_run: str | None = None
-    retention: int | None = None
-    sp = bdir / "status.json"
-    if sp.is_file():
-        try:
-            data = json.loads(sp.read_text())
-            last_run = data.get("last_run")
-            retention = data.get("retention_days")
-        except (OSError, ValueError):
-            pass
-
     return BackupStatus(
         dir=str(bdir),
-        exists=True,
-        last_run=last_run,
-        retention_days=retention,
+        exists=bool(items),
+        last_run=data.get("last_run"),
+        retention_days=data.get("retention_days"),
         total_bytes=total,
         items=items[:50],
     )
