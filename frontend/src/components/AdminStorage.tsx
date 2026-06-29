@@ -6,6 +6,7 @@ import { apiError } from '../api'
 import * as api from '../api'
 import type { StorageGcResult, BackupStatus } from '../api'
 import ConfirmDialog from './ConfirmDialog'
+import { SnapshotIcon } from './icons'
 
 function humanBytes(n: number): string {
   if (n < 1024) return `${n} B`
@@ -196,7 +197,10 @@ export default function AdminStorage() {
             <ul className="admin-storage__sample">
               {backups.items.slice(0, 10).map((b) => (
                 <li key={b.name}>
-                  {b.kind === 'snapshot' ? '📦' : b.kind === 'database' ? '🗄' : '🎞'} {b.name}
+                  <span className="admin-storage__bicon">
+                    <SnapshotIcon />
+                  </span>{' '}
+                  {b.name}
                   {b.size ? <> · {humanBytes(b.size)}</> : null} ·{' '}
                   {new Date(b.created_at).toLocaleString()}
                 </li>

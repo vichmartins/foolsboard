@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.89.1
+
+- improve: Backup snapshots in Admin → Storage now use a themed archive icon (in
+  the app’s accent color) instead of a raw 📦 emoji.
+
+
 ## v0.89.0
 
 - improve: **Incremental, deduplicated backups (restic).** Instead of a full

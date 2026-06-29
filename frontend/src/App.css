@@ -5339,6 +5339,17 @@ button.merge-tree__chev {
 .admin-storage__sample li {
   padding: 2px 0;
 }
+.admin-storage__bicon {
+  display: inline-flex;
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
+  color: var(--accent);
+}
+.admin-storage__bicon svg {
+  width: 100%;
+  height: 100%;
+}
 .admin-storage__more {
   font-style: italic;
   opacity: 0.8;
