@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.89.2
+
+- fix: The restore script now runs restic as the foolsboard user (matching the
+  backup timer and the app), so the backup repository keeps a single owner —
+  restic’s owner-only files mean a cross-user write would otherwise be unreadable.
+
+
 ## v0.89.1
 
 - improve: Backup snapshots in Admin → Storage now use a themed archive icon (in

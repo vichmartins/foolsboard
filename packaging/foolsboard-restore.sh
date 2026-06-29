@@ -26,12 +26,16 @@ command -v restic >/dev/null 2>&1 || { echo "restic is not installed" >&2; exit 
 
 export RESTIC_REPOSITORY="${FOOLSBOARD_RESTIC_REPO:-$BACKUP_DIR/restic}"
 export RESTIC_PASSWORD_FILE="$PWFILE"
-restic cat config >/dev/null 2>&1 || { echo "No restic repository at $RESTIC_REPOSITORY." >&2; exit 1; }
+# Always touch the repo AS the foolsboard user so it keeps a single owner -- the
+# timer and the app back up as foolsboard, and restic's repo files are owner-only,
+# so a root write here would create files the foolsboard user can't read.
+RESTIC="runuser -u $SVC_USER -- env RESTIC_REPOSITORY=$RESTIC_REPOSITORY RESTIC_PASSWORD_FILE=$RESTIC_PASSWORD_FILE restic"
+$RESTIC cat config >/dev/null 2>&1 || { echo "No restic repository at $RESTIC_REPOSITORY." >&2; exit 1; }
 
 # --- Pick a snapshot (numbered list to stderr; ids captured from stdout) ----
 echo "Snapshots in the foolsboard repository (newest last):"
 echo
-IDS="$(restic snapshots --json | python3 -c '
+IDS="$($RESTIC snapshots --json | python3 -c '
 import json, sys
 s = json.load(sys.stdin)
 for i, x in enumerate(s, 1):
@@ -69,10 +73,12 @@ systemctl stop "$SVC" || true
 echo ">> Safety snapshot of current state ..."
 runuser -u "$SVC_USER" -- "$APP_DIR/backup.sh" || echo "   WARNING: safety backup failed -- continuing."
 
-TMP="$(mktemp -d)"
+# A foolsboard-owned temp so the (foolsboard) restic write lands cleanly; root can
+# still read it for the pg_restore / media copy below.
+TMP="$(runuser -u "$SVC_USER" -- mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 echo ">> Extracting snapshot $SID ..."
-restic restore "$SID" --target "$TMP"
+$RESTIC restore "$SID" --target "$TMP"
 
 STORAGE="${STORAGE_LOCAL_DIR:-/var/lib/foolsboard/storage}"
 DUMP="$TMP$BACKUP_DIR/.stage/database.dump"
