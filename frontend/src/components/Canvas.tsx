@@ -34,6 +34,7 @@ import '@xyflow/react/dist/style.css'
 
 import * as api from '../api'
 import { BoardIdContext } from '../boardContext'
+import { NodeEditContext } from '../nodeEditContext'
 import {
   besideOffset,
   graphToPortable,
@@ -319,6 +320,17 @@ function CanvasInner({
   // File drag-and-drop: 'ready' = a panel is open (drop uploads), 'blocked' =
   // none open (hint only). droppedFiles are handed to the panel to upload.
   const [dragKind, setDragKind] = useState<'none' | 'ready'>('none')
+  // Whether the cursor is currently over the open object panel during a drag, so
+  // the overlay can say "add to <object>" vs "place on the canvas". Ref mirrors
+  // it so the mount-once drag listeners can read/compare without re-subscribing.
+  const [dragOnPanel, setDragOnPanel] = useState(false)
+  const dragOnPanelRef = useRef(false)
+  const setDragOnPanelSynced = (v: boolean) => {
+    if (dragOnPanelRef.current !== v) {
+      dragOnPanelRef.current = v
+      setDragOnPanel(v)
+    }
+  }
   // Shared so both the window drag listeners and the element-level drop handler
   // can keep the "drop to place" overlay (dragKind) in sync.
   const dragDepthRef = useRef(0)
@@ -1591,11 +1603,18 @@ function CanvasInner({
       // 'copy' when the source's effectAllowed doesn't permit it makes Chromium
       // reject the drop (this was the regression that broke filesystem drops).
       if ((assetDrag() || nodeDrag()) && e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+      // Context-aware overlay: is the cursor over the open object panel right now?
+      setDragOnPanelSynced(
+        hasPanelRef.current && !!(e.target as Element | null)?.closest?.('.panel'),
+      )
     }
     const onLeave = (e: DragEvent) => {
       if (playOpenRef.current || !droppable(e)) return
       dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
-      if (dragDepthRef.current === 0) setDragKind('none')
+      if (dragDepthRef.current === 0) {
+        setDragKind('none')
+        setDragOnPanelSynced(false)
+      }
     }
     const onDrop = (e: DragEvent) => {
       if (playOpenRef.current) {
@@ -1621,6 +1640,7 @@ function CanvasInner({
       e.preventDefault() // stop the browser from opening the file
       dragDepthRef.current = 0
       setDragKind('none')
+      setDragOnPanelSynced(false)
       if (!dt) return
       // Dropping on the open object's panel attaches there; anywhere else on the
       // canvas places a standalone media/link node at the drop point.
@@ -1744,6 +1764,7 @@ function CanvasInner({
   // Every item + connection on the board, for the gallery.
   return (
     <BoardIdContext.Provider value={boardId}>
+    <NodeEditContext.Provider value={handleNodeEdited}>
     <div
       className="canvas-wrap"
       style={{ '--me-color': myColor } as React.CSSProperties}
@@ -1766,6 +1787,7 @@ function CanvasInner({
         // clear the "drop to place" overlay ourselves -- otherwise it sticks.
         dragDepthRef.current = 0
         setDragKind('none')
+        setDragOnPanelSynced(false)
         const onPanel = !!(e.target as Element | null)?.closest?.('.panel')
         if (onPanel && hasPanelRef.current) setDroppedFiles(files)
         else void createMediaNodesAtRef.current(files, e.clientX, e.clientY)
@@ -1937,14 +1959,31 @@ function CanvasInner({
       )}
 
       {dragKind !== 'none' && !playOpen && (
-        <div className="drop-overlay drop-overlay--ready">
+        <div
+          className={
+            'drop-overlay drop-overlay--ready' +
+            (editorStory && dragOnPanel ? ' drop-overlay--panel' : '')
+          }
+        >
           <div className="drop-overlay__card">
-            <div className="drop-overlay__icon">⬆</div>
-            <div className="drop-overlay__text">Drop to place it on the canvas</div>
-            {editorStory && (
-              <div className="drop-overlay__sub">
-                …or drop on the panel to add it to “{editorStory.title || 'Untitled'}”
-              </div>
+            {editorStory && dragOnPanel ? (
+              <>
+                <div className="drop-overlay__icon">＋</div>
+                <div className="drop-overlay__text">
+                  Add it to “{editorStory.title || 'Untitled'}”
+                </div>
+                <div className="drop-overlay__sub">…or drop on the canvas to place it on its own</div>
+              </>
+            ) : (
+              <>
+                <div className="drop-overlay__icon">⬆</div>
+                <div className="drop-overlay__text">Drop to place it on the canvas</div>
+                {editorStory && (
+                  <div className="drop-overlay__sub">
+                    …or drop on the panel to add it to “{editorStory.title || 'Untitled'}”
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -2080,6 +2119,7 @@ function CanvasInner({
           )
         })()}
     </div>
+    </NodeEditContext.Provider>
     </BoardIdContext.Provider>
   )
 }

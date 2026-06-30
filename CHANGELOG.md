@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.90.0
+
+- feat: **Rotate images on the canvas.** Select an image and drag the round handle
+  above it to any angle — hold **Shift** to snap to 15°, **double-click** the handle
+  to reset to its original orientation. Rotation shows on the canvas, in playthrough
+  (including the lightbox), and in PNG exports, syncs to collaborators, and is fully
+  undoable with Ctrl+Z.
+- fix: **Renames now update live.** Renaming a media file on the canvas — and
+  editing an object’s fields in the panel — now shows up for collaborators
+  immediately instead of only after they refresh.
+- improve: **Context-aware drop overlay.** While dragging a file in, the prompt now
+  says “Add it to <object>” when you hover the open panel and “place on the canvas”
+  otherwise, so it’s clear where the drop will land.
+
+
 ## v0.89.2
 
 - fix: The restore script now runs restic as the foolsboard user (matching the
