@@ -218,7 +218,12 @@ export default function ContextPanel({
       // The fields now match the saved state, so move the baseline forward (lets
       // a later undo/redo be recognised as an external change and re-synced).
       baseline.current = { title: after.title, type: after.type, content: JSON.stringify(after.content) }
-      if (JSON.stringify(before) !== JSON.stringify(after)) onEdited?.(node.id, before, after)
+      if (JSON.stringify(before) !== JSON.stringify(after)) {
+        onEdited?.(node.id, before, after)
+        // Tell collaborators something changed so they refetch — otherwise a
+        // title/field edit only shows up after they refresh.
+        realtime.sendDirty()
+      }
       setJustSaved(true)
       if (savedTimer.current) window.clearTimeout(savedTimer.current)
       savedTimer.current = window.setTimeout(() => setJustSaved(false), 1800)

@@ -92,7 +92,7 @@ export default function Playthrough({
   const [current, setCurrent] = useState<string | undefined>(initialChosen ?? undefined)
   const [history, setHistory] = useState<string[]>([])
   const [closing, setClosing] = useState(false)
-  const [lightbox, setLightbox] = useState<string | null>(null)
+  const [lightbox, setLightbox] = useState<{ url: string; rotation: number } | null>(null)
 
   useEffect(() => {
     setChosen(initialChosen)
@@ -236,14 +236,19 @@ export default function Playthrough({
             assets={assets.get(node.id) ?? []}
             choices={choices}
             onChoose={go}
-            onZoom={setLightbox}
+            onZoom={(url, rotation = 0) => setLightbox({ url, rotation })}
           />
         )}
       </div>
 
       {lightbox && (
         <div className="pt-lightbox" onClick={() => setLightbox(null)} role="dialog" aria-label="Image">
-          <img src={lightbox} alt="" draggable={false} />
+          <img
+            src={lightbox.url}
+            alt=""
+            draggable={false}
+            style={lightbox.rotation ? { transform: `rotate(${lightbox.rotation}deg)` } : undefined}
+          />
         </div>
       )}
 
@@ -340,7 +345,7 @@ function Scene({
   assets: Asset[]
   choices: Choice[]
   onChoose: (id: string) => void
-  onZoom: (url: string) => void
+  onZoom: (url: string, rotation?: number) => void
 }) {
   const accent = KIND_COLORS[node.type] ?? 'var(--text-dim)'
   const media = isMediaNodeType(node.type)
@@ -461,7 +466,7 @@ function Scene({
 }
 
 // One attached media asset, rendered playable by kind.
-function AssetView({ asset, onZoom }: { asset: Asset; onZoom: (url: string) => void }) {
+function AssetView({ asset, onZoom }: { asset: Asset; onZoom: (url: string, rotation?: number) => void }) {
   const url = asset.url as string
   const k = mediaKind(asset)
   if (k === 'image')
@@ -509,7 +514,7 @@ function AssetView({ asset, onZoom }: { asset: Asset; onZoom: (url: string) => v
 
 // Render a media/link object inline (image, video, audio player, file, or a link
 // preview) -- everything needed lives in the node's content, like MediaNodeCard.
-function MediaBlock({ node, onZoom }: { node: StoryNode; onZoom: (url: string) => void }) {
+function MediaBlock({ node, onZoom }: { node: StoryNode; onZoom: (url: string, rotation?: number) => void }) {
   const c = node.content ?? {}
   const str = (k: string) => (typeof c[k] === 'string' ? (c[k] as string) : '')
   const url = str('url')
@@ -543,16 +548,19 @@ function MediaBlock({ node, onZoom }: { node: StoryNode; onZoom: (url: string) =
   const thumb = str('thumbnailUrl')
   const filename = str('filename') || node.title || 'file'
 
-  if (mk === 'image')
+  if (mk === 'image') {
+    const rotation = typeof c.rotation === 'number' ? (c.rotation as number) : 0
     return (
       <img
         className="pt-media-img"
         src={url}
         alt={filename}
         draggable={false}
-        onClick={() => onZoom(url)}
+        style={rotation ? { transform: `rotate(${rotation}deg)` } : undefined}
+        onClick={() => onZoom(url, rotation)}
       />
     )
+  }
   if (mk === 'video')
     return (
       <video className="pt-media-video" src={url} poster={thumb || undefined} controls preload="metadata" />

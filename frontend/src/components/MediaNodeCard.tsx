@@ -11,8 +11,10 @@ import * as api from '../api'
 import { safeHref, type Asset, type StoryNode } from '../types'
 import { useAuth } from '../auth'
 import { useBoardId } from '../boardContext'
+import { useRegisterNodeEdit } from '../nodeEditContext'
 import { collabColor } from '../collab'
-import { DownloadIcon, ResizeGripIcon } from './icons'
+import { realtime } from '../realtime'
+import { DownloadIcon, ResizeGripIcon, RotateIcon } from './icons'
 
 const SIDES: Position[] = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
@@ -52,8 +54,9 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
     e.stopPropagation()
     const zoom = getZoom() || 1
     const startX = e.clientX
-    const startW =
-      width ?? (mediaRef.current ? mediaRef.current.getBoundingClientRect().width / zoom : 240)
+    // offsetWidth is the unrotated layout width — getBoundingClientRect would be
+    // skewed by zoom and (for image nodes) by any rotation transform.
+    const startW = width ?? (mediaRef.current ? mediaRef.current.offsetWidth : 240)
     const onMove = (ev: PointerEvent) => {
       setWidth(Math.max(60, Math.min(1600, startW + (ev.clientX - startX) / zoom)))
     }
@@ -79,6 +82,82 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
       onClick={(e) => e.stopPropagation()}
     >
       <ResizeGripIcon />
+    </div>
+  )
+
+  // Free-angle rotation (image nodes). A handle above the node sets the angle from
+  // the pointer's position around the node centre; persisted in content.rotation
+  // and broadcast so collaborators see it. Hold Shift to snap to 15°.
+  const registerEdit = useRegisterNodeEdit()
+  const rot0 = typeof content.rotation === 'number' ? (content.rotation as number) : 0
+  const [rot, setRot] = useState(rot0)
+  useEffect(() => setRot(rot0), [rot0])
+  // Persist a new angle, sync it to collaborators, and record it as an undoable
+  // edit (same before/after path the object panel uses) so Ctrl+Z restores the
+  // previous angle. `before` is the content captured before this gesture began.
+  function commitRotation(before: Record<string, unknown>, deg: number) {
+    const after = { ...before, rotation: deg }
+    const story = d.story
+    const title = (story?.title as string) ?? (d.title as string) ?? 'file'
+    const type = (story?.type as string) ?? 'media'
+    void api.updateNode(boardId, id, { content: after }).then(() => realtime.sendDirty()).catch(() => {})
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === id
+          ? { ...n, data: { ...n.data, story: { ...(n.data.story as StoryNode), content: after } } }
+          : n,
+      ),
+    )
+    registerEdit?.(id, { title, type, content: before }, { title, type, content: after })
+  }
+  // Manual double-click detection: a pointerdown's preventDefault() suppresses the
+  // browser's compatibility dblclick, so we time two taps ourselves. Double-click
+  // the handle to snap the image back to its original (0°) orientation.
+  const lastRotTap = useRef(0)
+  function startRotate(e: React.PointerEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.timeStamp - lastRotTap.current < 350) {
+      lastRotTap.current = 0
+      if (rot0 !== 0) {
+        setRot(0)
+        commitRotation({ ...content }, 0)
+      }
+      return // a reset, not a rotate drag
+    }
+    lastRotTap.current = e.timeStamp
+    const card = (e.currentTarget as HTMLElement).closest('.media-node') as HTMLElement | null
+    if (!card) return
+    const before = { ...content } // angle before this drag, for undo
+    const r = card.getBoundingClientRect()
+    const cx = r.left + r.width / 2
+    const cy = r.top + r.height / 2
+    const onMove = (ev: PointerEvent) => {
+      let a = (Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180) / Math.PI + 90
+      if (ev.shiftKey) a = Math.round(a / 15) * 15
+      a = ((Math.round(a) % 360) + 360) % 360 // 0..359
+      if (a > 180) a -= 360 // normalise to (-180, 180]
+      setRot(a)
+    }
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      setRot((a) => {
+        if (a !== rot0) commitRotation(before, a) // skip no-op (a click, not a drag)
+        return a
+      })
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
+  const rotateHandle = (
+    <div
+      className="media-node__rotate nodrag"
+      title="Drag to rotate · hold Shift to snap · double-click to reset"
+      onPointerDown={startRotate}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <RotateIcon />
     </div>
   )
 
@@ -136,6 +215,8 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
             : n,
         ),
       )
+      // Let collaborators see the new name without a refresh.
+      realtime.sendDirty()
     } catch {
       /* ignore */
     }
@@ -271,7 +352,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
         src={url}
         alt={filename}
         draggable={false}
-        style={sizeStyle}
+        style={rot ? { ...(sizeStyle ?? {}), transform: `rotate(${rot}deg)` } : sizeStyle}
       />
     )
   } else if (mk === 'video') {
@@ -323,6 +404,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
     <div className={'media-node media-node--' + mk} style={ring}>
       {handles}
       {downloadBtn}
+      {mk === 'image' && selected && rotateHandle}
       <div className="media-node__body">{body}</div>
       {mk !== 'file' && caption}
       {(mk === 'image' || mk === 'video' || mk === 'audio') && resizeGrip}

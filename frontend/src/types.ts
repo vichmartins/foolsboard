@@ -226,6 +226,9 @@ export interface MediaNodeContent {
   thumbnailUrl?: string | null
   filename?: string
   contentType?: string
+  // Display rotation in degrees (image nodes). Persisted so it survives reloads
+  // and syncs to collaborators; applied on the canvas, in playthrough, and export.
+  rotation?: number
 }
 
 // Dragging an existing media tile (from the panel or the gallery) onto the

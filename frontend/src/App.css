@@ -2055,6 +2055,43 @@
 .media-node__resize:hover {
   color: var(--accent);
 }
+/* Rotate handle: a small grip floating above a selected image node, joined to it
+   by a short stem. Drag it around the node centre to set a free angle. */
+.media-node__rotate {
+  position: absolute;
+  top: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--bg-elev);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  cursor: grab;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.media-node__rotate:active {
+  cursor: grabbing;
+}
+.media-node__rotate::after {
+  content: '';
+  position: absolute;
+  top: 21px;
+  left: 50%;
+  width: 1px;
+  height: 10px;
+  background: var(--accent);
+  transform: translateX(-50%);
+}
+.media-node__rotate svg {
+  width: 13px;
+  height: 13px;
+}
 
 .story-node {
   position: relative;
@@ -3496,6 +3533,13 @@ button.media-name:hover {
 }
 .drop-overlay--blocked {
   background: rgba(0, 0, 0, 0.5);
+}
+/* Hovering the open object panel during a drag: slide the centred prompt over to
+   sit above the panel, so it's clear the drop lands on the object, not the canvas. */
+.drop-overlay--panel .drop-overlay__card {
+  /* override the pulse animation (which also drives transform) so the shift sticks */
+  animation: none;
+  transform: translateX(calc(50vw - var(--panel-width, 360px) / 2)) scale(1.02);
 }
 .drop-overlay__card {
   display: flex;
