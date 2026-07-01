@@ -28,6 +28,7 @@ import TypeToConfirmDialog from './components/TypeToConfirmDialog'
 import ThemeToggle from './components/ThemeToggle'
 import {
   CopyIcon,
+  DocIcon,
   FolderIcon,
   GalleryIcon,
   MergeIcon,
@@ -100,6 +101,8 @@ function Workspace() {
   }, [])
   const [impexOpen, setImpexOpen] = useState(false)
   const [galleryOpen, setGalleryOpen] = useState(false)
+  // Bumped by the "New document" button to tell Canvas to create + open a doc.
+  const [docNonce, setDocNonce] = useState(0)
   // Source boards to merge into the active board; handed to Canvas to import.
   const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
   // Selected object ids awaiting a move destination (opens the move dialog).
@@ -530,7 +533,7 @@ function Workspace() {
         <BrandMenu />
         <button
           className={'icon-btn sidebar-toggle' + (sidebarOpen ? ' icon-btn--active' : '')}
-          title={sidebarOpen ? 'Hide Explorer' : 'Show Explorer'}
+          title={(sidebarOpen ? 'Hide Explorer' : 'Show Explorer') + ' (Ctrl+B)'}
           aria-label="Toggle Explorer"
           aria-pressed={sidebarOpen}
           onClick={() => setSidebarOpen((o) => !o)}
@@ -671,11 +674,20 @@ function Workspace() {
           <button
             className="icon-btn"
             onClick={() => setGalleryOpen(true)}
-            title="Gallery"
+            title="Gallery (Ctrl+K)"
             aria-label="Gallery"
             disabled={!activeBoard}
           >
             <GalleryIcon />
+          </button>
+          <button
+            className="icon-btn"
+            onClick={() => setDocNonce((n) => n + 1)}
+            title="New document (D)"
+            aria-label="New document"
+            disabled={!activeBoard}
+          >
+            <DocIcon />
           </button>
           <button
             className="icon-btn"
@@ -753,6 +765,7 @@ function Workspace() {
             }}
             galleryOpen={galleryOpen}
             onCloseGallery={() => setGalleryOpen(false)}
+            newDocSignal={docNonce}
             onMoveSelection={(ids) => setMoveIds(ids)}
             onToast={showToast}
             boards={boards}

@@ -233,6 +233,19 @@ export interface MediaNodeContent {
   flipH?: boolean
 }
 
+// What a rich-text "doc" node stores in `content`. `doc` is the TipTap/ProseMirror
+// JSON (source of truth for editing); `text` is a plain-text preview the canvas
+// card and search use without instantiating an editor. `ystate` (Phase 2) will
+// hold a base64 Yjs snapshot for co-editing.
+export interface DocNodeContent {
+  doc?: Record<string, unknown>
+  text?: string
+  ystate?: string
+  // 'script' puts the editor in Celtx-style screenplay mode (same content, screenplay
+  // formatting + keymap); 'doc' (default) is the regular rich-text document.
+  mode?: 'doc' | 'script'
+}
+
 // Dragging an existing media tile (from the panel or the gallery) onto the
 // canvas carries the asset under this MIME type; the canvas drop handler turns
 // it into a media node referencing that asset.
@@ -391,11 +404,11 @@ export interface BoardGraph {
 export type Side = 'top' | 'right' | 'bottom' | 'left'
 
 // The kinds of objects you can drop on the canvas.
-export const NODE_TYPES = ['scene', 'character', 'dialog', 'event', 'note'] as const
+export const NODE_TYPES = ['scene', 'character', 'dialog', 'event', 'note', 'doc'] as const
 export type NodeKind = (typeof NODE_TYPES)[number]
 
 // Display label for an object kind (the stored type value stays unchanged).
-const TYPE_LABELS: Record<string, string> = { note: 'Notes', '': 'Object' }
+const TYPE_LABELS: Record<string, string> = { note: 'Notes', '': 'Object', doc: 'Document' }
 export function typeLabel(type: string): string {
   return TYPE_LABELS[type] ?? type.charAt(0).toUpperCase() + type.slice(1)
 }
@@ -411,6 +424,8 @@ export const KIND_COLORS: Record<string, string> = {
   // The node's own card on the canvas stays neutral like every other node.
   media: '#8b5cf6',
   link: '#8b5cf6',
+  // Rich-text document nodes — pink, distinct from scene's sky blue.
+  doc: '#ec4899',
 }
 
 // Neutral tag color for an untyped ("Object") node -- a lighter gray, distinct

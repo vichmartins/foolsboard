@@ -12,6 +12,8 @@ export interface MenuItem {
   // Single character that triggers this item while the menu is open. The first
   // matching letter in the label is underlined.
   mnemonic?: string
+  // Keyboard shortcut hint shown right-aligned (e.g. "Ctrl+C", "Del").
+  shortcut?: string
 }
 
 interface Props {
@@ -109,7 +111,8 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
               requestClose()
             }}
           >
-            {renderLabel(it.label, it.mnemonic)}
+            <span>{renderLabel(it.label, it.mnemonic)}</span>
+            {it.shortcut && <span className="ctx-menu__sc">{it.shortcut}</span>}
           </button>
         </li>
       ))}

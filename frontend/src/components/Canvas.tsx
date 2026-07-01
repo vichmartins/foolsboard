@@ -81,6 +81,8 @@ import ContextMenu from './ContextMenu'
 import ContextPanel from './ContextPanel'
 import FloatingEdge from './FloatingEdge'
 import MediaNodeCard from './MediaNodeCard'
+import DocNodeCard from './DocNodeCard'
+import DocEditor from './DocEditor'
 import MinimapSelection from './MinimapSelection'
 import NodeGallery from './NodeGallery'
 import PromptDialog from './PromptDialog'
@@ -109,6 +111,8 @@ interface CanvasProps {
   // on another board), pan to it once loaded, then call onFocusHandled.
   focusNodeId?: string | null
   onFocusHandled?: () => void
+  // Bumped by the top-bar "New document" button to create + open a doc node.
+  newDocSignal?: number
 }
 
 const PASTE_OFFSET = 48 // px nudge when pasting/duplicating within the same board
@@ -125,7 +129,7 @@ function countLabel(n: number, singular: string) {
   return `${n} ${singular}${n === 1 ? '' : 's'}`
 }
 
-const nodeTypes = { story: StoryNodeCard, media: MediaNodeCard, link: MediaNodeCard }
+const nodeTypes = { story: StoryNodeCard, media: MediaNodeCard, link: MediaNodeCard, doc: DocNodeCard }
 const edgeTypes = { floating: FloatingEdge }
 
 // Flatten a node's text (title, type, field values, link titles/urls) into one
@@ -154,8 +158,8 @@ function toRFNode(n: StoryNode): Node {
   const z = typeof n.content?.z === 'number' ? (n.content.z as number) : undefined
   return {
     id: n.id,
-    // Media/link nodes render with MediaNodeCard; everything else is a story card.
-    type: isMediaNodeType(n.type) ? n.type : 'story',
+    // Doc nodes render as a page card; media/link with MediaNodeCard; else story.
+    type: n.type === 'doc' ? 'doc' : isMediaNodeType(n.type) ? n.type : 'story',
     position: { x: n.x, y: n.y },
     ...(z !== undefined ? { zIndex: z } : {}),
     data: {
@@ -181,6 +185,7 @@ function CanvasInner({
   onOpenBoard,
   focusNodeId,
   onFocusHandled,
+  newDocSignal,
 }: CanvasProps) {
   const {
     screenToFlowPosition,
@@ -207,8 +212,14 @@ function CanvasInner({
     },
     [screenToFlowPosition],
   )
+  // Last pointer position over the canvas, so a toolbar-triggered "New document"
+  // (mouse is up in the top bar) still spawns where the user was working.
+  const lastPointer = useRef<{ x: number; y: number } | null>(null)
   const broadcastCursor = useCallback(
-    (e: React.PointerEvent) => sendCursorAt(e.clientX, e.clientY),
+    (e: React.PointerEvent) => {
+      lastPointer.current = { x: e.clientX, y: e.clientY }
+      sendCursorAt(e.clientX, e.clientY)
+    },
     [sendCursorAt],
   )
   const lastSelSent = useRef('')
@@ -282,6 +293,22 @@ function CanvasInner({
   useEffect(() => {
     playOpenRef.current = playOpen
   }, [playOpen])
+
+  // Rich-text doc editor overlay. Holds a snapshot of the node opened (so live
+  // saves updating the canvas card don't remount/reset the editor). docOpenRef
+  // lets the mount-once drag/key handlers ignore input while it's open.
+  const [docNode, setDocNode] = useState<StoryNode | null>(null)
+  const docOpenRef = useRef(false)
+  useEffect(() => {
+    docOpenRef.current = docNode !== null
+  }, [docNode])
+  const openDoc = useCallback(
+    (nodeId: string) => {
+      const story = getNodes().find((n) => n.id === nodeId)?.data?.story as StoryNode | undefined
+      if (story) setDocNode(story)
+    },
+    [getNodes],
+  )
 
   // Smoothly track remote node moves by easing each node's *position* toward its
   // latest target every frame -- so React Flow recomputes the node and its edges
@@ -964,6 +991,20 @@ function CanvasInner({
     [boardId, screenToFlowPosition, getNodes, markDirty],
   )
 
+  // Add a freshly-created node to the canvas with a brief ease-in animation
+  // (the rf-node-appear class is stripped once the entrance has played).
+  const addNodeAnimated = useCallback(
+    (created: StoryNode) => {
+      setNodes((nds) => [...nds, { ...toRFNode(created), className: 'rf-node-appear' }])
+      window.setTimeout(() => {
+        setNodes((nds) =>
+          nds.map((n) => (n.id === created.id ? { ...n, className: undefined } : n)),
+        )
+      }, 320)
+    },
+    [setNodes],
+  )
+
   // Right-click on empty canvas -> create a new object there (Agar.io style).
   const onPaneContextMenu = useCallback(
     async (event: React.MouseEvent | MouseEvent) => {
@@ -975,7 +1016,7 @@ function CanvasInner({
         x: pos.x,
         y: pos.y,
       })
-      setNodes((nds) => [...nds, toRFNode(created)])
+      addNodeAnimated(created)
       setSelectedId(created.id)
       markDirty()
       // Make the new object undoable (Ctrl+Z removes it; redo re-adds it).
@@ -987,14 +1028,54 @@ function CanvasInner({
             type: '', title: 'New object', x: pos.x, y: pos.y,
           })
           live.id = again.id
-          setNodes((nds) => [...nds, toRFNode(again)])
+          addNodeAnimated(again)
           setSelectedId(again.id)
           markDirty()
         },
       })
     },
-    [boardId, screenToFlowPosition, markDirty, pushUndo, removeByIds],
+    [boardId, screenToFlowPosition, markDirty, pushUndo, removeByIds, addNodeAnimated],
   )
+
+  // Create a new rich-text doc node at the viewport centre and open its editor.
+  const createDoc = useCallback(async () => {
+    const screen = lastPointer.current ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+    const pos = screenToFlowPosition(screen)
+    const created = await api.createNode(boardId, {
+      type: 'doc',
+      title: 'Untitled document',
+      x: pos.x,
+      y: pos.y,
+      content: {},
+    })
+    addNodeAnimated(created)
+    setSelectedId(created.id)
+    markDirty()
+    setDocNode(created) // open the editor immediately
+    const live = { id: created.id }
+    pushUndo({
+      undo: () => removeByIds([live.id], []),
+      redo: async () => {
+        const again = await api.createNode(boardId, {
+          type: 'doc', title: 'Untitled document', x: pos.x, y: pos.y, content: {},
+        })
+        live.id = again.id
+        addNodeAnimated(again)
+        markDirty()
+      },
+    })
+  }, [boardId, screenToFlowPosition, markDirty, pushUndo, removeByIds, addNodeAnimated])
+
+  // The top-bar "New document" button bumps newDocSignal; create a doc when it
+  // changes (a ref keeps the effect keyed only on the signal, not createDoc).
+  const createDocRef = useRef(createDoc)
+  useEffect(() => {
+    createDocRef.current = createDoc
+  })
+  useEffect(() => {
+    if (newDocSignal) void createDocRef.current()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newDocSignal])
 
   // Drop file(s) onto the canvas -> standalone media node(s) at that point. The
   // node is created first (a placeholder shows immediately), then the asset is
@@ -1376,12 +1457,12 @@ function CanvasInner({
 
   const actionsRef = useRef({
     doCopy, doCut, doPaste, doDuplicate, undo, redo,
-    zoomIn, zoomOut, fitView, exportImage, playFromSelection,
+    zoomIn, zoomOut, fitView, exportImage, playFromSelection, createDoc,
   })
   useEffect(() => {
     actionsRef.current = {
       doCopy, doCut, doPaste, doDuplicate, undo, redo,
-      zoomIn, zoomOut, fitView, exportImage, playFromSelection,
+      zoomIn, zoomOut, fitView, exportImage, playFromSelection, createDoc,
     }
   })
   useEffect(() => {
@@ -1395,7 +1476,7 @@ function CanvasInner({
           t.isContentEditable)
       )
         return
-      if (playOpenRef.current) return // the playthrough reader handles its own keys
+      if (playOpenRef.current || docOpenRef.current) return // overlays handle their own keys
       const a = actionsRef.current
       // Plain (no-modifier) canvas shortcuts mirroring the control buttons.
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -1424,6 +1505,11 @@ function CanvasInner({
           case 'E':
             e.preventDefault()
             a.exportImage()
+            return
+          case 'd':
+          case 'D':
+            e.preventDefault()
+            void a.createDoc()
             return
         }
       }
@@ -1486,8 +1572,12 @@ function CanvasInner({
   const selectedNode = selectedId
     ? (nodes.find((n) => n.id === selectedId)?.data?.story as StoryNode | undefined)
     : undefined
-  // Media/link nodes have no editor, so selecting one shouldn't take an edit lock.
-  const editingNodeId = selectedNode && !isMediaNodeType(selectedNode.type) ? selectedId : null
+  // Media/link nodes have no side-panel editor, and docs use their own overlay, so
+  // selecting either shouldn't take a side-panel edit lock.
+  const editingNodeId =
+    selectedNode && !isMediaNodeType(selectedNode.type) && selectedNode.type !== 'doc'
+      ? selectedId
+      : null
   const editingTitle = editingNodeId ? selectedNode?.title ?? '' : ''
   useEffect(() => {
     realtime.sendEdit(editingNodeId, editingTitle)
@@ -1620,13 +1710,13 @@ function CanvasInner({
       clearDraggedNode()
     }
     const onEnter = (e: DragEvent) => {
-      if (playOpenRef.current || !droppable(e)) return
+      if (playOpenRef.current || docOpenRef.current || !droppable(e)) return
       e.preventDefault()
       dragDepthRef.current += 1
       setDragKind('ready')
     }
     const onOver = (e: DragEvent) => {
-      if (playOpenRef.current || !droppable(e)) return
+      if (playOpenRef.current || docOpenRef.current || !droppable(e)) return
       e.preventDefault() // required to allow a drop
       // Only set dropEffect for our own asset drags (effectAllowed='copy'), which
       // the gallery cancel relies on. Do NOT set it for OS file drags: forcing
@@ -1639,7 +1729,7 @@ function CanvasInner({
       )
     }
     const onLeave = (e: DragEvent) => {
-      if (playOpenRef.current || !droppable(e)) return
+      if (playOpenRef.current || docOpenRef.current || !droppable(e)) return
       dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
       if (dragDepthRef.current === 0) {
         setDragKind('none')
@@ -1647,7 +1737,7 @@ function CanvasInner({
       }
     }
     const onDrop = (e: DragEvent) => {
-      if (playOpenRef.current) {
+      if (playOpenRef.current || docOpenRef.current) {
         e.preventDefault() // swallow the drop so the browser doesn't open the file
         return
       }
@@ -1730,7 +1820,11 @@ function CanvasInner({
   const selectedStory =
     (nodes.find((n) => n.id === selectedId)?.data?.story as StoryNode | undefined) ?? null
   // Media/link nodes render themselves -- no object editor panel for them.
-  const editorStory = selectedStory && !isMediaNodeType(selectedStory.type) ? selectedStory : null
+  // Docs edit in their own overlay (double-click), not the side panel.
+  const editorStory =
+    selectedStory && !isMediaNodeType(selectedStory.type) && selectedStory.type !== 'doc'
+      ? selectedStory
+      : null
   // A downloadable file behind the selected media node (for the context menu).
   const selMediaDl =
     selectedStory?.type === 'media'
@@ -1843,7 +1937,11 @@ function CanvasInner({
         onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
-        onNodeDoubleClick={(_, n) => openPanel(n.id)}
+        onNodeDoubleClick={(_, n) => {
+          const st = n.data?.story as StoryNode | undefined
+          if (st?.type === 'doc') openDoc(n.id)
+          else openPanel(n.id)
+        }}
         onPaneClick={() => {
           if (selectedId) closePanel()
         }}
@@ -1867,7 +1965,7 @@ function CanvasInner({
           <ControlButton
             className="rf-icon-btn"
             onClick={() => zoomIn({ duration: 150 })}
-            title="Zoom in — +"
+            title="Zoom in (+)"
             aria-label="Zoom in"
           >
             <PlusIcon />
@@ -1875,7 +1973,7 @@ function CanvasInner({
           <ControlButton
             className="rf-icon-btn"
             onClick={() => zoomOut({ duration: 150 })}
-            title="Zoom out — −"
+            title="Zoom out (−)"
             aria-label="Zoom out"
           >
             <MinusIcon />
@@ -1883,7 +1981,7 @@ function CanvasInner({
           <ControlButton
             className="rf-icon-btn"
             onClick={() => fitView({ padding: 0.2, duration: 300 })}
-            title="Fit to screen — F"
+            title="Fit to screen (F)"
             aria-label="Fit view"
           >
             <FitViewIcon />
@@ -1904,14 +2002,14 @@ function CanvasInner({
               const sel = getNodes().filter((n) => n.selected)
               openPlaythrough(sel.length === 1 ? sel[0].id : null)
             }}
-            title="Play through the story — P (from the selected object, if any)"
+            title="Play through the story (P) — from the selected object, if any"
           >
             <PlayIcon />
           </ControlButton>
           <ControlButton
             className="rf-export-btn"
             onClick={exportImage}
-            title="Export board as image (PNG) — E"
+            title="Export board as image, PNG (E)"
           >
             <ImageIcon />
           </ControlButton>
@@ -1948,6 +2046,18 @@ function CanvasInner({
           startId={playStart ?? selectedId ?? undefined}
           assets={playAssets}
           onClose={() => setPlayOpen(false)}
+        />
+      )}
+
+      {docNode && (
+        <DocEditor
+          key={docNode.id}
+          node={docNode}
+          boardId={boardId}
+          onClose={() => setDocNode(null)}
+          onSaved={(updated) =>
+            setNodes((nds) => nds.map((n) => (n.id === updated.id ? toRFNode(updated) : n)))
+          }
         />
       )}
 
@@ -2047,12 +2157,12 @@ function CanvasInner({
           y={nodeMenu.y}
           onClose={() => setNodeMenu(null)}
           items={[
-            { label: 'Copy', mnemonic: 'C', onClick: () => doCopy() },
-            { label: 'Cut', mnemonic: 't', onClick: () => void doCut() },
-            { label: 'Duplicate', mnemonic: 'D', onClick: () => void doDuplicate() },
+            { label: 'Copy', mnemonic: 'C', shortcut: 'Ctrl+C', onClick: () => doCopy() },
+            { label: 'Cut', mnemonic: 't', shortcut: 'Ctrl+X', onClick: () => void doCut() },
+            { label: 'Duplicate', mnemonic: 'D', shortcut: 'Ctrl+D', onClick: () => void doDuplicate() },
             { label: 'Move', mnemonic: 'M', onClick: () => doMove() },
             ...(clipboardHasContent()
-              ? [{ label: 'Paste', mnemonic: 'P', onClick: () => void doPaste() }]
+              ? [{ label: 'Paste', mnemonic: 'P', shortcut: 'Ctrl+V', onClick: () => void doPaste() }]
               : []),
             ...(selMediaDl
               ? [{ label: 'Download', mnemonic: 'w', onClick: () => downloadAsset(selMediaDl) }]
@@ -2061,10 +2171,10 @@ function CanvasInner({
               ? [
                   { label: 'Bring to front', mnemonic: 'f', onClick: () => void setNodeZ(menuNodeId, true) },
                   { label: 'Send to back', mnemonic: 'b', onClick: () => void setNodeZ(menuNodeId, false) },
-                  { label: 'Play from here', mnemonic: 'y', onClick: () => openPlaythrough(menuNodeId) },
+                  { label: 'Play from here', mnemonic: 'y', shortcut: 'P', onClick: () => openPlaythrough(menuNodeId) },
                 ]
               : []),
-            { label: 'Delete', mnemonic: 'l', danger: true, onClick: () => doDelete() },
+            { label: 'Delete', mnemonic: 'l', danger: true, shortcut: 'Del', onClick: () => doDelete() },
           ]}
         />
       )}

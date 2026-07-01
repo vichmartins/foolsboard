@@ -685,7 +685,7 @@ export default function ContextPanel({
       </div>
 
       <div className="panel__actions">
-        <button className="btn btn--primary" onClick={save} disabled={busy}>
+        <button className="btn btn--primary" onClick={save} disabled={busy} title="Save (Ctrl+S)">
           Save
         </button>
         <button

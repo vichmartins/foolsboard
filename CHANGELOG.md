@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.91.0
+
+- feat: **Documents.** A new rich-text Document object you can drop on the canvas
+  or attach to work — full-screen editor with headings, bold/italic/underline/
+  strike, bullet/numbered/check lists, quotes, code blocks, links, images, and
+  tables. Autosaves, syncs to collaborators, and has an editable title.
+- feat: **Screenplay mode.** Toggle a Document into Celtx-style script writing —
+  Scene/Action/Character/Dialogue/Parenthetical/Transition/Shot elements with
+  **Tab** to cycle, **Enter** to auto-advance, Ctrl+1–7 shortcuts, and proper
+  Courier formatting. The canvas card shows a SCREENPLAY tag.
+- feat: **Export to PDF** for both document and screenplay modes (via the browser’s
+  Save-as-PDF, so the text stays selectable and paginated).
+- improve: **Keyboard shortcuts shown in tooltips** consistently across the app in
+  the (Ctrl+Z) style, plus a shortcut column in the right-click menu.
+
+
 ## v0.90.4
 
 - improve: The image **flip** button now fades in on hover and out again, like the

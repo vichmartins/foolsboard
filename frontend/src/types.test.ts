@@ -105,7 +105,7 @@ describe('uploadSizeError', () => {
 
 describe('constants', () => {
   it('NODE_TYPES are the expected kinds', () => {
-    expect([...NODE_TYPES]).toEqual(['scene', 'character', 'dialog', 'event', 'note'])
+    expect([...NODE_TYPES]).toEqual(['scene', 'character', 'dialog', 'event', 'note', 'doc'])
   })
   it('every node type has an accent color', () => {
     for (const t of NODE_TYPES) expect(KIND_COLORS[t]).toMatch(/^#[0-9a-f]{6}$/i)
