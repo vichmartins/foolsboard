@@ -54,7 +54,7 @@ export default function DocNodeCard({ id, data, selected }: NodeProps) {
         {content.mode === 'script' ? 'Screenplay' : 'Document'}
       </span>
       <div className="doc-node__head">
-        <span className="doc-node__icon">
+        <span className="doc-node__icon" style={{ color: KIND_COLORS.doc }}>
           <DocIcon />
         </span>
         <span className="doc-node__title">{title}</span>

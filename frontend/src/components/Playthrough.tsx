@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { generateHTML } from '@tiptap/core'
+import StarterKit from '@tiptap/starter-kit'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
+import { TableKit } from '@tiptap/extension-table'
+import Image from '@tiptap/extension-image'
+
 import {
   isMediaNodeType,
   KIND_COLORS,
@@ -13,6 +20,19 @@ import {
   type LinkRef,
   type StoryNode,
 } from '../types'
+import { ScreenplayElement } from './screenplay'
+
+// Schema extensions needed to render a stored doc (content.doc JSON) back to HTML
+// read-only. Must cover every node/mark the editor can produce; ScreenplayElement
+// preserves the data-element attribute so screenplay formatting still applies.
+const DOC_RENDER_EXTENSIONS = [
+  StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: { openOnClick: false } }),
+  TaskList,
+  TaskItem.configure({ nested: true }),
+  TableKit,
+  Image,
+  ScreenplayElement,
+]
 
 // A connection reduced to what the reader needs: where it goes and its label
 // (the label becomes a choice at a branch).
@@ -371,7 +391,9 @@ function Scene({
       </span>
       <h2 className="pt-title">{node.title || 'Untitled'}</h2>
 
-      {media ? (
+      {node.type === 'doc' ? (
+        <DocBlock node={node} />
+      ) : media ? (
         <MediaBlock node={node} onZoom={onZoom} />
       ) : (
         <>
@@ -513,6 +535,29 @@ function AssetView({ asset, onZoom }: { asset: Asset; onZoom: (url: string, tran
 }
 
 // Render a media/link object inline (image, video, audio player, file, or a link
+// A rich-text / screenplay document rendered read-only (JSON -> HTML) with the
+// same formatting as the editor.
+function DocBlock({ node }: { node: StoryNode }) {
+  const c = node.content ?? {}
+  const isScript = c.mode === 'script'
+  const html = useMemo(() => {
+    const doc = c.doc
+    if (!doc || typeof doc !== 'object') return ''
+    try {
+      return generateHTML(doc as Record<string, unknown>, DOC_RENDER_EXTENSIONS)
+    } catch {
+      return ''
+    }
+  }, [c.doc])
+  if (!html) return <p className="pt-field__body pt-dim">(empty document)</p>
+  return (
+    <div
+      className={'pt-doc' + (isScript ? ' pt-doc--script' : '')}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  )
+}
+
 // preview) -- everything needed lives in the node's content, like MediaNodeCard.
 function MediaBlock({ node, onZoom }: { node: StoryNode; onZoom: (url: string, transform?: string) => void }) {
   const c = node.content ?? {}

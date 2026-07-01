@@ -21,6 +21,18 @@ const GROUPS: { title: string; items: Shortcut[] }[] = [
     ],
   },
   {
+    title: 'Board',
+    items: [
+      { keys: ['Ctrl', 'Alt', 'N'], desc: 'Create board' },
+      { keys: ['Ctrl', 'Alt', 'R'], desc: 'Rename board' },
+      { keys: ['Ctrl', 'Alt', 'M'], desc: 'Move board' },
+      { keys: ['Ctrl', 'Alt', 'G'], desc: 'Merge boards' },
+      { keys: ['Ctrl', 'Alt', 'S'], desc: 'Share board' },
+      { keys: ['Ctrl', 'Alt', 'D'], desc: 'Delete board' },
+      { keys: ['Ctrl', 'Alt', 'E'], desc: 'Import / Export' },
+    ],
+  },
+  {
     title: 'View',
     items: [
       { keys: ['+', '='], alt: true, desc: 'Zoom in' },
@@ -28,6 +40,7 @@ const GROUPS: { title: string; items: Shortcut[] }[] = [
       { keys: ['F'], desc: 'Fit board to screen' },
       { keys: ['P'], desc: 'Play through the story (from selected, if any)' },
       { keys: ['E'], desc: 'Export board as image (PNG)' },
+      { keys: ['D'], desc: 'New document' },
     ],
   },
   {
@@ -84,6 +97,33 @@ const GROUPS: { title: string; items: Shortcut[] }[] = [
       { keys: ['Click'], desc: 'Jump to location' },
       { keys: ['Drag'], desc: 'Pan the view' },
       { keys: ['Scroll'], desc: 'Zoom in / out' },
+    ],
+  },
+  {
+    title: 'Document editor',
+    items: [
+      { keys: ['Ctrl', 'B'], desc: 'Bold' },
+      { keys: ['Ctrl', 'I'], desc: 'Italic' },
+      { keys: ['Ctrl', 'U'], desc: 'Underline' },
+      { keys: ['Ctrl', 'Shift', 'S'], desc: 'Strikethrough' },
+      { keys: ['Ctrl', 'Alt', '1–3'], desc: 'Heading 1 / 2 / 3' },
+      { keys: ['Ctrl', 'Shift', '8'], desc: 'Bullet list' },
+      { keys: ['Ctrl', 'Shift', '7'], desc: 'Numbered list' },
+      { keys: ['Ctrl', 'Shift', '9'], desc: 'Checklist' },
+      { keys: ['Ctrl', 'Shift', 'B'], desc: 'Quote' },
+      { keys: ['Ctrl', 'Alt', 'C'], desc: 'Code block' },
+      { keys: ['Ctrl', 'Shift', 'K'], desc: 'Link' },
+      { keys: ['Ctrl', 'Alt', 'I'], desc: 'Image by URL' },
+      { keys: ['Ctrl', 'Alt', 'T'], desc: 'Insert table' },
+      { keys: ['Esc'], desc: 'Close the editor' },
+    ],
+  },
+  {
+    title: 'Screenplay mode',
+    items: [
+      { keys: ['Ctrl', '1–7'], desc: 'Set element (1 Scene … 7 Shot)' },
+      { keys: ['Tab'], desc: 'Cycle the element type' },
+      { keys: ['Enter'], desc: 'New line / auto-advance element' },
     ],
   },
 ]

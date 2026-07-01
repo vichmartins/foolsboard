@@ -7,7 +7,7 @@
 // high-frequency cursor stream only re-renders the canvas overlay, not the app.
 import { useEffect, useState } from 'react'
 import { getToken } from './api'
-import { HIGHLIGHT_PALETTE, collabColor } from './collab'
+import { collabColor } from './collab'
 
 export interface PresenceMember {
   id: string
@@ -94,6 +94,9 @@ class Realtime {
   // Board ops (node_move, board_dirty) are apply-and-forget, so they go to
   // direct handlers (the canvas) rather than into rendered state.
   private opListeners = new Set<(msg: any) => void>()
+  // Collaborative-doc Yjs sync (doc_update / doc_awareness), routed to whichever
+  // doc editor is currently open. High-frequency binary (base64) payloads.
+  private docListeners = new Set<(msg: any) => void>()
   // Fired each time the socket (re)connects -- e.g. after a deploy restarts the
   // server -- used to check for a newer app version.
   private connectListeners = new Set<() => void>()
@@ -278,6 +281,8 @@ class Realtime {
       this.emitPresence()
     } else if (msg.type === 'node_move' || msg.type === 'board_dirty') {
       this.opListeners.forEach((l) => l(msg))
+    } else if (msg.type === 'doc_update' || msg.type === 'doc_awareness') {
+      this.docListeners.forEach((l) => l(msg))
     }
   }
 
@@ -335,6 +340,21 @@ class Realtime {
     this.send({ type: 'board_dirty' })
   }
 
+  // --- Collaborative doc (Yjs) ---------------------------------------------
+  // Subscribe to incoming doc_update / doc_awareness messages (the open doc
+  // editor filters by node_id). Returns an unsubscribe fn.
+  onDocMessage(fn: (msg: any) => void): () => void {
+    this.docListeners.add(fn)
+    return () => this.docListeners.delete(fn)
+  }
+  // sub: 'update' | 'sync-req' | 'sync-state'. update is base64.
+  sendDocUpdate(nodeId: string, sub: string, update: string) {
+    this.send({ type: 'doc_update', node_id: nodeId, sub, update })
+  }
+  sendDocAwareness(nodeId: string, update: string) {
+    this.send({ type: 'doc_awareness', node_id: nodeId, update })
+  }
+
   // Announce my in-flight upload count (and which node) so collaborators see an
   // activity indicator.
   sendUpload(active: boolean, count: number, nodeTitle?: string) {
@@ -364,26 +384,13 @@ class Realtime {
     this.emitEdit()
   }
 
-  // Per-board map of userId -> the color to DISPLAY for them. Mine is fixed; a
-  // collaborator whose color collides with mine (or another) is reassigned the
-  // next free palette color, stably by user id.
+  // Per-board map of userId -> the color to DISPLAY for them. Everyone is shown in
+  // their own chosen highlight color (no clash reassignment) so avatars/cursors
+  // always match the color each person picked.
   private resolveColors(boardId: string): Record<string, string> {
     const out: Record<string, string> = {}
-    const used = new Set<string>()
-    if (this.self) {
-      out[this.self.id] = this.self.color
-      used.add(this.self.color)
-    }
-    const members = (this.presence[boardId] ?? [])
-      .filter((m) => !this.self || m.id !== this.self.id)
-      .slice()
-      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
-    for (const m of members) {
-      let c = m.color
-      if (used.has(c)) c = HIGHLIGHT_PALETTE.find((p) => !used.has(p)) ?? c
-      out[m.id] = c
-      used.add(c)
-    }
+    if (this.self) out[this.self.id] = this.self.color
+    for (const m of this.presence[boardId] ?? []) out[m.id] = m.color
     return out
   }
 

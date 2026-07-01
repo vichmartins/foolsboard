@@ -151,6 +151,22 @@ async def _handle(conn, user: User, raw: str) -> None:
             "color": conn.color,
             "activity": str(msg.get("activity") or "")[:30],
         })
+    elif kind in ("doc_update", "doc_awareness"):
+        # Yjs CRDT sync for collaborative doc editing — transient relay only (the
+        # authoritative snapshot is persisted via the normal REST node update).
+        # node_id scopes it to one doc; `update` is a base64 Yjs / awareness
+        # payload; `sub` (doc_update) is update | sync-req | sync-state.
+        node_id = msg.get("node_id")
+        update = msg.get("update")
+        if node_id and isinstance(update, str) and len(update) <= 4_000_000:
+            await hub.relay(conn, {
+                "type": kind,
+                "board_id": str(conn.board_id),
+                "user_id": str(conn.user_id),
+                "node_id": str(node_id),
+                "sub": str(msg.get("sub") or "update")[:16],
+                "update": update,
+            })
     elif kind == "board_dirty":
         await hub.relay(conn, {"type": "board_dirty", "board_id": str(conn.board_id)})
     elif kind == "upload":

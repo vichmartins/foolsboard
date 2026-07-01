@@ -103,6 +103,9 @@ function Workspace() {
   const [galleryOpen, setGalleryOpen] = useState(false)
   // Bumped by the "New document" button to tell Canvas to create + open a doc.
   const [docNonce, setDocNonce] = useState(0)
+  // The live status of a doc editor this user has open (editing/viewing/afk), or
+  // null when none — drives what collaborators see in the board presence bar.
+  const [docStatus, setDocStatus] = useState<'editing' | 'viewing' | 'afk' | null>(null)
   // Source boards to merge into the active board; handed to Canvas to import.
   const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
   // Selected object ids awaiting a move destination (opens the move dialog).
@@ -224,7 +227,9 @@ function Workspace() {
   // sent separately by their own channels and take priority on the receiver).
   useEffect(() => {
     let act: ActivityKind = 'viewing'
-    if (idle) act = 'away'
+    // In a doc editor, mirror its live status (editing / viewing / away).
+    if (docStatus) act = docStatus === 'afk' ? 'away' : docStatus
+    else if (idle) act = 'away'
     else if (flashAct) act = flashAct
     else if (galleryOpen) act = 'gallery'
     else if (impexOpen) act = 'transferring'
@@ -232,9 +237,61 @@ function Workspace() {
     else if (moveFolderBoard || moveFolderTarget || moveIds) act = 'moving'
     else if (dialog === 'new') act = 'creating'
     realtime.sendActivity(act)
-  }, [idle, flashAct, galleryOpen, impexOpen, dialog, mergeConfirm, moveFolderBoard, moveFolderTarget, moveIds])
+  }, [docStatus, idle, flashAct, galleryOpen, impexOpen, dialog, mergeConfirm, moveFolderBoard, moveFolderTarget, moveIds])
 
   const activeBoard = boards.find((b) => b.id === activeId) ?? null
+
+  // Board actions: Ctrl+Alt+<letter> (avoids browser + canvas Ctrl-combos). Each
+  // respects the same availability as its top-bar button; ignored while typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || !e.altKey || e.shiftKey) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      switch (e.code) {
+        case 'KeyN':
+          e.preventDefault()
+          setDialog('new')
+          break
+        case 'KeyR':
+          if (activeBoard) {
+            e.preventDefault()
+            setDialog('rename')
+          }
+          break
+        case 'KeyM':
+          if (activeBoard) {
+            e.preventDefault()
+            setMoveFolderBoard(activeBoard)
+          }
+          break
+        case 'KeyG':
+          if (boards.length >= 2) {
+            e.preventDefault()
+            setDialog('merge')
+          }
+          break
+        case 'KeyS':
+          if (activeBoard && !activeBoard.shared) {
+            e.preventDefault()
+            setShareTarget({ type: 'board', id: activeBoard.id, name: activeBoard.name })
+          }
+          break
+        case 'KeyD':
+          if (activeBoard && !activeBoard.shared) {
+            e.preventDefault()
+            setDeleteTarget(activeBoard)
+          }
+          break
+        case 'KeyE':
+          e.preventDefault()
+          setImpexOpen(true)
+          break
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [activeBoard, boards])
   // Announce the active board (join) and get other collaborators + what each is
   // doing (editing / uploading / viewing). useBoardPresence drives the board join.
   useBoardPresence(activeId)
@@ -593,14 +650,14 @@ function Workspace() {
           <button
             className="icon-btn"
             onClick={() => setDialog('new')}
-            title="Create"
+            title="Create (Ctrl+Alt+N)"
             aria-label="Create"
           >
             <PlusIcon />
           </button>
           <button
             className="icon-btn"
-            title="Rename"
+            title="Rename (Ctrl+Alt+R)"
             aria-label="Rename"
             onClick={() => setDialog('rename')}
             disabled={!activeBoard}
@@ -609,7 +666,7 @@ function Workspace() {
           </button>
           <button
             className="icon-btn"
-            title="Move"
+            title="Move (Ctrl+Alt+M)"
             aria-label="Move"
             onClick={() => activeBoard && setMoveFolderBoard(activeBoard)}
             disabled={!activeBoard}
@@ -620,7 +677,7 @@ function Workspace() {
             className="icon-btn"
             onClick={() => setDialog('merge')}
             disabled={boards.length < 2}
-            title="Merge"
+            title="Merge (Ctrl+Alt+G)"
             aria-label="Merge"
           >
             <MergeIcon />
@@ -628,7 +685,7 @@ function Workspace() {
           {!activeBoard?.shared && (
             <button
               className="icon-btn"
-              title="Share"
+              title="Share (Ctrl+Alt+S)"
               aria-label="Share"
               onClick={() =>
                 activeBoard &&
@@ -662,7 +719,7 @@ function Workspace() {
           {!activeBoard?.shared && (
             <button
               className="icon-btn icon-btn--danger"
-              title="Delete"
+              title="Delete (Ctrl+Alt+D)"
               aria-label="Delete"
               onClick={() => activeBoard && setDeleteTarget(activeBoard)}
               disabled={!activeBoard}
@@ -692,7 +749,7 @@ function Workspace() {
           <button
             className="icon-btn"
             onClick={() => setImpexOpen(true)}
-            title="Import/Export"
+            title="Import/Export (Ctrl+Alt+E)"
             aria-label="Import/Export"
           >
             <TransferIcon />
@@ -766,6 +823,7 @@ function Workspace() {
             galleryOpen={galleryOpen}
             onCloseGallery={() => setGalleryOpen(false)}
             newDocSignal={docNonce}
+            onDocStatusChange={setDocStatus}
             onMoveSelection={(ids) => setMoveIds(ids)}
             onToast={showToast}
             boards={boards}

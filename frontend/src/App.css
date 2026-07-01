@@ -1642,6 +1642,124 @@
 .pt-dim {
   color: var(--text-dim);
 }
+/* A document object rendered read-only in the playthrough reader. */
+.pt-doc {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--text);
+}
+.pt-doc > *:first-child {
+  margin-top: 0;
+}
+.pt-doc h1 {
+  font-size: 1.6em;
+  font-weight: 700;
+  margin: 0.7em 0 0.3em;
+}
+.pt-doc h2 {
+  font-size: 1.35em;
+  font-weight: 700;
+  margin: 0.7em 0 0.3em;
+}
+.pt-doc h3 {
+  font-size: 1.15em;
+  font-weight: 600;
+  margin: 0.6em 0 0.3em;
+}
+.pt-doc p {
+  margin: 0.5em 0;
+}
+.pt-doc ul,
+.pt-doc ol {
+  padding-left: 1.4em;
+  margin: 0.5em 0;
+}
+.pt-doc blockquote {
+  border-left: 3px solid var(--border);
+  margin: 0.6em 0;
+  padding-left: 1em;
+  color: var(--text-dim);
+}
+.pt-doc pre {
+  background: var(--bg-elev-2);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+.pt-doc code {
+  background: var(--bg-elev-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+}
+.pt-doc pre code {
+  background: none;
+  padding: 0;
+}
+.pt-doc a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.pt-doc img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+.pt-doc table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.6em 0;
+}
+.pt-doc th,
+.pt-doc td {
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+}
+.pt-doc ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.2em;
+}
+.pt-doc ul[data-type='taskList'] li {
+  display: flex;
+  gap: 8px;
+}
+/* Screenplay formatting when the document is in script mode. */
+.pt-doc--script {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+}
+.pt-doc--script p {
+  margin: 0;
+}
+.pt-doc--script p[data-element='scene'] {
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-top: 1.2em;
+}
+.pt-doc--script p[data-element='action'] {
+  margin-top: 0.6em;
+}
+.pt-doc--script p[data-element='character'] {
+  text-transform: uppercase;
+  margin: 0.8em 0 0 20ch;
+}
+.pt-doc--script p[data-element='parenthetical'] {
+  margin: 0 0 0 15ch;
+}
+.pt-doc--script p[data-element='dialogue'] {
+  margin: 0 10ch;
+}
+.pt-doc--script p[data-element='transition'] {
+  text-transform: uppercase;
+  text-align: right;
+  margin-top: 0.8em;
+}
+.pt-doc--script p[data-element='shot'] {
+  text-transform: uppercase;
+  margin-top: 0.6em;
+}
 .pt-end {
   margin-top: 24px;
   font-size: 15px;
@@ -2137,7 +2255,8 @@
   background: var(--bg-elev-2);
   border: 2px solid transparent;
   border-radius: 12px;
-  overflow: hidden;
+  /* No overflow:hidden — it would clip the connection handles that sit on the
+     card's edges. The preview clamps its own text instead. */
 }
 .doc-node__head {
   display: flex;
@@ -2245,6 +2364,11 @@
   border-bottom: 1px solid var(--border);
   background: var(--bg-elev);
 }
+/* Keep the toolbar buttons from wrapping/stretching when the bar gets narrow. */
+.doc-editor__bar .btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
 .doc-editor__title {
   flex: 0 1 460px;
   min-width: 160px;
@@ -2267,11 +2391,18 @@
   background: var(--bg-elev-2);
 }
 .doc-editor__status {
-  margin-left: auto;
+  /* .doc-peers (always mounted) carries the right-push, so a fixed gap here. */
+  margin-left: 12px;
   font-size: 12px;
   color: var(--text-dim);
   min-width: 52px;
   text-align: right;
+}
+.doc-peers {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  padding-left: 6px;
 }
 .doc-tb {
   display: flex;
@@ -2388,6 +2519,30 @@ b.doc-tb__glyph {
 .doc-editor--script .doc-editor__content p[data-element='shot'] {
   text-transform: uppercase;
   margin-top: 0.6em;
+}
+/* Live collaborator carets (Yjs awareness). Colors come from inline styles. */
+.collaboration-carets__caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: 1px solid;
+  border-right: 1px solid;
+  word-break: normal;
+  pointer-events: none;
+}
+.collaboration-carets__label {
+  position: absolute;
+  top: -1.35em;
+  left: -1px;
+  padding: 2px 5px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+  border-radius: 4px 4px 4px 0;
+  pointer-events: none;
+  user-select: none;
 }
 .doc-tb__btn:hover {
   background: var(--bg-elev-2);
@@ -2546,7 +2701,22 @@ b.doc-tb__glyph {
   padding: 2px 7px;
   border-radius: 999px;
 }
+.story-node__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.story-node__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.story-node__icon svg {
+  width: 15px;
+  height: 15px;
+}
 .story-node__title {
+  flex: 1;
+  min-width: 0;
   font-size: 14px;
   font-weight: 500;
   color: var(--text);
@@ -2561,8 +2731,13 @@ b.doc-tb__glyph {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s;
+  /* Above the media so a flipped/rotated image (which becomes a stacking context)
+     doesn't paint over the handles or block grabbing them. */
+  z-index: 6;
 }
-.story-node:hover .story-handle {
+.story-node:hover .story-handle,
+.media-node:hover .story-handle,
+.doc-node:hover .story-handle {
   opacity: 1;
   pointer-events: all;
 }
@@ -4954,25 +5129,38 @@ button.merge-tree__chev {
 }
 
 .dialog--wide {
-  width: min(540px, calc(100vw - 48px));
+  width: min(800px, calc(100vw - 48px));
 }
 
 /* Keyboard shortcuts reference */
 .shortcuts {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px 28px;
+  /* Masonry-style: cards flow down each column and stack directly under the one
+     above (no row alignment, so no big empty gaps). column-count fixes it at two
+     columns, so overflow is vertical (scrolls) rather than adding columns. */
+  column-count: 2;
+  column-gap: 12px;
   max-height: 65vh;
   overflow-y: auto;
   /* Keep the key chips clear of the scrollbar. */
   padding-right: 12px;
 }
+/* Each section is a bordered card so its start/end is unmistakable. */
+.shortcuts__group {
+  break-inside: avoid;
+  margin-bottom: 12px;
+  padding: 11px 13px 13px;
+  background: color-mix(in srgb, var(--bg-elev-2) 45%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
 .shortcuts__heading {
-  margin: 0 0 8px;
+  margin: 0 0 9px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border);
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.6px;
-  color: var(--text-dim);
+  color: var(--accent);
 }
 .shortcuts__list {
   list-style: none;
@@ -5016,7 +5204,7 @@ button.merge-tree__chev {
 }
 @media (max-width: 560px) {
   .shortcuts {
-    grid-template-columns: 1fr;
+    column-count: 1;
   }
 }
 
