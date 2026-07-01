@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.90.1
+
+- feat: **Flip images horizontally (mirror).** Selected image nodes get a flip
+  button that mirrors the image left↔right. Works alongside rotation, syncs to
+  collaborators, is undoable with Ctrl+Z, and shows in playthrough and exports.
+
+
 ## v0.90.0
 
 - feat: **Rotate images on the canvas.** Select an image and drag the round handle

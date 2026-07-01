@@ -229,6 +229,8 @@ export interface MediaNodeContent {
   // Display rotation in degrees (image nodes). Persisted so it survives reloads
   // and syncs to collaborators; applied on the canvas, in playthrough, and export.
   rotation?: number
+  // Horizontal mirror (image nodes), applied together with rotation.
+  flipH?: boolean
 }
 
 // Dragging an existing media tile (from the panel or the gallery) onto the

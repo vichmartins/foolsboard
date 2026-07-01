@@ -194,6 +194,18 @@ export function TemplateIcon() {
   )
 }
 
+// Two panels around a dashed axis = flip/mirror this image horizontally.
+export function FlipIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3" />
+      <path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3" />
+      <path d="M12 2v2M12 8v2M12 14v2M12 20v2" />
+    </svg>
+  )
+}
+
 // A circular arrow = rotate this image (media node handle).
 export function RotateIcon() {
   return (

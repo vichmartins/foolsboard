@@ -2092,6 +2092,35 @@
   width: 13px;
   height: 13px;
 }
+/* Flip (mirror) toggle: top-left of a selected image node; accented when on. */
+.media-node__flip {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg-elev) 82%, transparent);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.media-node__flip svg {
+  width: 13px;
+  height: 13px;
+}
+.media-node__flip:hover {
+  color: var(--accent);
+}
+.media-node__flip--on {
+  color: var(--accent);
+  border-color: var(--accent);
+}
 
 .story-node {
   position: relative;

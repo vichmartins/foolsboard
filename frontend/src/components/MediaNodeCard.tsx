@@ -14,7 +14,7 @@ import { useBoardId } from '../boardContext'
 import { useRegisterNodeEdit } from '../nodeEditContext'
 import { collabColor } from '../collab'
 import { realtime } from '../realtime'
-import { DownloadIcon, ResizeGripIcon, RotateIcon } from './icons'
+import { DownloadIcon, FlipIcon, ResizeGripIcon, RotateIcon } from './icons'
 
 const SIDES: Position[] = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
@@ -90,13 +90,13 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   // and broadcast so collaborators see it. Hold Shift to snap to 15°.
   const registerEdit = useRegisterNodeEdit()
   const rot0 = typeof content.rotation === 'number' ? (content.rotation as number) : 0
+  const flipH = content.flipH === true
   const [rot, setRot] = useState(rot0)
   useEffect(() => setRot(rot0), [rot0])
-  // Persist a new angle, sync it to collaborators, and record it as an undoable
-  // edit (same before/after path the object panel uses) so Ctrl+Z restores the
-  // previous angle. `before` is the content captured before this gesture began.
-  function commitRotation(before: Record<string, unknown>, deg: number) {
-    const after = { ...before, rotation: deg }
+  // Persist a content change, sync it to collaborators, and record it as an
+  // undoable edit (same before/after path the object panel uses) so Ctrl+Z
+  // restores the previous state. `before` is the content captured beforehand.
+  function commitContent(before: Record<string, unknown>, after: Record<string, unknown>) {
     const story = d.story
     const title = (story?.title as string) ?? (d.title as string) ?? 'file'
     const type = (story?.type as string) ?? 'media'
@@ -110,6 +110,10 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
     )
     registerEdit?.(id, { title, type, content: before }, { title, type, content: after })
   }
+  const commitRotation = (before: Record<string, unknown>, deg: number) =>
+    commitContent(before, { ...before, rotation: deg })
+  // Flip horizontally (mirror). A discrete toggle — also undoable.
+  const toggleFlip = () => commitContent({ ...content }, { ...content, flipH: !flipH })
   // Manual double-click detection: a pointerdown's preventDefault() suppresses the
   // browser's compatibility dblclick, so we time two taps ourselves. Double-click
   // the handle to snap the image back to its original (0°) orientation.
@@ -160,6 +164,25 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
       <RotateIcon />
     </div>
   )
+  const flipBtn = (
+    <button
+      type="button"
+      className={'media-node__flip nodrag' + (flipH ? ' media-node__flip--on' : '')}
+      title="Flip horizontally (mirror)"
+      aria-label="Flip horizontally"
+      aria-pressed={flipH}
+      onClick={(e) => {
+        e.stopPropagation()
+        toggleFlip()
+      }}
+    >
+      <FlipIcon />
+    </button>
+  )
+  // Combined image transform: mirror is applied in the image's own frame first
+  // (rightmost), then rotation, so a flipped image still rotates intuitively.
+  const imgTransform =
+    [rot ? `rotate(${rot}deg)` : '', flipH ? 'scaleX(-1)' : ''].filter(Boolean).join(' ') || undefined
 
   // Rename: double-click the caption to edit the filename (extension stays
   // locked, like the panel). Updates the asset + the node's cached title.
@@ -352,7 +375,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
         src={url}
         alt={filename}
         draggable={false}
-        style={rot ? { ...(sizeStyle ?? {}), transform: `rotate(${rot}deg)` } : sizeStyle}
+        style={imgTransform ? { ...(sizeStyle ?? {}), transform: imgTransform } : sizeStyle}
       />
     )
   } else if (mk === 'video') {
@@ -405,6 +428,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
       {handles}
       {downloadBtn}
       {mk === 'image' && selected && rotateHandle}
+      {mk === 'image' && selected && flipBtn}
       <div className="media-node__body">{body}</div>
       {mk !== 'file' && caption}
       {(mk === 'image' || mk === 'video' || mk === 'audio') && resizeGrip}
