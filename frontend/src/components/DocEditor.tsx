@@ -11,8 +11,14 @@ import TaskItem from '@tiptap/extension-task-item'
 import { TableKit } from '@tiptap/extension-table'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
+import Collaboration from '@tiptap/extension-collaboration'
+import CollaborationCaret from '@tiptap/extension-collaboration-caret'
+import * as Y from 'yjs'
 import * as api from '../api'
 import type { StoryNode } from '../types'
+import { useAuth } from '../auth'
+import { collabColor } from '../collab'
+import { WsDocProvider, u8ToB64, b64ToU8 } from './docCollab'
 import {
   ScreenplayElement,
   ScreenplayKeys,
@@ -31,6 +37,10 @@ import {
   UndoIcon,
   RedoIcon,
 } from './icons'
+import PresenceBar from './PresenceBar'
+import type { MemberActivity } from '../realtime'
+
+export type DocStatus = 'editing' | 'viewing' | 'afk'
 
 // StarterKit v3 already bundles bold/italic/strike, headings, lists, blockquote,
 // code/code-block, link, underline, and undo/redo — so we only add the extras.
@@ -38,6 +48,7 @@ const EXTENSIONS = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3] },
     link: { openOnClick: false, autolink: true },
+    undoRedo: false, // Collaboration (Yjs) provides history instead
   }),
   TaskList,
   TaskItem.configure({ nested: true }),
@@ -51,6 +62,9 @@ interface Props {
   boardId: string
   onClose: () => void
   onSaved: (updated: StoryNode) => void
+  // Report my live status so the board presence bar can mirror it (editing /
+  // viewing / away) instead of a blanket "editing" while the editor is open.
+  onStatusChange?: (status: DocStatus) => void
 }
 
 function escapeHtml(s: string): string {
@@ -128,7 +142,7 @@ function Btn({
   )
 }
 
-export default function DocEditor({ node, boardId, onClose, onSaved }: Props) {
+export default function DocEditor({ node, boardId, onClose, onSaved, onStatusChange }: Props) {
   const [title, setTitle] = useState(node.title || 'Untitled document')
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [closing, setClosing] = useState(false)
@@ -143,21 +157,193 @@ export default function DocEditor({ node, boardId, onClose, onSaved }: Props) {
     modeRef.current = mode
   }, [mode])
 
-  // Built once: the rich-text extensions + screenplay attribute/keymap layered on.
+  const { user } = useAuth()
+
+  // Shared Yjs document for this node, seeded from the persisted snapshot, plus a
+  // provider that syncs it over the existing WebSocket relay. Built once.
+  // Created once via refs so React StrictMode's double render/mount doesn't
+  // create or destroy the side-effectful provider (that killed dev sync).
+  const ydocRef = useRef<Y.Doc | null>(null)
+  if (!ydocRef.current) {
+    const d = new Y.Doc()
+    const ystate = node.content?.ystate
+    if (typeof ystate === 'string' && ystate) {
+      try {
+        Y.applyUpdate(d, b64ToU8(ystate))
+      } catch {
+        /* ignore an unreadable snapshot */
+      }
+    }
+    ydocRef.current = d
+  }
+  const ydoc = ydocRef.current
+  const providerRef = useRef<WsDocProvider | null>(null)
+  if (!providerRef.current) providerRef.current = new WsDocProvider(node.id, ydoc)
+  const provider = providerRef.current
+
+  // Wire the provider to the socket on mount; tear down on unmount — but defer the
+  // teardown so a StrictMode remount (which fires the cleanup then re-runs) cancels
+  // it. connect()/disconnect() are idempotent.
+  const disconnectTimer = useRef<number | null>(null)
+  useEffect(() => {
+    if (disconnectTimer.current) {
+      window.clearTimeout(disconnectTimer.current)
+      disconnectTimer.current = null
+    }
+    provider.connect()
+    return () => {
+      disconnectTimer.current = window.setTimeout(() => provider.destroy(), 250)
+    }
+  }, [provider])
+  const meColor = user ? user.color ?? collabColor(user.id) : '#888'
+  const meName = user?.username || 'Someone'
+  const meId = user?.id ?? ''
+  const ymeta = useMemo(() => ydoc.getMap('meta'), [ydoc])
+
+  // Collaborative title + mode: kept in the shared doc so concurrent editors don't
+  // clobber each other (a plain per-client value would last-write-wins on save).
+  useEffect(() => {
+    if (ymeta.get('title') === undefined) ymeta.set('title', node.title || 'Untitled document')
+    if (ymeta.get('mode') === undefined)
+      ymeta.set('mode', node.content?.mode === 'script' ? 'script' : 'doc')
+    const adopt = () => {
+      const t = ymeta.get('title')
+      if (typeof t === 'string') setTitle(t)
+      const m = ymeta.get('mode')
+      if (m === 'doc' || m === 'script') {
+        modeRef.current = m
+        setMode(m)
+      }
+    }
+    adopt()
+    ymeta.observe(adopt)
+    return () => ymeta.unobserve(adopt)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ymeta])
+
+  // Who else is in this doc (from Yjs awareness), so idle collaborators are shown
+  // even before they place a cursor.
+  const [peers, setPeers] = useState<
+    { key: string; name: string; color: string; status: DocStatus }[]
+  >([])
+  useEffect(() => {
+    const aw = provider.awareness
+    aw.setLocalStateField('user', { id: meId, name: meName, color: meColor })
+    if (!aw.getLocalState()?.docStatus) aw.setLocalStateField('docStatus', 'viewing')
+    const refresh = () => {
+      // One avatar per distinct person (dedupe by user id, collapse extra tabs /
+      // stale reloaded clients). Prefer an "active" status if any of a person's
+      // connections is editing.
+      const byPerson = new Map<string, { name: string; color: string; status: DocStatus }>()
+      aw.getStates().forEach((state, clientId) => {
+        if (clientId === aw.clientID) return // skip my own connection
+        const s = state as {
+          user?: { id?: string; name: string; color: string }
+          docStatus?: DocStatus
+        }
+        const u = s.user
+        if (!u?.name) return
+        const key = u.id || `c${clientId}`
+        const status: DocStatus =
+          s.docStatus === 'editing' || s.docStatus === 'afk' ? s.docStatus : 'viewing'
+        const prev = byPerson.get(key)
+        // Editing wins over viewing wins over afk when a person has >1 connection.
+        const rank = (x: DocStatus) => (x === 'editing' ? 2 : x === 'viewing' ? 1 : 0)
+        if (!prev || rank(status) > rank(prev.status)) {
+          byPerson.set(key, { name: u.name, color: u.color || '#888', status })
+        }
+      })
+      setPeers([...byPerson.entries()].map(([key, v]) => ({ key, ...v })))
+    }
+    aw.on('change', refresh)
+    refresh()
+    return () => aw.off('change', refresh)
+  }, [provider, meName, meColor, meId])
+
+  // Broadcast my own status: editing while typing (decays after a pause), away
+  // after idle / window blur, viewing otherwise — like the canvas presence.
+  const myStatusRef = useRef<DocStatus>('viewing')
+  const setMyStatus = useCallback(
+    (s: DocStatus) => {
+      if (myStatusRef.current === s) return
+      myStatusRef.current = s
+      provider.awareness.setLocalStateField('docStatus', s)
+      onStatusChange?.(s) // mirror to the board presence bar
+    },
+    [provider, onStatusChange],
+  )
+  // Report the initial status once so the canvas shows "viewing" (not a stale
+  // "editing") the moment the editor opens.
+  useEffect(() => {
+    onStatusChange?.(myStatusRef.current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const editDecay = useRef<number | null>(null)
+  useEffect(() => {
+    let afk = 0
+    const bump = () => {
+      if (myStatusRef.current === 'afk') setMyStatus('viewing')
+      window.clearTimeout(afk)
+      afk = window.setTimeout(() => setMyStatus('afk'), 60000)
+    }
+    const onBlur = () => setMyStatus('afk')
+    const evs = ['pointermove', 'keydown', 'pointerdown']
+    evs.forEach((e) => window.addEventListener(e, bump, { passive: true }))
+    window.addEventListener('blur', onBlur)
+    bump()
+    return () => {
+      window.clearTimeout(afk)
+      evs.forEach((e) => window.removeEventListener(e, bump))
+      window.removeEventListener('blur', onBlur)
+    }
+  }, [setMyStatus])
+
+  // Built once: rich-text + screenplay layer + Yjs collaboration & live carets.
   const extensions = useMemo(
     () => [
       ...EXTENSIONS,
       ScreenplayElement,
       ScreenplayKeys.configure({ isScript: () => modeRef.current === 'script' }),
+      Collaboration.configure({ document: ydoc }),
+      CollaborationCaret.configure({
+        provider,
+        user: { id: meId, name: meName, color: meColor },
+        render: (u: { name: string; color: string }) => {
+          const caret = document.createElement('span')
+          caret.className = 'collaboration-carets__caret'
+          caret.setAttribute('style', `border-color:${u.color}`)
+          const label = document.createElement('div')
+          label.className = 'collaboration-carets__label'
+          label.setAttribute('style', `background-color:${u.color}`)
+          label.textContent = u.name
+          caret.appendChild(label)
+          return caret
+        },
+      }),
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )
 
-  const editor = useEditor({
-    extensions,
-    content: (node.content?.doc as object | undefined) ?? '',
-    autofocus: 'end',
-  })
+  const editor = useEditor({ extensions, autofocus: 'end' })
+
+  // First collaborative open of a legacy doc (no ystate): seed the shared Yjs doc
+  // from the saved rich text once — after a beat, so a live peer's state wins.
+  useEffect(() => {
+    if (!editor) return
+    const hadYstate = typeof node.content?.ystate === 'string' && !!node.content?.ystate
+    if (hadYstate || !node.content?.doc) return
+    const t = window.setTimeout(() => {
+      const frag = ydoc.getXmlFragment('default')
+      const metaMap = ydoc.getMap('meta')
+      if (frag.length === 0 && !metaMap.get('seeded')) {
+        metaMap.set('seeded', true)
+        editor.commands.setContent(node.content!.doc as object)
+      }
+    }, 500)
+    return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor])
 
   // Force the toolbar to reflect the current selection's active marks/nodes.
   const [, setTick] = useState(0)
@@ -170,6 +356,21 @@ export default function DocEditor({ node, boardId, onClose, onSaved }: Props) {
     }
   }, [editor])
 
+  // Typing marks me "editing" (decays back to viewing after a short pause).
+  useEffect(() => {
+    if (!editor) return
+    const onUpdate = () => {
+      setMyStatus('editing')
+      if (editDecay.current) window.clearTimeout(editDecay.current)
+      editDecay.current = window.setTimeout(() => setMyStatus('viewing'), 2500)
+    }
+    editor.on('update', onUpdate)
+    return () => {
+      editor.off('update', onUpdate)
+      if (editDecay.current) window.clearTimeout(editDecay.current)
+    }
+  }, [editor, setMyStatus])
+
   // --- Autosave (debounced) -------------------------------------------------
   const saveNow = useCallback(async () => {
     if (!editor) return
@@ -179,6 +380,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved }: Props) {
       doc: editor.getJSON(),
       text: editor.getText().slice(0, 4000),
       mode,
+      ystate: u8ToB64(Y.encodeStateAsUpdate(ydoc)),
     }
     try {
       const updated = await api.updateNode(boardId, node.id, {
@@ -202,7 +404,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved }: Props) {
   })
   const schedule = useCallback(() => {
     if (saveTimer.current) window.clearTimeout(saveTimer.current)
-    saveTimer.current = window.setTimeout(() => saveRef.current(), 800)
+    saveTimer.current = window.setTimeout(() => saveRef.current(), 1200)
   }, [])
 
   useEffect(() => {
@@ -255,6 +457,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved }: Props) {
     if (m === mode) return
     modeRef.current = m
     setMode(m)
+    ymeta.set('mode', m) // sync the mode to collaborators
     if (m === 'script' && editor && !editor.getAttributes('paragraph').element) {
       editor.chain().focus().updateAttributes('paragraph', { element: 'scene' }).run()
     }
@@ -271,13 +474,27 @@ export default function DocEditor({ node, boardId, onClose, onSaved }: Props) {
       editor.getHTML(),
       mode === 'script',
     )
-    const w = window.open('', '_blank')
-    if (!w) return
-    w.document.write(html)
-    w.document.close()
-    w.focus()
-    // Give the new window a moment to lay out (and load any images) before printing.
-    window.setTimeout(() => w.print(), 350)
+    // Print via a hidden iframe rather than window.open — no popup blocker, and it
+    // works on insecure/LAN contexts too.
+    const iframe = document.createElement('iframe')
+    iframe.setAttribute('aria-hidden', 'true')
+    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;'
+    document.body.appendChild(iframe)
+    const win = iframe.contentWindow
+    if (!win) {
+      iframe.remove()
+      return
+    }
+    win.document.open()
+    win.document.write(html)
+    win.document.close()
+    const cleanup = () => iframe.remove()
+    win.onafterprint = cleanup
+    window.setTimeout(() => {
+      win.focus()
+      win.print()
+    }, 350)
+    window.setTimeout(cleanup, 60000) // fallback if afterprint never fires
   }
 
   return (
@@ -315,9 +532,24 @@ export default function DocEditor({ node, boardId, onClose, onSaved }: Props) {
           placeholder="Untitled document"
           onChange={(e) => {
             setTitle(e.target.value)
+            ymeta.set('title', e.target.value)
             schedule()
           }}
         />
+        {/* Always mounted (even with no peers) so PresenceBar can animate the last
+            collaborator out instead of vanishing when the list empties. */}
+        <div className="doc-peers">
+          <PresenceBar
+            members={peers.map(
+              (p): MemberActivity => ({
+                id: p.key,
+                username: p.name,
+                color: p.color,
+                status: p.status === 'afk' ? 'away' : p.status,
+              }),
+            )}
+          />
+        </div>
         <span className="doc-editor__status">
           {status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : ''}
         </span>

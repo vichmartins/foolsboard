@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.92.0
+
+- feat: **Real-time co-editing of Documents.** Open a Document with others and see
+  their edits appear live, character by character, with each person's cursor and
+  selection shown in their chosen colour and labelled with their name. Backed by a
+  Yjs CRDT so concurrent edits merge cleanly and the title/mode stay in sync.
+- feat: **Live presence in the editor.** A stack of collaborator avatars in the
+  document header pulses and shows an icon for what each person is doing —
+  ✏️ editing, 👁 viewing, or 💤 away — and animates smoothly as people come and go.
+- improve: **Board presence mirrors the editor.** While you're in a Document, the
+  canvas activity bar reflects your real status (editing / viewing / away) instead
+  of a blanket "editing", so teammates see what you're actually doing.
+- improve: Media and Document objects can now be **connected** like story nodes,
+  their connection handles reveal on hover, and stay clickable when an image is
+  flipped or rotated.
+- improve: Document content now renders inside **Playthrough** mode.
+
 ## v0.91.0
 
 - feat: **Documents.** A new rich-text Document object you can drop on the canvas

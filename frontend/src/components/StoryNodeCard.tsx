@@ -28,6 +28,32 @@ import { useAuth } from '../auth'
 import { collabColor } from '../collab'
 import Gallery from './Gallery'
 import { fmt, parseTime } from './TimestampsField'
+import {
+  SceneIcon,
+  CharacterIcon,
+  DialogIcon,
+  EventIcon,
+  NoteIcon,
+  ObjectIcon,
+} from './icons'
+
+// The icon for each object kind (colored to match the kind's tag via CSS).
+function kindIcon(kind: string) {
+  switch (kind) {
+    case 'scene':
+      return <SceneIcon />
+    case 'character':
+      return <CharacterIcon />
+    case 'dialog':
+      return <DialogIcon />
+    case 'event':
+      return <EventIcon />
+    case 'note':
+      return <NoteIcon />
+    default:
+      return <ObjectIcon />
+  }
+}
 
 export interface StoryNodeData extends Record<string, unknown> {
   title: string
@@ -155,7 +181,12 @@ export default function StoryNodeCard({ data, selected }: NodeProps) {
       <span className="story-node__kind" style={{ background: accent }}>
         {typeLabel(d.kind)}
       </span>
-      <span className="story-node__title">{d.title || 'Untitled'}</span>
+      <div className="story-node__head">
+        <span className="story-node__icon" style={{ color: accent }}>
+          {kindIcon(d.kind)}
+        </span>
+        <span className="story-node__title">{d.title || 'Untitled'}</span>
+      </div>
       {d.preview && <span className="story-node__preview">{d.preview}</span>}
 
       <div className={'story-node__more' + (expanded ? ' story-node__more--open' : '')}>

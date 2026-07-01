@@ -1,7 +1,7 @@
 {
   "name": "foolsboard",
   "private": true,
-  "version": "0.91.0",
+  "version": "0.92.0",
   "type": "module",
   "scripts": {
     "foolsboard": "vite",
@@ -13,6 +13,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tiptap/extension-collaboration": "^3.27.1",
+    "@tiptap/extension-collaboration-caret": "^3.27.1",
     "@tiptap/extension-image": "^3.27.1",
     "@tiptap/extension-link": "^3.27.1",
     "@tiptap/extension-placeholder": "^3.27.1",
@@ -30,7 +32,9 @@
     "axios": "^1.18.0",
     "html-to-image": "^1.11.13",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "y-protocols": "^1.0.7",
+    "yjs": "^13.6.31"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

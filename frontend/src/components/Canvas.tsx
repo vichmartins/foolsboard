@@ -82,7 +82,7 @@ import ContextPanel from './ContextPanel'
 import FloatingEdge from './FloatingEdge'
 import MediaNodeCard from './MediaNodeCard'
 import DocNodeCard from './DocNodeCard'
-import DocEditor from './DocEditor'
+import DocEditor, { type DocStatus } from './DocEditor'
 import MinimapSelection from './MinimapSelection'
 import NodeGallery from './NodeGallery'
 import PromptDialog from './PromptDialog'
@@ -113,6 +113,9 @@ interface CanvasProps {
   onFocusHandled?: () => void
   // Bumped by the top-bar "New document" button to create + open a doc node.
   newDocSignal?: number
+  // The live doc-editor status (editing / viewing / away), or null when closed,
+  // so the board presence bar can mirror what the user is actually doing.
+  onDocStatusChange?: (status: DocStatus | null) => void
 }
 
 const PASTE_OFFSET = 48 // px nudge when pasting/duplicating within the same board
@@ -186,6 +189,7 @@ function CanvasInner({
   focusNodeId,
   onFocusHandled,
   newDocSignal,
+  onDocStatusChange,
 }: CanvasProps) {
   const {
     screenToFlowPosition,
@@ -212,14 +216,8 @@ function CanvasInner({
     },
     [screenToFlowPosition],
   )
-  // Last pointer position over the canvas, so a toolbar-triggered "New document"
-  // (mouse is up in the top bar) still spawns where the user was working.
-  const lastPointer = useRef<{ x: number; y: number } | null>(null)
   const broadcastCursor = useCallback(
-    (e: React.PointerEvent) => {
-      lastPointer.current = { x: e.clientX, y: e.clientY }
-      sendCursorAt(e.clientX, e.clientY)
-    },
+    (e: React.PointerEvent) => sendCursorAt(e.clientX, e.clientY),
     [sendCursorAt],
   )
   const lastSelSent = useRef('')
@@ -301,7 +299,10 @@ function CanvasInner({
   const docOpenRef = useRef(false)
   useEffect(() => {
     docOpenRef.current = docNode !== null
-  }, [docNode])
+    // When the editor closes, clear the doc status; while open, DocEditor reports
+    // its live status (editing/viewing/away) directly.
+    if (docNode === null) onDocStatusChange?.(null)
+  }, [docNode, onDocStatusChange])
   const openDoc = useCallback(
     (nodeId: string) => {
       const story = getNodes().find((n) => n.id === nodeId)?.data?.story as StoryNode | undefined
@@ -1037,10 +1038,11 @@ function CanvasInner({
     [boardId, screenToFlowPosition, markDirty, pushUndo, removeByIds, addNodeAnimated],
   )
 
-  // Create a new rich-text doc node at the viewport centre and open its editor.
+  // Create a new rich-text doc node, uniformly: centred in the current view,
+  // selected (highlighted), with the ease-in animation, then open its editor.
   const createDoc = useCallback(async () => {
-    const screen = lastPointer.current ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 }
-    const pos = screenToFlowPosition(screen)
+    const c = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
+    const pos = { x: c.x - 105, y: c.y - 60 } // offset so the ~210px card is centred
     const created = await api.createNode(boardId, {
       type: 'doc',
       title: 'Untitled document',
@@ -1048,7 +1050,13 @@ function CanvasInner({
       y: pos.y,
       content: {},
     })
-    addNodeAnimated(created)
+    setNodes((nds) => [
+      ...nds.map((n) => (n.selected ? { ...n, selected: false } : n)),
+      { ...toRFNode(created), selected: true, className: 'rf-node-appear' },
+    ])
+    window.setTimeout(() => {
+      setNodes((nds) => nds.map((n) => (n.id === created.id ? { ...n, className: undefined } : n)))
+    }, 320)
     setSelectedId(created.id)
     markDirty()
     setDocNode(created) // open the editor immediately
@@ -1513,7 +1521,7 @@ function CanvasInner({
             return
         }
       }
-      if (!(e.ctrlKey || e.metaKey)) return
+      if (!(e.ctrlKey || e.metaKey) || e.altKey) return // leave Ctrl+Alt+* to app shortcuts
       const k = e.key.toLowerCase()
       if (k === 'c') {
         a.doCopy()
@@ -2058,6 +2066,7 @@ function CanvasInner({
           onSaved={(updated) =>
             setNodes((nds) => nds.map((n) => (n.id === updated.id ? toRFNode(updated) : n)))
           }
+          onStatusChange={onDocStatusChange}
         />
       )}
 
