@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.90.2
+
+- feat: **Layer nodes.** Right-click a node → **Bring to front** / **Send to back**
+  to control what sits on top when items overlap. The order is saved, syncs to
+  collaborators, and is undoable with Ctrl+Z.
+- fix: **Delete** in the node right-click menu is red again (it had lost its danger
+  styling).
+- improve: The image **flip** button now matches the other node badges — a circular
+  corner badge that fills with the accent colour when the mirror is active.
+
+
 ## v0.90.1
 
 - feat: **Flip images horizontally (mirror).** Selected image nodes get a flip

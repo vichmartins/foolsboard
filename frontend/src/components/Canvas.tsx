@@ -150,11 +150,14 @@ function nodeSearchText(story: StoryNode | undefined): string {
 }
 
 function toRFNode(n: StoryNode): Node {
+  // Persisted stacking order (Bring to front / Send to back). Absent = 0.
+  const z = typeof n.content?.z === 'number' ? (n.content.z as number) : undefined
   return {
     id: n.id,
     // Media/link nodes render with MediaNodeCard; everything else is a story card.
     type: isMediaNodeType(n.type) ? n.type : 'story',
     position: { x: n.x, y: n.y },
+    ...(z !== undefined ? { zIndex: z } : {}),
     data: {
       title: n.title,
       kind: n.type,
@@ -1223,6 +1226,33 @@ function CanvasInner({
     [boardId, pushUndo, applyNodeUpdate],
   )
 
+  // --- Layering (foreground/background) ------------------------------------
+  // Stacking is a persisted `z` in the node's content, applied as the RF node's
+  // zIndex (see toRFNode). Bring-to-front/send-to-back set it just past the
+  // current extreme; the change reflects live, syncs, and is undoable.
+  const setNodeZ = useCallback(
+    async (nodeId: string, toFront: boolean) => {
+      const target = getNodes().find((n) => n.id === nodeId)
+      const story = target?.data?.story as StoryNode | undefined
+      if (!story) return
+      const zOf = (n: Node) => {
+        const c = (n.data?.story as StoryNode | undefined)?.content
+        return typeof c?.z === 'number' ? (c.z as number) : 0
+      }
+      const zs = getNodes().map(zOf)
+      const newZ = toFront ? Math.max(0, ...zs) + 1 : Math.min(0, ...zs) - 1
+      const before = { title: story.title, type: story.type, content: story.content ?? {} }
+      const after = { ...before, content: { ...(story.content ?? {}), z: newZ } }
+      try {
+        applyNodeUpdate(await api.updateNode(boardId, nodeId, { content: after.content }))
+        handleNodeEdited(nodeId, before, after)
+      } catch {
+        /* node deleted since */
+      }
+    },
+    [boardId, getNodes, applyNodeUpdate, handleNodeEdited],
+  )
+
   // --- Edge editing --------------------------------------------------------
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.preventDefault()
@@ -2028,9 +2058,13 @@ function CanvasInner({
               ? [{ label: 'Download', mnemonic: 'w', onClick: () => downloadAsset(selMediaDl) }]
               : []),
             ...(menuNodeId
-              ? [{ label: 'Play from here', mnemonic: 'y', onClick: () => openPlaythrough(menuNodeId) }]
+              ? [
+                  { label: 'Bring to front', mnemonic: 'f', onClick: () => void setNodeZ(menuNodeId, true) },
+                  { label: 'Send to back', mnemonic: 'b', onClick: () => void setNodeZ(menuNodeId, false) },
+                  { label: 'Play from here', mnemonic: 'y', onClick: () => openPlaythrough(menuNodeId) },
+                ]
               : []),
-            { label: 'Delete', mnemonic: 'l', onClick: () => doDelete() },
+            { label: 'Delete', mnemonic: 'l', danger: true, onClick: () => doDelete() },
           ]}
         />
       )}
