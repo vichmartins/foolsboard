@@ -428,7 +428,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
       {handles}
       {downloadBtn}
       {mk === 'image' && selected && rotateHandle}
-      {mk === 'image' && selected && flipBtn}
+      {mk === 'image' && flipBtn}
       <div className="media-node__body">{body}</div>
       {mk !== 'file' && caption}
       {(mk === 'image' || mk === 'video' || mk === 'audio') && resizeGrip}

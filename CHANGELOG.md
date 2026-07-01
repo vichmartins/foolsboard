@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.90.4
+
+- improve: The image **flip** button now fades in on hover and out again, like the
+  resize grip, instead of only appearing when the image is selected.
+
+
 ## v0.90.3
 
 - improve: The image **flip** button returns to its top-left corner and no longer

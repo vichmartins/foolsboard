@@ -2092,7 +2092,7 @@
   width: 13px;
   height: 13px;
 }
-/* Flip (mirror) toggle: top-left of a selected image node. */
+/* Flip (mirror) toggle: top-left of an image node; hover-revealed like the resize grip. */
 .media-node__flip {
   position: absolute;
   top: 2px;
@@ -2109,10 +2109,16 @@
   background: color-mix(in srgb, var(--bg-elev) 82%, transparent);
   color: var(--text-dim);
   cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease;
 }
 .media-node__flip svg {
   width: 13px;
   height: 13px;
+}
+.media-node:hover .media-node__flip,
+.media-node__flip:focus-visible {
+  opacity: 1;
 }
 .media-node__flip:hover {
   color: var(--accent);
