@@ -167,7 +167,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   const flipBtn = (
     <button
       type="button"
-      className={'media-node__flip nodrag' + (flipH ? ' media-node__flip--on' : '')}
+      className="media-node__flip nodrag"
       title="Flip horizontally (mirror)"
       aria-label="Flip horizontally"
       aria-pressed={flipH}

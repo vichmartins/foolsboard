@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.90.3
+
+- improve: The image **flip** button returns to its top-left corner and no longer
+  changes color when the mirror is active (subtle hover tint only).
+
+
 ## v0.90.2
 
 - feat: **Layer nodes.** Right-click a node → **Bring to front** / **Send to back**

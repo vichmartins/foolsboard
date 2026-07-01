@@ -2092,35 +2092,30 @@
   width: 13px;
   height: 13px;
 }
-/* Flip (mirror) toggle: a corner badge matching the download/remove badges, at
-   the top-left of a selected image node; filled with the accent when active. */
+/* Flip (mirror) toggle: top-left of a selected image node. */
 .media-node__flip {
   position: absolute;
-  top: -8px;
-  left: -8px;
-  z-index: 5;
+  top: 2px;
+  left: 2px;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   padding: 0;
-  border: 2px solid var(--bg-elev);
-  border-radius: 50%;
-  background: var(--bg-elev-2);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg-elev) 82%, transparent);
   color: var(--text-dim);
   cursor: pointer;
 }
 .media-node__flip svg {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
 }
 .media-node__flip:hover {
   color: var(--accent);
-}
-.media-node__flip--on {
-  background: var(--accent);
-  color: #fff;
 }
 
 .story-node {
