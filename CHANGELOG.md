@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.96.1
+
+- fix: **No more ghost cursor/avatar after refreshing in a document.** Refreshing
+  while co-editing left your previous connection lingering as a duplicate cursor
+  and avatar (for you and others) until it timed out. The reconnected tab now
+  clears its own stale connection and tells everyone to drop it immediately.
+
 ## v0.96.0
 
 - feat: **Screenplay autocomplete (Celtx-style).** While writing a Character,
