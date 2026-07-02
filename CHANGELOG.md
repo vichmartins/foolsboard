@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.95.1
+
+- fix: **Media survives board import.** Importing a board into another workspace no
+  longer loses its images, video, and audio — media nodes are now relinked to the
+  freshly-restored files (previously their content still pointed at the source
+  workspace's storage keys, so everything showed as missing). Re-import an
+  affected bundle to repair a board imported before this fix.
+
 ## v0.95.0
 
 - feat: **Expandable Document cards on the canvas.** Document objects now have the
