@@ -135,9 +135,13 @@ function Workspace() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
   // A node to pan to after switching boards (from the workspace-wide Gallery).
-  const [pendingFocus, setPendingFocus] = useState<{ boardId: string; nodeId: string } | null>(
-    null,
-  )
+  // `open` = also open the object's editor (side panel / doc overlay) after
+  // panning to it — set for double-click and gallery picks, not plain navigation.
+  const [pendingFocus, setPendingFocus] = useState<{
+    boardId: string
+    nodeId: string
+    open?: boolean
+  } | null>(null)
   // "New version deployed" prompt (production only); dismissible.
   const updateAvailable = useUpdateAvailable()
   const [updateDismissed, setUpdateDismissed] = useState(false)
@@ -774,6 +778,10 @@ function Workspace() {
           orderedTop={computeOrderedTop()}
           activeId={activeId}
           onSelectBoard={setActiveId}
+          onOpenObject={(bid, nid, open) => {
+            setActiveId(bid)
+            setPendingFocus({ boardId: bid, nodeId: nid, open })
+          }}
           onRenameFolder={renameFolder}
           onDeleteFolder={deleteFolder}
           onShareFolder={(f) => setShareTarget({ type: 'folder', id: f.id, name: f.name })}
@@ -831,11 +839,13 @@ function Workspace() {
             categories={categories}
             onOpenBoard={(bid, nid) => {
               setActiveId(bid)
-              setPendingFocus(nid ? { boardId: bid, nodeId: nid } : null)
+              // Gallery picks jump to the object and open its editor.
+              setPendingFocus(nid ? { boardId: bid, nodeId: nid, open: true } : null)
             }}
             focusNodeId={
               pendingFocus && pendingFocus.boardId === activeId ? pendingFocus.nodeId : null
             }
+            focusOpen={!!pendingFocus?.open}
             onFocusHandled={() => setPendingFocus(null)}
           />
         ) : (

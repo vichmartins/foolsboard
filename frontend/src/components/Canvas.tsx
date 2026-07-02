@@ -110,6 +110,9 @@ interface CanvasProps {
   // When this board is opened targeting a specific node (e.g. from the Gallery
   // on another board), pan to it once loaded, then call onFocusHandled.
   focusNodeId?: string | null
+  // Also open the node's editor (side panel / doc overlay) after panning to it.
+  // False = just pan + highlight (single-click navigation from the explorer).
+  focusOpen?: boolean
   onFocusHandled?: () => void
   // Bumped by the top-bar "New document" button to create + open a doc node.
   newDocSignal?: number
@@ -187,6 +190,7 @@ function CanvasInner({
   categories = [],
   onOpenBoard,
   focusNodeId,
+  focusOpen,
   onFocusHandled,
   newDocSignal,
   onDocStatusChange,
@@ -1615,21 +1619,30 @@ function CanvasInner({
     [],
   )
 
-  // Center the canvas on a node, select it, and open its panel. Used by the
-  // gallery to jump straight to a chosen item.
+  // Center the canvas on a node and select (highlight) it. With `open`, also open
+  // its editor — the doc overlay for docs, the side panel otherwise. Used by the
+  // gallery and the explorer's board-contents drill-in.
   const focusNode = useCallback(
-    (id: string) => {
+    (id: string, opts?: { open?: boolean; duration?: number }) => {
       const n = getNodes().find((x) => x.id === id)
       if (!n) return
       const { w, h } = nodeSize(n)
       setCenter(n.position.x + w / 2, n.position.y + h / 2, {
         zoom: Math.max(getZoom(), 1),
-        duration: 400,
+        duration: opts?.duration ?? 400,
       })
       selectNodes([id])
-      openPanel(id)
+      if (opts?.open) {
+        const st = n.data?.story as StoryNode | undefined
+        if (st?.type === 'doc') openDoc(id)
+        else openPanel(id)
+      } else if (hasPanelRef.current) {
+        // Plain navigation (single-click): don't leave an edit panel open — for
+        // the same item this just dismisses it, for another it hands off cleanly.
+        closePanel()
+      }
     },
-    [getNodes, setCenter, getZoom, selectNodes, openPanel],
+    [getNodes, setCenter, getZoom, selectNodes, openPanel, openDoc, closePanel],
   )
 
   // Frame both endpoints of a connection and select them (from the gallery).
@@ -1646,18 +1659,26 @@ function CanvasInner({
     [fitView, selectNodes],
   )
 
-  // Opened to a specific node (e.g. picked in the workspace-wide Gallery while on
-  // another board): once this board's graph has loaded, pan to that node. The
-  // short delay lets React Flow measure nodes and run its initial fitView first,
-  // so this centering wins.
+  // True once React Flow has mounted + run its initial fitView (see onInit). Until
+  // then a focus must wait for that fit to land, or our centering gets overridden.
+  const rfReady = useRef(false)
+  // Opened to a specific node (from the Gallery, or a click in the explorer's
+  // board-contents view): pan to it and, if requested, open its editor. Once the
+  // board is initialized we go on the next frame (feels instant); only a fresh
+  // board switch that hasn't finished its initial fitView waits briefly.
   useEffect(() => {
     if (!focusNodeId || !getNodes().some((n) => n.id === focusNodeId)) return
-    const t = window.setTimeout(() => {
-      focusNode(focusNodeId)
+    const run = () => {
+      focusNode(focusNodeId, { open: focusOpen, duration: focusOpen ? 300 : 180 })
       onFocusHandled?.()
-    }, 240)
+    }
+    if (rfReady.current) {
+      const r = requestAnimationFrame(run)
+      return () => cancelAnimationFrame(r)
+    }
+    const t = window.setTimeout(run, 240)
     return () => window.clearTimeout(t)
-  }, [focusNodeId, nodes, getNodes, focusNode, onFocusHandled])
+  }, [focusNodeId, focusOpen, nodes, getNodes, focusNode, onFocusHandled])
 
   // Esc cascade: the gallery drawer (handled in ContextPanel, which stops the
   // event) takes priority; otherwise close the open panel; otherwise clear any
@@ -1960,6 +1981,9 @@ function CanvasInner({
         onBeforeDelete={onBeforeDelete}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
+        onInit={() => {
+          rfReady.current = true
+        }}
         fitView
         // Allow zooming out much further than the default 0.5 floor for big boards.
         minZoom={0.05}
@@ -2092,7 +2116,7 @@ function CanvasInner({
           folders={folders}
           categories={categories}
           onPickNode={(id) => {
-            focusNode(id)
+            focusNode(id, { open: true })
             onCloseGallery?.()
           }}
           onPickEdge={(s, t) => {
