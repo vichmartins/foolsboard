@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.96.3
+
+- improve: **Cross-element screenplay autocomplete now works from any line.** Any
+  element can suggest matching Character / Scene / Transition / Shot values
+  (tagged with their type); accepting converts the line to that element. The
+  current element's own values are still offered first.
+
 ## v0.96.2
 
 - improve: **Screenplay autocomplete works cross-element.** Typing a known

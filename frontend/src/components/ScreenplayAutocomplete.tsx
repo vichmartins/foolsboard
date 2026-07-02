@@ -9,8 +9,10 @@ import { createPortal } from 'react-dom'
 import type { Editor } from '@tiptap/react'
 import type { ScreenEl } from './screenplay'
 
-// Elements that have reusable, named values worth completing in place.
-const OWN_VOCAB = new Set<ScreenEl>(['character', 'scene', 'transition', 'shot'])
+// Element types with reusable, named values worth completing. Any of these can be
+// suggested from any line (accepting converts the line to that element).
+const VOCAB: ScreenEl[] = ['character', 'scene', 'transition', 'shot']
+const OWN_VOCAB = new Set<ScreenEl>(VOCAB)
 
 // A little starter vocabulary, merged with what you've actually written.
 const SEED: Partial<Record<ScreenEl, string[]>> = {
@@ -85,18 +87,22 @@ export default function ScreenplayAutocomplete({ editor, active }: Props) {
     return out
   }
 
-  // Suggestions for the paragraph the caret is in.
+  // Suggestions for the paragraph the caret is in: this element's own values
+  // first (completed in place), then matching values of the other vocabulary
+  // element types (accepting converts the line to that element, Celtx-style).
   const buildItems = (el: ScreenEl, query: string): AcItem[] => {
-    const items: AcItem[] = OWN_VOCAB.has(el)
-      ? collectFor(el, query).map((text) => ({ text }))
-      : []
-    // On an Action line, a known character name offers to turn the line into a
-    // Character cue (so you can just type the name and pick it).
-    if (el === 'action') {
-      const seen = new Set(items.map((i) => i.text.toLowerCase()))
-      for (const name of collectFor('character', query)) {
-        if (!seen.has(name.toLowerCase())) items.push({ text: name, el: 'character' })
-      }
+    const items: AcItem[] = []
+    const seen = new Set<string>()
+    const push = (text: string, convertTo?: ScreenEl) => {
+      const key = text.toLowerCase()
+      if (seen.has(key)) return
+      seen.add(key)
+      items.push(convertTo ? { text, el: convertTo } : { text })
+    }
+    if (OWN_VOCAB.has(el)) for (const t of collectFor(el, query)) push(t)
+    for (const other of VOCAB) {
+      if (other === el) continue
+      for (const t of collectFor(other, query)) push(t, other)
     }
     return items.slice(0, MAX_ITEMS)
   }
