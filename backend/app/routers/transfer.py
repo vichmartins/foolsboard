@@ -394,11 +394,12 @@ def _do_import(zf: zipfile.ZipFile, db: Session, user: User) -> list[Board]:
         id_map: dict[str, UUID] = {}
         for n in b.get("nodes") or []:
             content = n.get("content")
+            content = content if isinstance(content, dict) else {}
             node = Node(
                 board_id=board.id,
                 type=(str(n.get("type") or "note"))[:50],
                 title=(str(n.get("title") or ""))[:300],
-                content=content if isinstance(content, dict) else {},
+                content=content,
                 x=float(n.get("x") or 0),
                 y=float(n.get("y") or 0),
                 width=n.get("width"),
@@ -410,6 +411,7 @@ def _do_import(zf: zipfile.ZipFile, db: Session, user: User) -> list[Board]:
             if n.get("id"):
                 id_map[str(n["id"])] = node.id
 
+            primary: Asset | None = None  # first restored asset -> relinked into content
             for a in n.get("assets") or []:
                 if not isinstance(a, dict):
                     continue
@@ -426,18 +428,33 @@ def _do_import(zf: zipfile.ZipFile, db: Session, user: User) -> list[Board]:
                     if a.get("thumb")
                     else None
                 )
-                db.add(
-                    Asset(
-                        node_id=node.id,
-                        kind=kind,
-                        filename=(str(a.get("filename") or "file"))[:500],
-                        content_type=(str(a.get("content_type") or "application/octet-stream"))[:150],
-                        size=real_size,  # actual restored bytes, not the manifest's claim
-                        storage_key=key,
-                        thumbnail_key=thumb_restored[0] if thumb_restored else None,
-                        content_hash=a.get("content_hash"),
-                    )
+                asset = Asset(
+                    node_id=node.id,
+                    kind=kind,
+                    filename=(str(a.get("filename") or "file"))[:500],
+                    content_type=(str(a.get("content_type") or "application/octet-stream"))[:150],
+                    size=real_size,  # actual restored bytes, not the manifest's claim
+                    storage_key=key,
+                    thumbnail_key=thumb_restored[0] if thumb_restored else None,
+                    content_hash=a.get("content_hash"),
                 )
+                db.add(asset)
+                if primary is None:
+                    primary = asset
+
+            # A media node points at its file through content.assetId/url/thumbnailUrl,
+            # which were exported verbatim and still reference the SOURCE asset (a
+            # storage key that doesn't exist in this workspace). Relink them to the
+            # freshly-restored asset, or the node shows a broken/missing file.
+            if primary is not None and "assetId" in content:
+                db.flush()  # assign primary.id
+                content = dict(content)
+                content["assetId"] = str(primary.id)
+                content["url"] = storage.url_for(primary.storage_key)
+                content["thumbnailUrl"] = (
+                    storage.url_for(primary.thumbnail_key) if primary.thumbnail_key else None
+                )
+                node.content = content  # reassign so the JSON column change is tracked
 
         for e in b.get("edges") or []:
             if not isinstance(e, dict):

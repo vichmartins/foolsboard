@@ -114,3 +114,42 @@ def test_imported_asset_uses_real_bytes_and_fresh_key(client, admin, db):
     assert len(imported) == 1
     assert imported[0].size == 11               # actual restored bytes, not the manifest's 10
     assert imported[0].storage_key != "orig.bin"  # a fresh key, never reuses the source's
+
+
+def test_import_relinks_media_node_content(client, admin, db):
+    """A media node's content.assetId/url must be relinked to the freshly-restored
+    asset — otherwise it points at the source's storage key and shows nothing."""
+    token, _ = admin
+    bid = new_board(client, token, "WithMedia")
+    old = {
+        "assetId": "00000000-0000-0000-0000-000000000000",
+        "url": "/media/orig.bin",
+        "thumbnailUrl": "/media/orig-thumb.bin",
+        "mediaKind": "image",
+        "filename": "pic.png",
+    }
+    nid = new_node(client, token, bid, type="media", title="M", content=old)
+    store = pathlib.Path(settings.storage_local_dir)
+    (store / "orig.bin").write_bytes(b"hello-bytes")
+    make_asset(db, uuid.UUID(nid), filename="pic.png", storage_key="orig.bin", content_hash="h1")
+
+    ex = client.post("/api/boards/export", json={"board_ids": [bid]}, headers=auth(token))
+    assert ex.status_code == 200, ex.text
+    imp = client.post(
+        "/api/boards/import",
+        files={"file": ("b.zip", io.BytesIO(ex.content), "application/zip")},
+        headers=auth(token),
+    )
+    assert imp.status_code == 200, imp.text
+    new_board_id = uuid.UUID(imp.json()[0]["id"])
+
+    node_ids = list(db.scalars(select(Node.id).where(Node.board_id == new_board_id)))
+    imported_asset = list(db.scalars(select(Asset).where(Asset.node_id.in_(node_ids))))[0]
+    graph = client.get(f"/api/boards/{new_board_id}/graph", headers=auth(token)).json()
+    media_node = next(n for n in graph["nodes"] if n["type"] == "media")
+    c = media_node["content"]
+    assert c["assetId"] == str(imported_asset.id)   # points at the new asset, not the source
+    assert c["assetId"] != old["assetId"]
+    assert c["url"] != old["url"]                    # fresh URL, not the stale source key
+    assert imported_asset.storage_key in c["url"]
+    assert c["thumbnailUrl"] is None                # source had no thumb -> cleared, not stale
