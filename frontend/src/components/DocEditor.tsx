@@ -14,6 +14,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import Collaboration from '@tiptap/extension-collaboration'
 import CollaborationCaret from '@tiptap/extension-collaboration-caret'
 import * as Y from 'yjs'
+import { removeAwarenessStates } from 'y-protocols/awareness'
 import * as api from '../api'
 import type { StoryNode } from '../types'
 import { useAuth } from '../auth'
@@ -186,6 +187,11 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
       // stale reloaded clients). Prefer an "active" status if any of a person's
       // connections is editing.
       const byPerson = new Map<string, { name: string; color: string; status: DocStatus }>()
+      // Any awareness state that claims to be ME but isn't my current connection is
+      // a ghost from a prior tab/refresh — page unload can't reliably broadcast its
+      // removal, so it lingers as a duplicate cursor + avatar until Yjs's ~30s
+      // timeout. Remove those (and broadcast it) so they clear for everyone at once.
+      const myGhosts: number[] = []
       aw.getStates().forEach((state, clientId) => {
         if (clientId === aw.clientID) return // skip my own connection
         const s = state as {
@@ -194,6 +200,10 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
         }
         const u = s.user
         if (!u?.name) return
+        if (meId && u.id === meId) {
+          myGhosts.push(clientId)
+          return
+        }
         const key = u.id || `c${clientId}`
         const status: DocStatus =
           s.docStatus === 'editing' || s.docStatus === 'afk' ? s.docStatus : 'viewing'
@@ -204,6 +214,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
           byPerson.set(key, { name: u.name, color: u.color || '#888', status })
         }
       })
+      if (myGhosts.length) removeAwarenessStates(aw, myGhosts, 'local')
       setPeers([...byPerson.entries()].map(([key, v]) => ({ key, ...v })))
     }
     aw.on('change', refresh)
