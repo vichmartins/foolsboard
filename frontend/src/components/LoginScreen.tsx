@@ -125,7 +125,7 @@ export default function LoginScreen() {
         </div>
 
         <button className="btn btn--primary auth-submit" type="submit" disabled={busy}>
-          {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
+          {busy ? 'Please wait…' : mode === 'login' ? 'Sign In' : 'Create Account'}
         </button>
 
         <button

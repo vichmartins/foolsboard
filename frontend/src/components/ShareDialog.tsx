@@ -112,7 +112,7 @@ export default function ShareDialog({ resourceType, resourceId, resourceName, on
                 <button
                   type="button"
                   className="icon-btn icon-btn--danger"
-                  title="Remove access"
+                  title="Remove Access"
                   aria-label="Remove access"
                   onClick={() => remove(s.id)}
                 >

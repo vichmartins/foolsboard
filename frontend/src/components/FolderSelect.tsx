@@ -278,7 +278,7 @@ export default function FolderSelect({
                     <>
                       <button
                         className="folder-row__act"
-                        title="Share folder"
+                        title="Share Folder"
                         aria-label="Share folder"
                         onClick={() => onShare(f)}
                       >
@@ -297,7 +297,7 @@ export default function FolderSelect({
                       </button>
                       <button
                         className="folder-row__act folder-row__act--danger"
-                        title="Delete folder (boards are kept)"
+                        title="Delete Folder (boards are kept)"
                         aria-label="Delete folder"
                         onClick={() => onDelete(f.id)}
                       >

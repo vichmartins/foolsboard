@@ -14,7 +14,7 @@ import { useBoardId } from '../boardContext'
 import { useRegisterNodeEdit } from '../nodeEditContext'
 import { collabColor } from '../collab'
 import { realtime } from '../realtime'
-import { DownloadIcon, FlipIcon, ResizeGripIcon, RotateIcon } from './icons'
+import { FlipIcon, ResizeGripIcon, RotateIcon } from './icons'
 
 const SIDES: Position[] = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
@@ -168,7 +168,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
     <button
       type="button"
       className="media-node__flip nodrag"
-      title="Flip horizontally (mirror)"
+      title="Flip Horizontally (mirror)"
       aria-label="Flip horizontally"
       aria-pressed={flipH}
       onClick={(e) => {
@@ -286,7 +286,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
       <button
         type="button"
         className="media-node__del nodrag"
-        title="Remove from board"
+        title="Remove from Board"
         aria-label="Remove from board"
         onClick={(e) => {
           e.stopPropagation()
@@ -328,7 +328,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
           href={safeHref(url)}
           target="_blank"
           rel="noreferrer noopener"
-          title="Open link"
+          title="Open Link"
           onClick={(e) => e.stopPropagation()}
         >
           ↗
@@ -341,18 +341,6 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   const mk = str('mediaKind') || 'file'
   const url = str('url')
   const thumb = str('thumbnailUrl')
-  const downloadBtn = url ? (
-    <a
-      className="media-node__dl nodrag"
-      href={url}
-      download={filename}
-      title="Download"
-      aria-label="Download"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <DownloadIcon />
-    </a>
-  ) : null
 
   // Created node before its upload finished: show a placeholder.
   if (!url) {
@@ -426,7 +414,6 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   return (
     <div className={'media-node media-node--' + mk} style={ring}>
       {handles}
-      {downloadBtn}
       {mk === 'image' && selected && rotateHandle}
       {mk === 'image' && flipBtn}
       <div className="media-node__body">{body}</div>

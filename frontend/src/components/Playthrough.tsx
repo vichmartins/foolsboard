@@ -1,11 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { generateHTML } from '@tiptap/core'
-import StarterKit from '@tiptap/starter-kit'
-import TaskList from '@tiptap/extension-task-list'
-import TaskItem from '@tiptap/extension-task-item'
-import { TableKit } from '@tiptap/extension-table'
-import Image from '@tiptap/extension-image'
 
 import {
   isMediaNodeType,
@@ -20,19 +15,7 @@ import {
   type LinkRef,
   type StoryNode,
 } from '../types'
-import { ScreenplayElement } from './screenplay'
-
-// Schema extensions needed to render a stored doc (content.doc JSON) back to HTML
-// read-only. Must cover every node/mark the editor can produce; ScreenplayElement
-// preserves the data-element attribute so screenplay formatting still applies.
-const DOC_RENDER_EXTENSIONS = [
-  StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: { openOnClick: false } }),
-  TaskList,
-  TaskItem.configure({ nested: true }),
-  TableKit,
-  Image,
-  ScreenplayElement,
-]
+import { DOC_RENDER_EXTENSIONS } from './docExport'
 
 // A connection reduced to what the reader needs: where it goes and its label
 // (the label becomes a choice at a branch).

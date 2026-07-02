@@ -132,9 +132,9 @@ export default function AdminUsers() {
 
       {confirmDelete && (
         <ConfirmDialog
-          title="Delete account?"
+          title="Delete Account?"
           message={`"${confirmDelete.username}" and all of their boards, objects, links, and media will be permanently deleted.`}
-          confirmLabel="Delete account"
+          confirmLabel="Delete Account"
           danger
           onConfirm={() => remove(confirmDelete)}
           onCancel={() => setConfirmDelete(null)}

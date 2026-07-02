@@ -570,7 +570,7 @@ export default function ContextPanel({
           <h3 title={title || 'Media'}>{title || 'Media'}</h3>
           <button
             className="icon-btn"
-            title="Collapse gallery"
+            title="Collapse Gallery"
             aria-label="Collapse gallery"
             onClick={toggleMedia}
           >
@@ -751,7 +751,7 @@ export default function ContextPanel({
 
       {confirmDelete && (
         <ConfirmDialog
-          title="Delete object?"
+          title="Delete Object?"
           message={`"${title || 'Untitled'}" and its media will be permanently deleted.`}
           confirmLabel="Delete"
           danger

@@ -91,7 +91,7 @@ export default function NearbyNodes({ nodes, onAddMedia, onAddLinks }: Props) {
     <div className="nearby">
       <div className="nearby__controls">
         <input
-          className="nearby__search"
+          className="nearby__search search-input"
           type="search"
           placeholder="Search nodes…"
           title="Supports regular expressions"

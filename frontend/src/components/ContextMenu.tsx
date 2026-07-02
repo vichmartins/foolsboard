@@ -1,7 +1,7 @@
 // A small floating context menu anchored at a screen position.
 // Closes on outside click, another right-click, or Escape — with a brief
 // exit animation before it actually unmounts.
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 const CLOSE_MS = 120
 
@@ -41,6 +41,38 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
   const ref = useRef<HTMLUListElement>(null)
   const [closing, setClosing] = useState(false)
   const timer = useRef<number | null>(null)
+  // Adaptive placement: default down-right from the cursor, but flip up and/or
+  // left when the menu would overflow the viewport, then clamp to a small margin.
+  // Measured in a layout effect so the corrected position paints without a flash.
+  const [pos, setPos] = useState<{ top: number; left: number; origin: string }>({
+    top: y,
+    left: x,
+    origin: 'top left',
+  })
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const m = 6 // keep a small gap from the edge
+    const w = el.offsetWidth
+    const h = el.offsetHeight
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    let left = x
+    let flipX = false
+    if (x + w > vw - m && x - w >= m) {
+      left = x - w // not enough room to the right -> open leftward
+      flipX = true
+    }
+    left = Math.max(m, Math.min(left, vw - w - m))
+    let top = y
+    let flipY = false
+    if (y + h > vh - m && y - h >= m) {
+      top = y - h // not enough room below -> open upward
+      flipY = true
+    }
+    top = Math.max(m, Math.min(top, vh - h - m))
+    setPos({ top, left, origin: `${flipY ? 'bottom' : 'top'} ${flipX ? 'right' : 'left'}` })
+  }, [x, y, items])
   // Latest props for the stable, mount-once handlers below.
   const itemsRef = useRef(items)
   itemsRef.current = items
@@ -99,7 +131,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
     <ul
       ref={ref}
       className={'ctx-menu' + (closing ? ' ctx-menu--closing' : '')}
-      style={{ top: y, left: x }}
+      style={{ top: pos.top, left: pos.left, transformOrigin: pos.origin }}
       onContextMenu={(e) => e.preventDefault()}
     >
       {items.map((it, i) => (

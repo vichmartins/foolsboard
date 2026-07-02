@@ -120,7 +120,7 @@ export default function AdminLogs() {
           className="admin-logs__select"
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
-          title="Filter by user"
+          title="Filter by User"
         >
           <option value="">All users</option>
           {users.map((u) => (
@@ -135,7 +135,7 @@ export default function AdminLogs() {
             className="admin-logs__select"
             value={action}
             onChange={(e) => setAction(e.target.value)}
-            title="Filter by action"
+            title="Filter by Action"
           >
             <option value="">All actions</option>
             {actions.map((a) => (
@@ -151,7 +151,7 @@ export default function AdminLogs() {
             className="admin-logs__select"
             value={statusClass}
             onChange={(e) => setStatusClass(e.target.value)}
-            title="Filter by status"
+            title="Filter by Status"
           >
             <option value="">All statuses</option>
             <option value="2">2xx — success</option>
@@ -162,7 +162,7 @@ export default function AdminLogs() {
         )}
 
         <input
-          className="admin-logs__search"
+          className="admin-logs__search search-input"
           type="search"
           placeholder="Filter loaded rows…"
           title="Supports regular expressions"
@@ -219,7 +219,7 @@ export default function AdminLogs() {
 
       {!done && (
         <button className="btn admin-logs__more" onClick={() => load(false)} disabled={loading}>
-          {loading ? 'Loading…' : 'Load more'}
+          {loading ? 'Loading…' : 'Load More'}
         </button>
       )}
     </div>

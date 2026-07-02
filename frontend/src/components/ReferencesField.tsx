@@ -76,7 +76,7 @@ export default function ReferencesField({ value, onChange }: Props) {
           onClick={() => void add()}
           disabled={loading || !url.trim()}
           aria-label="Add link"
-          title="Add link"
+          title="Add Link"
         >
           {loading ? '…' : '+'}
         </button>

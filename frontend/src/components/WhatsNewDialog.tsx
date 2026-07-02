@@ -190,7 +190,7 @@ export default function WhatsNewDialog({ onClose }: { onClose: () => void }) {
         </div>
         <div className="whatsnew__actions">
           <button className="btn btn--primary" onClick={onClose}>
-            Got it
+            Got It
           </button>
         </div>
       </div>

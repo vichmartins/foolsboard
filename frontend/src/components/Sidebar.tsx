@@ -5,10 +5,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { Board, Category, Folder, StoryNode, MediaNodeContent, DocNodeContent } from '../types'
 import { KIND_COLORS, OBJECT_COLOR, typeLabel, nodePreview, isMediaNodeType } from '../types'
+import { downloadAsset } from '../types'
 import * as api from '../api'
 import { makeMatcher } from '../search'
 import { useGlobalPresence } from '../realtime'
 import ContextMenu from './ContextMenu'
+import ConfirmDialog from './ConfirmDialog'
+import { exportDocNodePdf } from './docExport'
 import ShareMark from './ShareMark'
 import {
   BoardIcon,
@@ -45,6 +48,11 @@ interface Props {
   // canvas. `open` also opens its editor (panel / doc overlay) — set on
   // double-click. Used by the board-contents drill-in view.
   onOpenObject: (boardId: string, nodeId: string, open: boolean) => void
+  // A drill-in object was renamed/duplicated/deleted — refresh the canvas (if
+  // it's showing that board) and notify collaborators.
+  onObjectsMutated: (boardId: string) => void
+  // Start a playthrough from an object (board must be the one open on the canvas).
+  onPlayObject: (boardId: string, nodeId: string) => void
   onRenameFolder: (id: string, name: string) => void
   onDeleteFolder: (id: string) => void
   onShareFolder: (folder: Folder) => void
@@ -140,6 +148,8 @@ export default function Sidebar(props: Props) {
     boardRev,
     onSelectBoard,
     onOpenObject,
+    onObjectsMutated,
+    onPlayObject,
     onRenameFolder,
     onDeleteFolder,
     onShareFolder,
@@ -314,6 +324,89 @@ export default function Sidebar(props: Props) {
     // objectName is stable enough for this list; recompute on data/filter change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drillNodes, objFilter])
+
+  // --- drill-in object actions (right-click menu) ---------------------------
+  const [objMenu, setObjMenu] = useState<{ x: number; y: number; node: StoryNode } | null>(null)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameVal, setRenameVal] = useState('')
+  const [deleteObj, setDeleteObj] = useState<StoryNode | null>(null)
+
+  const startRenameObj = (n: StoryNode) => {
+    setObjMenu(null)
+    setRenamingId(n.id)
+    setRenameVal(n.title || '')
+  }
+  const submitRenameObj = async (n: StoryNode) => {
+    const t = renameVal.trim()
+    setRenamingId(null)
+    if (!drill || !t || t === n.title) return
+    setDrillNodes((ns) => ns?.map((x) => (x.id === n.id ? { ...x, title: t } : x)) ?? null)
+    try {
+      await api.updateNode(drill.id, n.id, { title: t })
+    } catch {
+      /* leave the optimistic value; a later refresh reconciles */
+    }
+    onObjectsMutated(drill.id)
+  }
+  const duplicateObj = async (n: StoryNode) => {
+    if (!drill) return
+    const bid = drill.id
+    try {
+      let copy = await api.createNode(bid, {
+        type: n.type,
+        title: n.title,
+        content: n.content,
+        x: (n.x ?? 0) + 24,
+        y: (n.y ?? 0) + 24,
+        width: n.width ?? undefined,
+        height: n.height ?? undefined,
+        color: n.color ?? undefined,
+      })
+      // Media copies need their own asset row (sharing the file) so rename/delete
+      // work independently — mirrors the canvas's duplicate. [[media-asset-per-node]]
+      const content = (n.content ?? {}) as Record<string, unknown>
+      const srcAssetId = content.assetId
+      if (typeof srcAssetId === 'string') {
+        try {
+          const refs = await api.referenceAssets(copy.id, [srcAssetId])
+          const a = refs[0]
+          if (a)
+            copy = await api.updateNode(bid, copy.id, {
+              content: { ...content, assetId: a.id, url: a.url, thumbnailUrl: a.thumbnail_url },
+            })
+        } catch {
+          /* asset gone/unowned — keep the plain copy */
+        }
+      }
+      setDrillNodes((ns) => [...(ns ?? []), copy])
+      onObjectsMutated(bid)
+    } catch {
+      /* create failed — nothing to add */
+    }
+  }
+  const deleteObjNow = async (n: StoryNode) => {
+    setDeleteObj(null)
+    if (!drill) return
+    const bid = drill.id
+    setDrillNodes((ns) => (ns ?? []).filter((x) => x.id !== n.id))
+    try {
+      await api.deleteNode(bid, n.id)
+    } catch {
+      /* ignore — optimistic removal already applied */
+    }
+    onObjectsMutated(bid)
+  }
+  const downloadObj = (n: StoryNode) => {
+    if (n.type === 'doc') {
+      exportDocNodePdf(n)
+      return
+    }
+    const c = (n.content ?? {}) as MediaNodeContent
+    if (c.url) downloadAsset({ url: c.url, filename: c.filename || 'file' })
+  }
+  // Media objects can be downloaded (their file); documents export to PDF.
+  const canDownload = (n: StoryNode): boolean =>
+    n.type === 'doc' || (n.type === 'media' && !!(n.content as MediaNodeContent)?.url)
 
   const toggle = (set: Set<string>, key: string, id: string, save: (s: Set<string>) => void) => {
     const n = new Set(set)
@@ -753,7 +846,7 @@ export default function Sidebar(props: Props) {
             <span className="tree-folder__tools">
               <button
                 className="icon-btn"
-                title="New board in folder"
+                title="New Board in Folder"
                 aria-label="New board in folder"
                 onClick={() => beginCreate('folder:' + f.id, 'board')}
               >
@@ -876,7 +969,7 @@ export default function Sidebar(props: Props) {
               <div className="sidebar__head sidebar__head--back">
                 <button
                   className="tree-back"
-                  title="Back to explorer"
+                  title="Back to Explorer"
                   aria-label="Back to explorer"
                   onClick={() => {
                     drillReq.current++
@@ -892,8 +985,10 @@ export default function Sidebar(props: Props) {
               </div>
               <div className="obj-filter">
                 <input
-                  className="obj-filter__input"
+                  className="obj-filter__input search-input"
+                  type="search"
                   placeholder="Filter objects…"
+                  title="Supports regular expressions"
                   value={objFilter}
                   onChange={(e) => setObjFilter(e.target.value)}
                 />
@@ -910,23 +1005,42 @@ export default function Sidebar(props: Props) {
                         : 'No matches.'}
                   </div>
                 ) : (
-                  drillList.map((n) => (
-                    <button
-                      key={n.id}
-                      className="tree-obj-row"
-                      title={`${objectName(n)} · double-click to open`}
-                      onClick={() => onOpenObject(drill.id, n.id, false)}
-                      onDoubleClick={() => onOpenObject(drill.id, n.id, true)}
-                    >
-                      <span
-                        className="tree-obj__dot"
-                        style={{ background: objectColor(n) }}
-                        aria-hidden="true"
+                  drillList.map((n) =>
+                    renamingId === n.id ? (
+                      <input
+                        key={n.id}
+                        className="tree-input"
+                        autoFocus
+                        value={renameVal}
+                        onChange={(e) => setRenameVal(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void submitRenameObj(n)
+                          if (e.key === 'Escape') setRenamingId(null)
+                        }}
+                        onBlur={() => void submitRenameObj(n)}
                       />
-                      <span className="tree-obj__name">{objectName(n)}</span>
-                      <span className="tree-obj__tag">{typeLabel(n.type)}</span>
-                    </button>
-                  ))
+                    ) : (
+                      <button
+                        key={n.id}
+                        className="tree-obj-row"
+                        title={`${objectName(n)} · double-click to open`}
+                        onClick={() => onOpenObject(drill.id, n.id, false)}
+                        onDoubleClick={() => onOpenObject(drill.id, n.id, true)}
+                        onContextMenu={(e) => {
+                          e.preventDefault()
+                          setObjMenu({ x: e.clientX, y: e.clientY, node: n })
+                        }}
+                      >
+                        <span
+                          className="tree-obj__dot"
+                          style={{ background: objectColor(n) }}
+                          aria-hidden="true"
+                        />
+                        <span className="tree-obj__name">{objectName(n)}</span>
+                        <span className="tree-obj__tag">{typeLabel(n.type)}</span>
+                      </button>
+                    ),
+                  )
                 )}
               </div>
             </>
@@ -1067,7 +1181,7 @@ export default function Sidebar(props: Props) {
                       <span className="tree-cat__tools">
                         <button
                           className="icon-btn"
-                          title="Add folder or board"
+                          title="Add Folder or Board"
                           aria-label="Add to category"
                           onClick={(e) => setAddMenu({ x: e.clientX, y: e.clientY, catId: c.id })}
                         >
@@ -1086,7 +1200,7 @@ export default function Sidebar(props: Props) {
                         </button>
                         <button
                           className="icon-btn icon-btn--danger"
-                          title="Delete category"
+                          title="Delete Category"
                           aria-label="Delete category"
                           onClick={() => onDeleteCategory(c.id)}
                         >
@@ -1141,12 +1255,12 @@ export default function Sidebar(props: Props) {
           items={
             menu.board.shared
               ? [
-                  { label: 'View objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
+                  { label: 'View Objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
                   { label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) },
                   { label: 'Create Private Copy', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },
                 ]
               : [
-                  { label: 'View objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
+                  { label: 'View Objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
                   { label: 'Rename', mnemonic: 'r', onClick: () => startRenameBoard(menu.board) },
                   { label: 'Move to…', mnemonic: 'v', onClick: () => onMoveBoard(menu.board) },
                   { label: 'Share', mnemonic: 's', onClick: () => onShareBoard(menu.board) },
@@ -1154,19 +1268,19 @@ export default function Sidebar(props: Props) {
                   ...(menu.board.is_template
                     ? [
                         {
-                          label: 'New board from template',
+                          label: 'New Board from Template',
                           mnemonic: 'n',
                           onClick: () => onCreatePrivateCopy(menu.board),
                         },
                         {
-                          label: 'Remove from templates',
+                          label: 'Remove from Templates',
                           mnemonic: 't',
                           onClick: () => onSetTemplate(menu.board, false),
                         },
                       ]
                     : [
                         {
-                          label: 'Save as template',
+                          label: 'Save as Template',
                           mnemonic: 't',
                           onClick: () => onSetTemplate(menu.board, true),
                         },
@@ -1232,6 +1346,62 @@ export default function Sidebar(props: Props) {
             },
           ]}
           onClose={() => setFolderMenu(null)}
+        />
+      )}
+
+      {objMenu && (
+        <ContextMenu
+          x={objMenu.x}
+          y={objMenu.y}
+          items={[
+            {
+              label: 'Open',
+              mnemonic: 'o',
+              onClick: () => onOpenObject(objMenu.node.board_id, objMenu.node.id, true),
+            },
+            { label: 'Rename', mnemonic: 'r', onClick: () => startRenameObj(objMenu.node) },
+            { label: 'Duplicate', mnemonic: 'd', onClick: () => void duplicateObj(objMenu.node) },
+            ...(canDownload(objMenu.node)
+              ? [
+                  {
+                    label: objMenu.node.type === 'doc' ? 'Download as PDF' : 'Download',
+                    mnemonic: 'w',
+                    onClick: () => downloadObj(objMenu.node),
+                  },
+                ]
+              : []),
+            ...(drill && drill.id === activeId
+              ? [
+                  {
+                    label: 'Play from Here',
+                    mnemonic: 'p',
+                    onClick: () => onPlayObject(objMenu.node.board_id, objMenu.node.id),
+                  },
+                ]
+              : []),
+            {
+              label: 'Delete',
+              mnemonic: 'l',
+              danger: true,
+              onClick: () => setDeleteObj(objMenu.node),
+            },
+          ]}
+          onClose={() => setObjMenu(null)}
+        />
+      )}
+
+      {deleteObj && (
+        <ConfirmDialog
+          title="Delete Object?"
+          danger
+          confirmLabel="Delete"
+          message={
+            <>
+              Delete <strong>{objectName(deleteObj)}</strong>? This can’t be undone.
+            </>
+          }
+          onCancel={() => setDeleteObj(null)}
+          onConfirm={() => void deleteObjNow(deleteObj)}
         />
       )}
     </>

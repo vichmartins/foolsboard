@@ -82,7 +82,7 @@ export default function AccountDialog({ onClose }: { onClose: () => void }) {
           )}
           <div className="account-avatar__actions">
             <button type="button" className="btn" onClick={() => fileRef.current?.click()}>
-              Upload photo
+              Upload Photo
             </button>
             {user.avatar_url && (
               <button type="button" className="btn" onClick={removeAvatar}>
@@ -104,12 +104,12 @@ export default function AccountDialog({ onClose }: { onClose: () => void }) {
           </label>
           {profileMsg && <p className="account-msg">{profileMsg}</p>}
           <button className="btn btn--primary" type="submit" disabled={profileBusy}>
-            Save profile
+            Save Profile
           </button>
         </form>
 
         <form className="account-section" onSubmit={changePassword}>
-          <h3 className="account-h3">Change password</h3>
+          <h3 className="account-h3">Change Password</h3>
           <label className="field">
             <span>Current password</span>
             <input type="password" value={curPw} onChange={(e) => setCurPw(e.target.value)} />
@@ -124,7 +124,7 @@ export default function AccountDialog({ onClose }: { onClose: () => void }) {
             type="submit"
             disabled={pwBusy || !curPw || newPw.length < 8}
           >
-            Update password
+            Update Password
           </button>
         </form>
 

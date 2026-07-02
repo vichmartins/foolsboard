@@ -154,7 +154,7 @@ export default function CategorySelect({
                   </button>
                   <button
                     className="folder-row__act folder-row__act--danger"
-                    title="Delete category (items are kept)"
+                    title="Delete Category (items are kept)"
                     aria-label="Delete category"
                     onClick={() => onDelete(c.id)}
                   >

@@ -91,7 +91,7 @@ export default function AdminInvites() {
             options={DURATIONS.map((d) => ({ value: String(d.minutes), label: d.label }))}
           />
           <button className="btn btn--primary" onClick={generate} disabled={busy}>
-            {busy ? 'Generating…' : 'Generate code'}
+            {busy ? 'Generating…' : 'Generate Code'}
           </button>
         </div>
       </div>
@@ -146,7 +146,7 @@ export default function AdminInvites() {
                 <button
                   type="button"
                   className="icon-btn icon-btn--danger"
-                  title="Delete code"
+                  title="Delete Code"
                   aria-label="Delete code"
                   onClick={() => revoke(inv.id)}
                 >
