@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.95.2
+
+- improve: The document context-menu action is now labelled **Export as PDF**
+  (was "Download as PDF"), on both the canvas and the Explorer.
+
 ## v0.95.1
 
 - fix: **Media survives board import.** Importing a board into another workspace no

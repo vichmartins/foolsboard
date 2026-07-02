@@ -1364,7 +1364,7 @@ export default function Sidebar(props: Props) {
             ...(canDownload(objMenu.node)
               ? [
                   {
-                    label: objMenu.node.type === 'doc' ? 'Download as PDF' : 'Download',
+                    label: objMenu.node.type === 'doc' ? 'Export as PDF' : 'Download',
                     mnemonic: 'w',
                     onClick: () => downloadObj(objMenu.node),
                   },

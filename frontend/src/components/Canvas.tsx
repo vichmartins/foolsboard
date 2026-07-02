@@ -2282,7 +2282,7 @@ function CanvasInner({
             ...(menuStory?.type === 'doc'
               ? [
                   {
-                    label: 'Download as PDF',
+                    label: 'Export as PDF',
                     mnemonic: 'w',
                     onClick: () => exportDocNodePdf(menuStory),
                   },
