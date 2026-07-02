@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.95.0
+
+- feat: **Expandable Document cards on the canvas.** Document objects now have the
+  same hover ▾ chevron as the other object cards — expand it for a scrollable,
+  formatted preview of the document (or screenplay) right on the canvas, without
+  opening the editor. Double-click still opens the full editor.
+- fix: Document cards now match the other object cards' **background color** and
+  **drop shadow** (they were using the darker media tone and had no shadow).
+
 ## v0.94.0
 
 - feat: **Right-click menu for objects in the Explorer.** In a board's object list,

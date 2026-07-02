@@ -2354,16 +2354,18 @@
   position: relative;
   width: 210px;
   min-height: 120px;
-  max-height: 220px;
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 12px 14px;
-  background: var(--bg-elev-2);
+  background: var(--bg-elev); /* match the story object cards, not the darker media tone */
   border: 2px solid transparent;
   border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35); /* same lift as the story object cards */
   /* No overflow:hidden — it would clip the connection handles that sit on the
-     card's edges. The preview clamps its own text instead. */
+     card's edges. Collapsed, the plain preview clamps its own text; expanded, the
+     rendered preview caps + scrolls itself, and the card grows to contain it (no
+     fixed max-height, or the scroll area would spill past the card's border). */
 }
 .doc-node__head {
   display: flex;
@@ -2401,6 +2403,81 @@
 .doc-node__empty {
   font-style: italic;
   opacity: 0.7;
+}
+/* In-card expand chevron (mirrors the story card's toggle). */
+.doc-node__toggle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: var(--bg-elev-2);
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.22s ease, background 0.15s ease, color 0.15s ease;
+}
+.doc-node:hover .doc-node__toggle,
+.doc-node__toggle--open {
+  opacity: 1;
+}
+.doc-node__toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.doc-node__toggle--open {
+  transform: rotate(180deg);
+}
+/* Smoothly grow/shrink the preview area (0fr -> 1fr row). */
+.doc-node__more {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.doc-node__more--open {
+  grid-template-rows: 1fr;
+}
+.doc-node__more-inner {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.doc-node__more--open .doc-node__more-inner {
+  opacity: 1;
+}
+.doc-node__more-empty {
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+/* The rendered document preview: capped height, scrollable (nowheel lets it
+   scroll without zooming the canvas). Reuses .pt-doc element styling, scaled down. */
+.doc-node__render {
+  max-height: 220px;
+  overflow: auto;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.doc-node__render.pt-doc {
+  font-size: 11px;
+  line-height: 1.5;
+}
+.doc-node__render img {
+  max-width: 100%;
+  height: auto;
 }
 
 /* ---- Doc editor (full-screen overlay) ------------------------------------ */
