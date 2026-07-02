@@ -1361,21 +1361,21 @@ export default function Sidebar(props: Props) {
             },
             { label: 'Rename', mnemonic: 'r', onClick: () => startRenameObj(objMenu.node) },
             { label: 'Duplicate', mnemonic: 'd', onClick: () => void duplicateObj(objMenu.node) },
-            ...(canDownload(objMenu.node)
-              ? [
-                  {
-                    label: objMenu.node.type === 'doc' ? 'Export as PDF' : 'Download',
-                    mnemonic: 'w',
-                    onClick: () => downloadObj(objMenu.node),
-                  },
-                ]
-              : []),
             ...(drill && drill.id === activeId
               ? [
                   {
                     label: 'Play from Here',
                     mnemonic: 'p',
                     onClick: () => onPlayObject(objMenu.node.board_id, objMenu.node.id),
+                  },
+                ]
+              : []),
+            ...(canDownload(objMenu.node)
+              ? [
+                  {
+                    label: objMenu.node.type === 'doc' ? 'Export as PDF' : 'Download',
+                    mnemonic: objMenu.node.type === 'doc' ? 'x' : 'w',
+                    onClick: () => downloadObj(objMenu.node),
                   },
                 ]
               : []),

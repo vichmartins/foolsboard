@@ -39,6 +39,7 @@ import {
   RedoIcon,
 } from './icons'
 import PresenceBar from './PresenceBar'
+import ScreenplayAutocomplete from './ScreenplayAutocomplete'
 import type { MemberActivity } from '../realtime'
 
 export type DocStatus = 'editing' | 'viewing' | 'afk'
@@ -584,6 +585,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
       <div className="doc-editor__scroll">
         <EditorContent className="doc-editor__content" editor={editor} />
       </div>
+      <ScreenplayAutocomplete editor={editor} active={mode === 'script'} />
     </div>
   )
 }

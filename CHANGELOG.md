@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.96.0
+
+- feat: **Screenplay autocomplete (Celtx-style).** While writing a Character,
+  Scene, Transition, or Shot element, a dropdown suggests values you've already
+  used in the document (plus built-in transitions, shots, and INT./EXT. prefixes).
+  ↑/↓ to navigate, Tab/Enter or click to accept; the element's indentation is
+  applied automatically. Free-form Action/Dialogue lines are left alone.
+
 ## v0.95.2
 
 - improve: The document context-menu action is now labelled **Export as PDF**
