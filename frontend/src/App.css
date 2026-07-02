@@ -2755,6 +2755,40 @@ b.doc-tb__glyph {
   padding: 64px 76px 120px;
   min-height: 70vh;
 }
+/* Screenplay autocomplete dropdown (Celtx-style), portaled to body at the caret. */
+.sp-ac {
+  position: fixed;
+  z-index: 3000;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  min-width: 160px;
+  max-width: 320px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+.sp-ac__item {
+  display: block;
+  width: 100%;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sp-ac__item--active,
+.sp-ac__item:hover {
+  background: var(--accent);
+  color: #fff;
+}
 .doc-editor__content .ProseMirror {
   outline: none;
   color: var(--text);
