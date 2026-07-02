@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import * as api from './api'
 import { useAuth } from './auth'
 import AccountDialog from './components/AccountDialog'
@@ -106,6 +106,10 @@ function Workspace() {
   // The live status of a doc editor this user has open (editing/viewing/afk), or
   // null when none — drives what collaborators see in the board presence bar.
   const [docStatus, setDocStatus] = useState<'editing' | 'viewing' | 'afk' | null>(null)
+  // Bumped whenever the active board's object set changes, so the explorer's
+  // board-contents drill-in can refresh its list live.
+  const [boardRev, setBoardRev] = useState(0)
+  const bumpBoardRev = useCallback(() => setBoardRev((n) => n + 1), [])
   // Source boards to merge into the active board; handed to Canvas to import.
   const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
   // Selected object ids awaiting a move destination (opens the move dialog).
@@ -777,6 +781,7 @@ function Workspace() {
           categories={categories}
           orderedTop={computeOrderedTop()}
           activeId={activeId}
+          boardRev={boardRev}
           onSelectBoard={setActiveId}
           onOpenObject={(bid, nid, open) => {
             setActiveId(bid)
@@ -847,6 +852,7 @@ function Workspace() {
             }
             focusOpen={!!pendingFocus?.open}
             onFocusHandled={() => setPendingFocus(null)}
+            onBoardChanged={bumpBoardRev}
           />
         ) : (
           <div className="loading">Loading…</div>

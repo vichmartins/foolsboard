@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.93.1
+
+- fix: **Search boxes handle glob-style queries.** A query that isn't valid regex
+  (e.g. `*New*`) is now treated as a forgiving wildcard — `*` matches any run of
+  characters and `?` any single character — instead of finding nothing. Valid
+  regex still works as full regex.
+- fix: **The Explorer's object list refreshes live.** Objects created, renamed, or
+  deleted on the canvas (by you or a collaborator) now appear in the board-contents
+  drill-in without leaving and re-entering it.
+
 ## v0.93.0
 
 - feat: **Browse a board's objects in the Explorer.** Double-click a board (or use

@@ -37,6 +37,9 @@ interface Props {
   folders: Folder[]
   categories: Category[]
   activeId: string | null
+  // Bumped when the active board's object set changes, so the board-contents
+  // drill-in can refresh itself live while it's showing that board.
+  boardRev: number
   onSelectBoard: (id: string) => void
   // Navigate to a specific object: open its board and focus/select it on the
   // canvas. `open` also opens its editor (panel / doc overlay) — set on
@@ -134,6 +137,7 @@ export default function Sidebar(props: Props) {
     folders,
     categories,
     activeId,
+    boardRev,
     onSelectBoard,
     onOpenObject,
     onRenameFolder,
@@ -261,6 +265,25 @@ export default function Sidebar(props: Props) {
       setDrill(null)
     }
   }, [boards, drill])
+  // Live refresh: while drilled into the board that's open on the canvas, refetch
+  // its objects whenever they change (boardRev bump) so newly created/renamed/
+  // deleted objects show up without leaving and re-entering. Quietly replaces the
+  // list (no "Loading…" flash), debounced to coalesce bursts. Skips boardRev === 0
+  // (nothing has changed yet) so opening the drill doesn't double-fetch.
+  useEffect(() => {
+    if (!drill || drill.id !== activeId || boardRev === 0) return
+    const req = ++drillReq.current
+    const t = window.setTimeout(() => {
+      api
+        .getGraph(drill.id)
+        .then((g) => {
+          if (drillReq.current === req) setDrillNodes(g.nodes)
+        })
+        .catch(() => {})
+    }, 200)
+    return () => window.clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boardRev])
 
   // A readable name for an object row: its title, else a type-appropriate
   // fallback (filename for media, first line for docs, field preview otherwise).
