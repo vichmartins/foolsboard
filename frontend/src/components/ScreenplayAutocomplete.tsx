@@ -7,11 +7,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Editor } from '@tiptap/react'
-import type { ScreenEl } from './screenplay'
+import { SCREEN_ELEMENTS, type ScreenEl } from './screenplay'
 
-// Element types with reusable, named values worth completing. Any of these can be
-// suggested from any line (accepting converts the line to that element).
-const VOCAB: ScreenEl[] = ['character', 'scene', 'transition', 'shot']
+// Every element type is completable: its previously-used values are offered in
+// place, and it can be suggested from any other line (accepting converts the line
+// to that element). Ordered as in the screenplay element list.
+const VOCAB: ScreenEl[] = SCREEN_ELEMENTS.map((e) => e.el)
 const OWN_VOCAB = new Set<ScreenEl>(VOCAB)
 
 // A little starter vocabulary, merged with what you've actually written.
