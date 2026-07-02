@@ -25,4 +25,16 @@ describe('makeMatcher', () => {
     expect(m('a ( paren')).toBe(true)
     expect(m('no parens')).toBe(false)
   })
+  it('treats a glob-style invalid regex as wildcards', () => {
+    const m = makeMatcher('*New*') // invalid regex (leading quantifier)
+    expect(m('New object')).toBe(true)
+    expect(m('a New thing')).toBe(true)
+    expect(m('Zaff')).toBe(false)
+  })
+  it('supports ? as a single-char wildcard when the regex is invalid', () => {
+    const m = makeMatcher('*Scene ?') // invalid as regex, glob otherwise
+    expect(m('Scene 1')).toBe(true)
+    expect(m('Scene 42')).toBe(true) // "?" matches the "4", ".*" the rest
+    expect(m('Scene')).toBe(false) // nothing after the space
+  })
 })

@@ -114,6 +114,9 @@ interface CanvasProps {
   // False = just pan + highlight (single-click navigation from the explorer).
   focusOpen?: boolean
   onFocusHandled?: () => void
+  // Fires when this board's object set changes (create/delete/rename/edit, local
+  // or from a collaborator), so the explorer's board-contents list can refresh.
+  onBoardChanged?: () => void
   // Bumped by the top-bar "New document" button to create + open a doc node.
   newDocSignal?: number
   // The live doc-editor status (editing / viewing / away), or null when closed,
@@ -192,6 +195,7 @@ function CanvasInner({
   focusNodeId,
   focusOpen,
   onFocusHandled,
+  onBoardChanged,
   newDocSignal,
   onDocStatusChange,
 }: CanvasProps) {
@@ -249,8 +253,15 @@ function CanvasInner({
     },
     [getNodes],
   )
-  // Tell collaborators a structural change landed; they refetch the graph.
-  const markDirty = useCallback(() => realtime.sendDirty(), [])
+  // Tell collaborators a structural change landed; they refetch the graph. Also
+  // notify locally so our own explorer board-contents list stays in sync (the
+  // dirty broadcast only reaches other clients, not us).
+  const onBoardChangedRef = useRef(onBoardChanged)
+  onBoardChangedRef.current = onBoardChanged
+  const markDirty = useCallback(() => {
+    realtime.sendDirty()
+    onBoardChangedRef.current?.()
+  }, [])
 
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
@@ -441,6 +452,7 @@ function CanvasInner({
                 })
               })
               setEdges(g.edges.map(toRFEdge))
+              onBoardChangedRef.current?.()
             })
             .catch(() => {})
         }, 250)
