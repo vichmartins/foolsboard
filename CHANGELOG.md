@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.96.2
+
+- improve: **Screenplay autocomplete works cross-element.** Typing a known
+  character name on an Action line now suggests it (tagged "Character"); accepting
+  fills the name and converts the line to a Character element, so it snaps to the
+  right formatting.
+
 ## v0.96.1
 
 - fix: **No more ghost cursor/avatar after refreshing in a document.** Refreshing
