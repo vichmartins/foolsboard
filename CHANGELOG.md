@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.96.4
+
+- improve: **Autocomplete now covers all screenplay elements.** Action, Dialogue,
+  and Parenthetical also complete from their previously-used values and can be
+  suggested/converted-to from other lines, alongside Character/Scene/Transition/Shot.
+
 ## v0.96.3
 
 - improve: **Cross-element screenplay autocomplete now works from any line.** Any
