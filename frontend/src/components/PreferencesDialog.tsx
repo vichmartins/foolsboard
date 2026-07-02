@@ -30,7 +30,7 @@ export default function PreferencesDialog({ onClose }: { onClose: () => void }) 
         <h2 className="dialog__title">Preferences</h2>
 
         <div className="account-section">
-          <h3 className="account-h3">Highlight color</h3>
+          <h3 className="account-h3">Highlight Color</h3>
           <p className="account-hint">
             Your preferred color for your cursor and selections, shown to collaborators.
           </p>

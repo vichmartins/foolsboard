@@ -83,6 +83,7 @@ import FloatingEdge from './FloatingEdge'
 import MediaNodeCard from './MediaNodeCard'
 import DocNodeCard from './DocNodeCard'
 import DocEditor, { type DocStatus } from './DocEditor'
+import { exportDocNodePdf } from './docExport'
 import MinimapSelection from './MinimapSelection'
 import NodeGallery from './NodeGallery'
 import PromptDialog from './PromptDialog'
@@ -117,6 +118,10 @@ interface CanvasProps {
   // Fires when this board's object set changes (create/delete/rename/edit, local
   // or from a collaborator), so the explorer's board-contents list can refresh.
   onBoardChanged?: () => void
+  // Bumped when the explorer mutates an object on this board, so we refetch it.
+  refreshNonce?: number
+  // A request to start a playthrough from a given node (explorer "Play from Here").
+  playSignal?: { nodeId: string; nonce: number } | null
   // Bumped by the top-bar "New document" button to create + open a doc node.
   newDocSignal?: number
   // The live doc-editor status (editing / viewing / away), or null when closed,
@@ -196,6 +201,8 @@ function CanvasInner({
   focusOpen,
   onFocusHandled,
   onBoardChanged,
+  refreshNonce,
+  playSignal,
   newDocSignal,
   onDocStatusChange,
 }: CanvasProps) {
@@ -467,6 +474,29 @@ function CanvasInner({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardId])
+
+  // The explorer mutated an object on this board (rename/duplicate/delete) — pull
+  // a fresh graph so the canvas matches. Seeded so a fresh mount never refetches
+  // on a stale nonce. Preserves the current selection like the board_dirty path.
+  const lastRefresh = useRef(refreshNonce)
+  useEffect(() => {
+    if (refreshNonce === lastRefresh.current) return
+    lastRefresh.current = refreshNonce
+    api
+      .getGraph(boardId)
+      .then((g) => {
+        setNodes((prev) => {
+          const sel = new Set(prev.filter((n) => n.selected).map((n) => n.id))
+          return g.nodes.map((n) => {
+            const rf = toRFNode(n)
+            return sel.has(n.id) ? { ...rf, selected: true } : rf
+          })
+        })
+        setEdges(g.edges.map(toRFEdge))
+      })
+      .catch(() => {})
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshNonce])
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -1090,16 +1120,33 @@ function CanvasInner({
     })
   }, [boardId, screenToFlowPosition, markDirty, pushUndo, removeByIds, addNodeAnimated])
 
-  // The top-bar "New document" button bumps newDocSignal; create a doc when it
-  // changes (a ref keeps the effect keyed only on the signal, not createDoc).
+  // The top-bar "New document" button bumps newDocSignal; create a doc only when
+  // it actually changes. Seeding the ref with the current value means a fresh
+  // mount (this canvas is keyed by board, so switching boards remounts it) never
+  // fires on a stale signal — otherwise double-clicking a board in the explorer
+  // would spawn a document on the board you just opened.
   const createDocRef = useRef(createDoc)
   useEffect(() => {
     createDocRef.current = createDoc
   })
+  const lastDocSignal = useRef(newDocSignal)
   useEffect(() => {
-    if (newDocSignal) void createDocRef.current()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (newDocSignal !== lastDocSignal.current) {
+      lastDocSignal.current = newDocSignal
+      void createDocRef.current()
+    }
   }, [newDocSignal])
+
+  // Explorer "Play from Here": start a playthrough from the requested node when
+  // the nonce changes. Seeded so a fresh mount doesn't replay a stale request.
+  const openPlaythroughRef = useRef(openPlaythrough)
+  openPlaythroughRef.current = openPlaythrough
+  const lastPlayNonce = useRef(playSignal?.nonce)
+  useEffect(() => {
+    if (!playSignal || playSignal.nonce === lastPlayNonce.current) return
+    lastPlayNonce.current = playSignal.nonce
+    openPlaythroughRef.current(playSignal.nodeId)
+  }, [playSignal])
 
   // Drop file(s) onto the canvas -> standalone media node(s) at that point. The
   // node is created first (a placeholder shows immediately), then the asset is
@@ -1277,17 +1324,19 @@ function CanvasInner({
   )
 
   const onNodesDelete = useCallback(
-    (deleted: Node[]) => {
-      // Deleting a node cascades its edges on the backend, so ignore 404s.
-      deleted.forEach((n) => api.deleteNode(boardId, n.id).catch(() => {}))
+    async (deleted: Node[]) => {
       if (deleted.some((n) => n.id === selectedId)) setSelectedId(null)
+      // Deleting a node cascades its edges on the backend, so ignore 404s. Await
+      // the deletions before markDirty so listeners that refetch the graph (the
+      // explorer's object list) see them committed, not a stale pre-delete snapshot.
+      await Promise.all(deleted.map((n) => api.deleteNode(boardId, n.id).catch(() => {})))
       markDirty()
     },
     [boardId, selectedId, markDirty],
   )
   const onEdgesDelete = useCallback(
-    (deleted: Edge[]) => {
-      deleted.forEach((e) => api.deleteEdge(boardId, e.id).catch(() => {}))
+    async (deleted: Edge[]) => {
+      await Promise.all(deleted.map((e) => api.deleteEdge(boardId, e.id).catch(() => {})))
       markDirty()
     },
     [boardId, markDirty],
@@ -1866,11 +1915,16 @@ function CanvasInner({
     selectedStory && !isMediaNodeType(selectedStory.type) && selectedStory.type !== 'doc'
       ? selectedStory
       : null
-  // A downloadable file behind the selected media node (for the context menu).
-  const selMediaDl =
-    selectedStory?.type === 'media'
+  // The right-clicked node (context menu target). Drives the media/doc download
+  // actions so they act on the node you clicked, not the panel selection.
+  const menuStory = menuNodeId
+    ? ((nodes.find((n) => n.id === menuNodeId)?.data?.story as StoryNode | undefined) ?? null)
+    : null
+  // A downloadable file behind the right-clicked media node (for the context menu).
+  const menuMediaDl =
+    menuStory?.type === 'media'
       ? (() => {
-          const c = selectedStory.content as Record<string, unknown>
+          const c = menuStory.content as Record<string, unknown>
           const url = typeof c?.url === 'string' ? c.url : null
           const filename = typeof c?.filename === 'string' ? c.filename : 'file'
           return url ? { url, filename } : null
@@ -2009,7 +2063,7 @@ function CanvasInner({
           <ControlButton
             className="rf-icon-btn"
             onClick={() => zoomIn({ duration: 150 })}
-            title="Zoom in (+)"
+            title="Zoom In (+)"
             aria-label="Zoom in"
           >
             <PlusIcon />
@@ -2017,7 +2071,7 @@ function CanvasInner({
           <ControlButton
             className="rf-icon-btn"
             onClick={() => zoomOut({ duration: 150 })}
-            title="Zoom out (−)"
+            title="Zoom Out (−)"
             aria-label="Zoom out"
           >
             <MinusIcon />
@@ -2025,7 +2079,7 @@ function CanvasInner({
           <ControlButton
             className="rf-icon-btn"
             onClick={() => fitView({ padding: 0.2, duration: 300 })}
-            title="Fit to screen (F)"
+            title="Fit to Screen (F)"
             aria-label="Fit view"
           >
             <FitViewIcon />
@@ -2033,7 +2087,7 @@ function CanvasInner({
           <ControlButton
             className="rf-icon-btn"
             onClick={() => setLocked((v) => !v)}
-            title={locked ? 'Unlock the canvas' : 'Lock the canvas (prevent moving objects)'}
+            title={locked ? 'Unlock the Canvas' : 'Lock the Canvas (prevent moving objects)'}
             aria-label="Toggle canvas lock"
           >
             {locked ? <LockIcon /> : <UnlockIcon />}
@@ -2046,14 +2100,14 @@ function CanvasInner({
               const sel = getNodes().filter((n) => n.selected)
               openPlaythrough(sel.length === 1 ? sel[0].id : null)
             }}
-            title="Play through the story (P) — from the selected object, if any"
+            title="Play Through the Story (P) — from the selected object, if any"
           >
             <PlayIcon />
           </ControlButton>
           <ControlButton
             className="rf-export-btn"
             onClick={exportImage}
-            title="Export board as image, PNG (E)"
+            title="Export Board as Image, PNG (E)"
           >
             <ImageIcon />
           </ControlButton>
@@ -2098,7 +2152,13 @@ function CanvasInner({
           key={docNode.id}
           node={docNode}
           boardId={boardId}
-          onClose={() => setDocNode(null)}
+          onClose={() => {
+            // Return to the canvas with the doc highlighted and centered, so a
+            // freshly created (or just-edited) document is easy to spot.
+            const id = docNode.id
+            setDocNode(null)
+            focusNode(id)
+          }}
           onSaved={(updated) =>
             setNodes((nds) => nds.map((n) => (n.id === updated.id ? toRFNode(updated) : n)))
           }
@@ -2209,14 +2269,23 @@ function CanvasInner({
             ...(clipboardHasContent()
               ? [{ label: 'Paste', mnemonic: 'P', shortcut: 'Ctrl+V', onClick: () => void doPaste() }]
               : []),
-            ...(selMediaDl
-              ? [{ label: 'Download', mnemonic: 'w', onClick: () => downloadAsset(selMediaDl) }]
-              : []),
             ...(menuNodeId
               ? [
-                  { label: 'Bring to front', mnemonic: 'f', onClick: () => void setNodeZ(menuNodeId, true) },
-                  { label: 'Send to back', mnemonic: 'b', onClick: () => void setNodeZ(menuNodeId, false) },
-                  { label: 'Play from here', mnemonic: 'y', shortcut: 'P', onClick: () => openPlaythrough(menuNodeId) },
+                  { label: 'Bring to Front', mnemonic: 'f', onClick: () => void setNodeZ(menuNodeId, true) },
+                  { label: 'Send to Back', mnemonic: 'b', onClick: () => void setNodeZ(menuNodeId, false) },
+                  { label: 'Play from Here', mnemonic: 'y', shortcut: 'P', onClick: () => openPlaythrough(menuNodeId) },
+                ]
+              : []),
+            ...(menuMediaDl
+              ? [{ label: 'Download', mnemonic: 'w', onClick: () => downloadAsset(menuMediaDl) }]
+              : []),
+            ...(menuStory?.type === 'doc'
+              ? [
+                  {
+                    label: 'Download as PDF',
+                    mnemonic: 'w',
+                    onClick: () => exportDocNodePdf(menuStory),
+                  },
                 ]
               : []),
             { label: 'Delete', mnemonic: 'l', danger: true, shortcut: 'Del', onClick: () => doDelete() },
@@ -2226,7 +2295,7 @@ function CanvasInner({
 
       {editEdge && (
         <PromptDialog
-          title="Connection label"
+          title="Connection Label"
           label="Annotate this branch (leave empty to clear)"
           placeholder="e.g. if the hero refuses"
           initialValue={typeof editEdge.label === 'string' ? editEdge.label : ''}

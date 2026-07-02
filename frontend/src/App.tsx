@@ -110,6 +110,13 @@ function Workspace() {
   // board-contents drill-in can refresh its list live.
   const [boardRev, setBoardRev] = useState(0)
   const bumpBoardRev = useCallback(() => setBoardRev((n) => n + 1), [])
+  // Bumped when the explorer mutates an object (rename/duplicate/delete) so the
+  // canvas refetches the board it's showing. Flows canvas <- explorer, the
+  // opposite of boardRev.
+  const [canvasRefresh, setCanvasRefresh] = useState(0)
+  // Request to start a playthrough from a specific object (explorer "Play from
+  // Here"); the Canvas watches the nonce and opens the playthrough.
+  const [playReq, setPlayReq] = useState<{ nodeId: string; nonce: number } | null>(null)
   // Source boards to merge into the active board; handed to Canvas to import.
   const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
   // Selected object ids awaiting a move destination (opens the move dialog).
@@ -748,7 +755,7 @@ function Workspace() {
           <button
             className="icon-btn"
             onClick={() => setDocNonce((n) => n + 1)}
-            title="New document (D)"
+            title="New Document (D)"
             aria-label="New document"
             disabled={!activeBoard}
           >
@@ -786,6 +793,16 @@ function Workspace() {
           onOpenObject={(bid, nid, open) => {
             setActiveId(bid)
             setPendingFocus({ boardId: bid, nodeId: nid, open })
+          }}
+          onObjectsMutated={(bid) => {
+            // Only the open board has a canvas to refresh / collaborators to notify.
+            if (bid !== activeId) return
+            setCanvasRefresh((n) => n + 1)
+            realtime.sendDirty()
+          }}
+          onPlayObject={(bid, nid) => {
+            setActiveId(bid)
+            setPlayReq((p) => ({ nodeId: nid, nonce: (p?.nonce ?? 0) + 1 }))
           }}
           onRenameFolder={renameFolder}
           onDeleteFolder={deleteFolder}
@@ -853,6 +870,8 @@ function Workspace() {
             focusOpen={!!pendingFocus?.open}
             onFocusHandled={() => setPendingFocus(null)}
             onBoardChanged={bumpBoardRev}
+            refreshNonce={canvasRefresh}
+            playSignal={playReq}
           />
         ) : (
           <div className="loading">Loading…</div>

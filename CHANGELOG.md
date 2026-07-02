@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.94.0
+
+- feat: **Right-click menu for objects in the Explorer.** In a board's object list,
+  right-click any object for **Open**, **Rename** (inline), **Duplicate**,
+  **Download** / **Download as PDF**, **Play from Here** (when that board is open),
+  and **Delete**. The list and canvas stay in sync as you go.
+- feat: **Download documents as PDF.** Documents (and screenplays) can be exported
+  to PDF straight from the right-click menu on the canvas and in the Explorer —
+  no need to open the editor first. Honors document vs. screenplay formatting.
+- improve: **Media download moved to the right-click menu.** The floating download
+  button on media cards is gone; right-click a media object for **Download**. The
+  download actions sit next to **Play from Here**.
+- improve: Closing a document returns you to the canvas with it **centered and
+  highlighted**, so a freshly created document is easy to find.
+- improve: **Context menus now flip** to stay on screen — they open upward/leftward
+  near an edge instead of getting clipped.
+- improve: **Consistent typography** — Title Case for buttons, menus, and titles;
+  one shared style for every search field; a single source of truth for the app's
+  fonts.
+- fix: Glob-style search queries (e.g. `*New*`) now work as wildcards.
+- fix: The Explorer's object list updates reliably when objects are created,
+  renamed, or **deleted** (a delete race could leave stale rows).
+- fix: Double-clicking a board in the Explorer no longer spawns a stray document.
+
 ## v0.93.1
 
 - fix: **Search boxes handle glob-style queries.** A query that isn't valid regex

@@ -41,7 +41,7 @@ export default function DocNodeCard({ id, data, selected }: NodeProps) {
       <button
         type="button"
         className="media-node__del nodrag"
-        title="Remove from board"
+        title="Remove from Board"
         aria-label="Remove from board"
         onClick={(e) => {
           e.stopPropagation()

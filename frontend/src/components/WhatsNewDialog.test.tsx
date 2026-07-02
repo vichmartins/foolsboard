@@ -19,10 +19,10 @@ describe('WhatsNewDialog', () => {
     }
   })
 
-  it('closes via the Got it button', () => {
+  it('closes via the Got It button', () => {
     const onClose = vi.fn()
     render(<WhatsNewDialog onClose={onClose} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Got it' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Got It' }))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

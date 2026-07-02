@@ -350,7 +350,7 @@ export default function NodeGallery({
               ))}
             </div>
             <input
-              className="gallery-search__input"
+              className="gallery-search__input search-input"
               type="search"
               autoFocus
               placeholder="Search by any attribute…"

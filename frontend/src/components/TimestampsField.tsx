@@ -133,7 +133,7 @@ export default function TimestampsField({ value, onChange }: Props) {
           onClick={() => void add()}
           disabled={loading || !url.trim()}
           aria-label="Add timestamp"
-          title="Add timestamp"
+          title="Add Timestamp"
         >
           {loading ? '…' : '+'}
         </button>

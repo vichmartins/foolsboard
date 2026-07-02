@@ -19,6 +19,7 @@ import type { StoryNode } from '../types'
 import { useAuth } from '../auth'
 import { collabColor } from '../collab'
 import { WsDocProvider, u8ToB64, b64ToU8 } from './docCollab'
+import { buildPrintHtml, printHtml } from './docExport'
 import {
   ScreenplayElement,
   ScreenplayKeys,
@@ -65,57 +66,6 @@ interface Props {
   // Report my live status so the board presence bar can mirror it (editing /
   // viewing / away) instead of a blanket "editing" while the editor is open.
   onStatusChange?: (status: DocStatus) => void
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string,
-  )
-}
-
-// Build a standalone, print-ready HTML document for the browser's Save-as-PDF.
-// Rich docs print in a serif with 1in margins; screenplays print in Courier with
-// industry element indentation (measured from a 1.5in left margin).
-function buildPrintHtml(title: string, bodyHtml: string, isScript: boolean): string {
-  const page = isScript ? '@page { margin: 1in 1in 1in 1.5in; }' : '@page { margin: 1in; }'
-  const shared = `
-    * { box-sizing: border-box; }
-    body { margin: 0; color: #000; background: #fff; }
-    .pdf-title { margin: 0 0 1em; }
-    img { max-width: 100%; }`
-  const doc = `
-    body { font: 12pt/1.6 Georgia, 'Times New Roman', serif; }
-    .pdf-title { font-size: 22pt; }
-    h1 { font-size: 20pt; margin: .8em 0 .3em; }
-    h2 { font-size: 16pt; margin: .8em 0 .3em; }
-    h3 { font-size: 13pt; margin: .7em 0 .3em; }
-    p { margin: .5em 0; }
-    ul, ol { padding-left: 1.5em; }
-    blockquote { border-left: 3px solid #999; margin: .6em 0; padding-left: 1em; color: #333; }
-    pre { background: #f4f4f4; padding: 10px; border-radius: 4px; font: 10.5pt 'Courier New', monospace; white-space: pre-wrap; }
-    code { background: #f4f4f4; padding: 1px 4px; border-radius: 3px; font-family: 'Courier New', monospace; }
-    pre code { background: none; padding: 0; }
-    a { color: #0645ad; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #999; padding: 5px 7px; }
-    ul[data-type="taskList"] { list-style: none; padding-left: 0; }
-    ul[data-type="taskList"] li { display: flex; gap: 6px; }`
-  const script = `
-    body { font: 12pt/1.5 'Courier New', Courier, monospace; }
-    .pdf-title { text-align: center; text-transform: uppercase; }
-    p { margin: 0; }
-    p[data-element="scene"] { text-transform: uppercase; font-weight: bold; margin-top: 1.2em; }
-    p[data-element="action"] { margin-top: .6em; }
-    p[data-element="character"] { text-transform: uppercase; margin: .8em 0 0 2.2in; }
-    p[data-element="parenthetical"] { margin: 0 0 0 1.6in; }
-    p[data-element="dialogue"] { margin: 0 1in 0 1in; }
-    p[data-element="transition"] { text-transform: uppercase; text-align: right; margin-top: .8em; }
-    p[data-element="shot"] { text-transform: uppercase; margin-top: .6em; }`
-  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(
-    title,
-  )}</title><style>${page}${shared}${isScript ? script : doc}</style></head><body><h1 class="pdf-title">${escapeHtml(
-    title,
-  )}</h1>${bodyHtml}</body></html>`
 }
 
 function Btn({
@@ -469,32 +419,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
   // text, paginated, styled for paper per the current mode.
   const exportPdf = () => {
     if (!editor) return
-    const html = buildPrintHtml(
-      title.trim() || 'Untitled document',
-      editor.getHTML(),
-      mode === 'script',
-    )
-    // Print via a hidden iframe rather than window.open — no popup blocker, and it
-    // works on insecure/LAN contexts too.
-    const iframe = document.createElement('iframe')
-    iframe.setAttribute('aria-hidden', 'true')
-    iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;'
-    document.body.appendChild(iframe)
-    const win = iframe.contentWindow
-    if (!win) {
-      iframe.remove()
-      return
-    }
-    win.document.open()
-    win.document.write(html)
-    win.document.close()
-    const cleanup = () => iframe.remove()
-    win.onafterprint = cleanup
-    window.setTimeout(() => {
-      win.focus()
-      win.print()
-    }, 350)
-    window.setTimeout(cleanup, 60000) // fallback if afterprint never fires
+    printHtml(buildPrintHtml(title.trim() || 'Untitled document', editor.getHTML(), mode === 'script'))
   }
 
   return (
@@ -619,10 +544,10 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
             <span className="doc-tb__h">H3</span>
           </Btn>
           <span className="doc-tb__sep" />
-          <Btn title="Bullet list (Ctrl+Shift+8)" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+          <Btn title="Bullet List (Ctrl+Shift+8)" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
             <BulletListIcon />
           </Btn>
-          <Btn title="Numbered list (Ctrl+Shift+7)" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+          <Btn title="Numbered List (Ctrl+Shift+7)" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
             <OrderedListIcon />
           </Btn>
           <Btn title="Checklist (Ctrl+Shift+9)" active={editor.isActive('taskList')} onClick={() => editor.chain().focus().toggleTaskList().run()}>
@@ -632,7 +557,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
           <Btn title="Quote (Ctrl+Shift+B)" active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
             <QuoteIcon />
           </Btn>
-          <Btn title="Code block (Ctrl+Alt+C)" active={editor.isActive('codeBlock')} onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
+          <Btn title="Code Block (Ctrl+Alt+C)" active={editor.isActive('codeBlock')} onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
             <CodeIcon />
           </Btn>
           <Btn title="Link (Ctrl+Shift+K)" active={editor.isActive('link')} onClick={() => promptLink(editor)}>
@@ -641,7 +566,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
           <Btn title="Image by URL (Ctrl+Alt+I)" onClick={() => promptImage(editor)}>
             <ImageIcon />
           </Btn>
-          <Btn title="Insert table (Ctrl+Alt+T)" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+          <Btn title="Insert Table (Ctrl+Alt+T)" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
             <TableIcon />
           </Btn>
             </>

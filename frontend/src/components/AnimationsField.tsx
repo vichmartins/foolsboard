@@ -59,7 +59,7 @@ export default function AnimationsField({ value, onChange }: Props) {
         </div>
       )}
       <button type="button" className="btn anim-field__add" onClick={add}>
-        + Add animation
+        + Add Animation
       </button>
     </div>
   )

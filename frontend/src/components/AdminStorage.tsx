@@ -167,7 +167,7 @@ export default function AdminStorage() {
         </p>
         <div className="admin-storage__actions">
           <button className="btn btn--primary" disabled={runningBackup} onClick={runBackupNow}>
-            {runningBackup ? 'Backing up…' : 'Run backup now'}
+            {runningBackup ? 'Backing up…' : 'Run Backup Now'}
           </button>
           {backupMsg && <span className="admin-storage__daysmsg">{backupMsg}</span>}
         </div>
@@ -214,7 +214,7 @@ export default function AdminStorage() {
       </section>
 
       <section className="admin-storage__section">
-        <h3 className="admin-storage__title">Automatic cleanup</h3>
+        <h3 className="admin-storage__title">Automatic Cleanup</h3>
         <p className="admin-storage__intro">
           Orphaned files older than this many days are removed automatically when the server
           starts. Set to <strong>0</strong> to turn the automatic sweep off. This grace period does
@@ -246,7 +246,7 @@ export default function AdminStorage() {
       </section>
 
       <section className="admin-storage__section">
-        <h3 className="admin-storage__title">Manual cleanup</h3>
+        <h3 className="admin-storage__title">Manual Cleanup</h3>
         <p className="admin-storage__intro">
           Find and remove <strong>orphaned media</strong> — files still on disk that no object,
           thumbnail, or avatar references anymore. Scanning is read-only; nothing is deleted until
@@ -254,7 +254,7 @@ export default function AdminStorage() {
         </p>
       <div className="admin-storage__actions">
         <button className="btn btn--primary" disabled={busy} onClick={scan}>
-          {busy && !confirm ? 'Scanning…' : 'Scan for orphans'}
+          {busy && !confirm ? 'Scanning…' : 'Scan for Orphans'}
         </button>
         {result && result.orphans > 0 && (
           <button
@@ -297,9 +297,9 @@ export default function AdminStorage() {
 
       {confirm && result && (
         <ConfirmDialog
-          title="Delete orphaned files?"
+          title="Delete Orphaned Files?"
           message={`${result.orphans} unreferenced file(s) (${humanBytes(result.freed_bytes)}) will be permanently deleted from storage. This cannot be undone.`}
-          confirmLabel="Delete files"
+          confirmLabel="Delete Files"
           danger
           onConfirm={purge}
           onCancel={() => setConfirm(false)}

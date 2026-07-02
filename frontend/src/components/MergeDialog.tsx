@@ -123,7 +123,7 @@ export default function MergeDialog({
                 Back
               </button>
               <button className="btn btn--danger" onClick={() => onConfirm([...selected])}>
-                Merge &amp; delete{count > 0 ? ` (${count})` : ''}
+                Merge &amp; Delete{count > 0 ? ` (${count})` : ''}
               </button>
             </div>
           </>

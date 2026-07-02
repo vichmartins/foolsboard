@@ -42,7 +42,13 @@
 }
 
 :root {
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  /* Single source of truth for the app's typefaces. Sans is inherited
+     everywhere (inputs/buttons set `font-family: inherit`); mono is used for
+     code, keyboard hints, IDs, and log rows via var(--font-mono). Screenplay
+     mode intentionally overrides with Courier. */
+  --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
