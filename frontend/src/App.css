@@ -2770,7 +2770,9 @@ b.doc-tb__glyph {
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
 }
 .sp-ac__item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   padding: 5px 10px;
   border: none;
@@ -2780,14 +2782,33 @@ b.doc-tb__glyph {
   text-align: left;
   font-size: 13px;
   color: var(--text);
-  white-space: nowrap;
+}
+.sp-ac__text {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Marks a suggestion that converts the line to another element (e.g. Character). */
+.sp-ac__tag {
+  flex: none;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  opacity: 0.8;
 }
 .sp-ac__item--active,
 .sp-ac__item:hover {
   background: var(--accent);
   color: #fff;
+}
+.sp-ac__item--active .sp-ac__tag,
+.sp-ac__item:hover .sp-ac__tag {
+  color: #fff;
+  opacity: 0.85;
 }
 .doc-editor__content .ProseMirror {
   outline: none;
