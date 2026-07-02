@@ -2,8 +2,11 @@
 // sections) each holding folders and/or boards, plus loose (uncategorized) items
 // at the top. Drag a board/folder onto a category to file it; drag a board onto a
 // folder to move it inside. The "+" on a category creates a folder or board in it.
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { Board, Category, Folder } from '../types'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { Board, Category, Folder, StoryNode, MediaNodeContent, DocNodeContent } from '../types'
+import { KIND_COLORS, OBJECT_COLOR, typeLabel, nodePreview, isMediaNodeType } from '../types'
+import * as api from '../api'
+import { makeMatcher } from '../search'
 import { useGlobalPresence } from '../realtime'
 import ContextMenu from './ContextMenu'
 import ShareMark from './ShareMark'
@@ -35,6 +38,10 @@ interface Props {
   categories: Category[]
   activeId: string | null
   onSelectBoard: (id: string) => void
+  // Navigate to a specific object: open its board and focus/select it on the
+  // canvas. `open` also opens its editor (panel / doc overlay) — set on
+  // double-click. Used by the board-contents drill-in view.
+  onOpenObject: (boardId: string, nodeId: string, open: boolean) => void
   onRenameFolder: (id: string, name: string) => void
   onDeleteFolder: (id: string) => void
   onShareFolder: (folder: Folder) => void
@@ -128,6 +135,7 @@ export default function Sidebar(props: Props) {
     categories,
     activeId,
     onSelectBoard,
+    onOpenObject,
     onRenameFolder,
     onDeleteFolder,
     onShareFolder,
@@ -221,6 +229,68 @@ export default function Sidebar(props: Props) {
   const treeRef = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
   useFlipReorder(treeRef, dragging)
+
+  // --- board-contents drill-in ----------------------------------------------
+  // When set, the tree is replaced by a flat list of the board's objects so you
+  // can navigate straight to one. drillNodes === null means "loading".
+  const [drill, setDrill] = useState<Board | null>(null)
+  const [drillNodes, setDrillNodes] = useState<StoryNode[] | null>(null)
+  const [drillErr, setDrillErr] = useState(false)
+  const [objFilter, setObjFilter] = useState('')
+  const drillReq = useRef(0) // guards against out-of-order responses
+  const openDrill = async (board: Board) => {
+    const req = ++drillReq.current
+    setDrill(board)
+    setDrillNodes(null)
+    setDrillErr(false)
+    setObjFilter('')
+    try {
+      const g = await api.getGraph(board.id)
+      if (drillReq.current === req) setDrillNodes(g.nodes)
+    } catch {
+      if (drillReq.current === req) {
+        setDrillErr(true)
+        setDrillNodes([])
+      }
+    }
+  }
+  // Leave the drill-in if its board disappears (deleted, unshared, etc.).
+  useEffect(() => {
+    if (drill && !boards.some((b) => b.id === drill.id)) {
+      drillReq.current++
+      setDrill(null)
+    }
+  }, [boards, drill])
+
+  // A readable name for an object row: its title, else a type-appropriate
+  // fallback (filename for media, first line for docs, field preview otherwise).
+  const objectName = (n: StoryNode): string => {
+    if (n.title && n.title.trim()) return n.title.trim()
+    if (isMediaNodeType(n.type)) {
+      const c = n.content as MediaNodeContent
+      return c?.filename || (n.type === 'link' ? 'Link' : 'Media')
+    }
+    if (n.type === 'doc') {
+      const c = n.content as DocNodeContent
+      const t = (c?.text || '').trim()
+      return t ? t.split('\n')[0].slice(0, 80) : 'Document'
+    }
+    return nodePreview(n.type, n.content) || 'Untitled'
+  }
+  const objectColor = (n: StoryNode): string =>
+    n.color || (n.type ? KIND_COLORS[n.type] ?? OBJECT_COLOR : OBJECT_COLOR)
+  // Alphabetical (file-listing feel) + live filter over name/type.
+  const drillList = useMemo(() => {
+    const list = [...(drillNodes ?? [])].sort((a, b) =>
+      objectName(a).localeCompare(objectName(b), undefined, { sensitivity: 'base' }),
+    )
+    if (!objFilter.trim()) return list
+    // Full regex support (case-insensitive), like every other search box.
+    const match = makeMatcher(objFilter)
+    return list.filter((n) => match(objectName(n)) || match(typeLabel(n.type)))
+    // objectName is stable enough for this list; recompute on data/filter change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drillNodes, objFilter])
 
   const toggle = (set: Set<string>, key: string, id: string, save: (s: Set<string>) => void) => {
     const n = new Set(set)
@@ -527,7 +597,8 @@ export default function Sidebar(props: Props) {
           draggable
           onDragStart={(e) => beginItemDrag(e, BOARD_DND, b.id)}
           onClick={(e) => clickItem(e, b.id, () => onSelectBoard(b.id))}
-          title={b.name}
+          onDoubleClick={() => openDrill(b)}
+          title={`${b.name} · double-click to view its objects`}
         >
           <span className="tree-board__icon" aria-hidden="true">
             <BoardIcon />
@@ -777,6 +848,67 @@ export default function Sidebar(props: Props) {
         style={{ width: open ? width : 0, transition: resizing ? 'none' : undefined }}
       >
         <div className="sidebar__inner" style={{ width }}>
+          {drill ? (
+            <>
+              <div className="sidebar__head sidebar__head--back">
+                <button
+                  className="tree-back"
+                  title="Back to explorer"
+                  aria-label="Back to explorer"
+                  onClick={() => {
+                    drillReq.current++
+                    setDrill(null)
+                  }}
+                >
+                  <ChevronIcon />
+                </button>
+                <span className="sidebar__title sidebar__title--board" title={drill.name}>
+                  {drill.name}
+                </span>
+                {drillNodes && <span className="tree-cat__count">{drillNodes.length}</span>}
+              </div>
+              <div className="obj-filter">
+                <input
+                  className="obj-filter__input"
+                  placeholder="Filter objects…"
+                  value={objFilter}
+                  onChange={(e) => setObjFilter(e.target.value)}
+                />
+              </div>
+              <div className="sidebar__tree sidebar__tree--objects">
+                {drillNodes === null ? (
+                  <div className="tree-empty">Loading…</div>
+                ) : drillList.length === 0 ? (
+                  <div className="tree-empty">
+                    {drillErr
+                      ? 'Could not load objects.'
+                      : drillNodes.length === 0
+                        ? 'No objects on this board yet.'
+                        : 'No matches.'}
+                  </div>
+                ) : (
+                  drillList.map((n) => (
+                    <button
+                      key={n.id}
+                      className="tree-obj-row"
+                      title={`${objectName(n)} · double-click to open`}
+                      onClick={() => onOpenObject(drill.id, n.id, false)}
+                      onDoubleClick={() => onOpenObject(drill.id, n.id, true)}
+                    >
+                      <span
+                        className="tree-obj__dot"
+                        style={{ background: objectColor(n) }}
+                        aria-hidden="true"
+                      />
+                      <span className="tree-obj__name">{objectName(n)}</span>
+                      <span className="tree-obj__tag">{typeLabel(n.type)}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </>
+          ) : (
+            <>
           <div className="sidebar__head">
             <span className="sidebar__title">Explorer</span>
             <div className="sidebar__actions">
@@ -965,6 +1097,8 @@ export default function Sidebar(props: Props) {
               )
             })}
           </div>
+            </>
+          )}
         </div>
         {open && (
           <div
@@ -984,10 +1118,12 @@ export default function Sidebar(props: Props) {
           items={
             menu.board.shared
               ? [
+                  { label: 'View objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
                   { label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) },
                   { label: 'Create Private Copy', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },
                 ]
               : [
+                  { label: 'View objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
                   { label: 'Rename', mnemonic: 'r', onClick: () => startRenameBoard(menu.board) },
                   { label: 'Move to…', mnemonic: 'v', onClick: () => onMoveBoard(menu.board) },
                   { label: 'Share', mnemonic: 's', onClick: () => onShareBoard(menu.board) },

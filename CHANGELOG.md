@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.93.0
+
+- feat: **Browse a board's objects in the Explorer.** Double-click a board (or use
+  its right-click **View objects**) to drill into a flat, filterable list of every
+  object on it. Click one to jump straight to it on the canvas; the **‹** header
+  takes you back to the folder tree.
+- improve: **Snappier jump-to-object.** Navigating to an object is now near-instant
+  on the board that's already open, instead of a noticeable pause before it pans.
+- improve: **Click vs. double-click in the object list.** A single click pans to and
+  highlights the object; a double-click also opens its editor (the document overlay
+  for docs/screenplays, the edit panel otherwise). Single-clicking again — or another
+  object — closes the open edit panel and hands off cleanly.
+- improve: The object-list filter supports **full regex**, matching the app's other
+  search boxes.
+
 ## v0.92.0
 
 - feat: **Real-time co-editing of Documents.** Open a Document with others and see
