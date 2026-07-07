@@ -9,6 +9,30 @@ import { useEffect, useState } from 'react'
 import { getToken } from './api'
 import { collabColor } from './collab'
 
+// --- Binary framing for the high-volume Yjs channels ------------------------
+// doc_update / doc_awareness ride the socket as compact binary frames instead of
+// JSON+base64, cutting ~70% of their wire size. Layout:
+//   byte 0     tag   (1 = doc_update, 2 = doc_awareness)
+//   byte 1     sub   (0 = update, 1 = sync-req, 2 = sync-state; 0 for awareness)
+//   bytes 2-17 node_id (the 16 raw UUID bytes)
+//   bytes 18+  payload (raw Yjs / awareness bytes; empty for sync-req)
+// Every other message type stays JSON text on the same connection.
+const DOC_TAG = { doc_update: 1, doc_awareness: 2 } as const
+const SUB_CODE: Record<string, number> = { update: 0, 'sync-req': 1, 'sync-state': 2 }
+const SUB_NAME = ['update', 'sync-req', 'sync-state']
+
+function uuidToBytes(uuid: string): Uint8Array {
+  const hex = uuid.replace(/-/g, '')
+  const b = new Uint8Array(16)
+  for (let i = 0; i < 16; i++) b[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16)
+  return b
+}
+function bytesToUuid(b: Uint8Array): string {
+  let s = ''
+  for (let i = 0; i < 16; i++) s += b[i].toString(16).padStart(2, '0')
+  return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`
+}
+
 export interface PresenceMember {
   id: string
   username: string
@@ -95,7 +119,7 @@ class Realtime {
   // direct handlers (the canvas) rather than into rendered state.
   private opListeners = new Set<(msg: any) => void>()
   // Collaborative-doc Yjs sync (doc_update / doc_awareness), routed to whichever
-  // doc editor is currently open. High-frequency binary (base64) payloads.
+  // doc editor is currently open. High-frequency; carried as binary frames.
   private docListeners = new Set<(msg: any) => void>()
   // Fired each time the socket (re)connects -- e.g. after a deploy restarts the
   // server -- used to check for a newer app version.
@@ -148,6 +172,7 @@ class Realtime {
     const ws = new WebSocket(
       `${proto}://${location.host}/api/ws?token=${encodeURIComponent(token)}`,
     )
+    ws.binaryType = 'arraybuffer' // doc/awareness frames arrive as binary
     this.ws = ws
 
     ws.onopen = () => {
@@ -162,7 +187,27 @@ class Realtime {
     ws.onerror = () => ws.close()
   }
 
+  // Decode a binary doc/awareness frame and hand it to the doc listeners as a
+  // message object (update is a Uint8Array, not base64).
+  private onBinary(buf: ArrayBuffer) {
+    const data = new Uint8Array(buf)
+    if (data.length < 18) return
+    const tag = data[0]
+    const nodeId = bytesToUuid(data.subarray(2, 18))
+    const update = data.subarray(18)
+    if (tag === DOC_TAG.doc_update) {
+      const sub = SUB_NAME[data[1]] ?? 'update'
+      this.docListeners.forEach((l) => l({ type: 'doc_update', node_id: nodeId, sub, update }))
+    } else if (tag === DOC_TAG.doc_awareness) {
+      this.docListeners.forEach((l) => l({ type: 'doc_awareness', node_id: nodeId, update }))
+    }
+  }
+
   private onMessage(e: MessageEvent) {
+    if (typeof e.data !== 'string') {
+      this.onBinary(e.data as ArrayBuffer)
+      return
+    }
     let msg: any
     try {
       msg = JSON.parse(e.data)
@@ -347,12 +392,22 @@ class Realtime {
     this.docListeners.add(fn)
     return () => this.docListeners.delete(fn)
   }
-  // sub: 'update' | 'sync-req' | 'sync-state'. update is base64.
-  sendDocUpdate(nodeId: string, sub: string, update: string) {
-    this.send({ type: 'doc_update', node_id: nodeId, sub, update })
+  // Send a binary doc/awareness frame: [tag][sub][node_id:16][payload].
+  private sendDocBinary(tag: number, sub: number, nodeId: string, payload: Uint8Array) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
+    const frame = new Uint8Array(18 + payload.length)
+    frame[0] = tag
+    frame[1] = sub
+    frame.set(uuidToBytes(nodeId), 2)
+    if (payload.length) frame.set(payload, 18)
+    this.ws.send(frame)
   }
-  sendDocAwareness(nodeId: string, update: string) {
-    this.send({ type: 'doc_awareness', node_id: nodeId, update })
+  // sub: 'update' | 'sync-req' | 'sync-state'. update is a raw Yjs update.
+  sendDocUpdate(nodeId: string, sub: string, update: Uint8Array) {
+    this.sendDocBinary(DOC_TAG.doc_update, SUB_CODE[sub] ?? 0, nodeId, update)
+  }
+  sendDocAwareness(nodeId: string, update: Uint8Array) {
+    this.sendDocBinary(DOC_TAG.doc_awareness, 0, nodeId, update)
   }
 
   // Announce my in-flight upload count (and which node) so collaborators see an

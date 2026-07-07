@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.99.1
+
+- perf: **Co-editing now uses a compact binary WebSocket protocol.** The Yjs doc
+  and cursor channels ride the socket as raw binary frames instead of
+  JSON+base64, roughly halving-to-quartering their wire size (~70% smaller per
+  message; stacked with v0.99.0's tick batching that's ~85–90% less traffic than
+  before during active typing). Every other message stays JSON on the same
+  connection. Documents converge byte-identically (verified); an old tab open
+  across the upgrade degrades gracefully rather than erroring.
+
 ## v0.99.0
 
 - perf: **Real-time co-editing is much leaner on the wire.** Instead of sending

@@ -59,11 +59,21 @@ async def ws_endpoint(ws: WebSocket) -> None:
     conn = await hub.register(ws, user)
     try:
         while True:
-            raw = await ws.receive_text()
+            message = await ws.receive()
+            if message.get("type") == "websocket.disconnect":
+                break
             # A single malformed/hostile message (e.g. NaN that blows up int()) must
-            # not tear down the whole session — ignore it and keep receiving.
+            # not tear down the whole session — ignore it and keep receiving. Text
+            # frames are JSON control/relay messages; binary frames are the compact
+            # Yjs doc/awareness channel.
             try:
-                await _handle(conn, user, raw)
+                text = message.get("text")
+                if text is not None:
+                    await _handle(conn, user, text)
+                else:
+                    data = message.get("bytes")
+                    if data is not None:
+                        await _handle_binary(conn, data)
             except Exception:
                 pass
     except WebSocketDisconnect:
@@ -78,6 +88,24 @@ async def ws_endpoint(ws: WebSocket) -> None:
             await ws.close()
         except Exception:
             pass
+
+
+async def _handle_binary(conn, data: bytes) -> None:
+    """Relay a binary Yjs frame to the other board members.
+
+    Frame: [tag:1][sub:1][node_id:16][payload...]; tag 1=doc_update, 2=doc_awareness.
+    We don't parse the payload — it's an opaque CRDT/awareness blob — just forward
+    the frame verbatim to everyone else on the sender's board (the client filters
+    by the node_id embedded in the frame). The authoritative doc snapshot is still
+    persisted via the normal REST node update.
+    """
+    if conn.board_id is None:
+        return
+    if len(data) < 18 or len(data) > 4_000_000:
+        return
+    if data[0] not in (1, 2):
+        return
+    await hub.relay_bytes(conn, data)
 
 
 async def _handle(conn, user: User, raw: str) -> None:
