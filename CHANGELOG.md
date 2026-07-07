@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.98.2
+
+- fix: **Document export to Word (.docx) and OpenDocument (.odt) was failing** on
+  the server. pandoc's `--sandbox` flag (used as a hardening measure) blocks
+  pandoc from reading its own bundled templates in pandoc 3.x, so every DOCX/ODT
+  conversion errored out. Removed the flag and instead strip `<img>` tags from the
+  HTML before conversion — that closes the same SSRF/local-file-read vector the
+  sandbox was guarding against, without breaking output. (Screenplay .docx was
+  unaffected — it's built with python-docx, not pandoc.)
+- fix: A failed document export now shows an error instead of silently doing
+  nothing.
+
 ## v0.98.1
 
 - fix: Context-menu submenus (e.g. **Export as ▸**) now reposition to stay on

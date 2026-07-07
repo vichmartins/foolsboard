@@ -166,8 +166,14 @@ export async function exportDocHtmlAs(
     downloadBlob(new Blob([text ?? ''], { type: 'text/plain' }), safeFilename(name, 'txt'))
     return
   }
-  const blob = await api.exportDocument(bodyHtml, name, format, isScript ? 'script' : 'doc')
-  downloadBlob(blob, safeFilename(name, format))
+  try {
+    const blob = await api.exportDocument(bodyHtml, name, format, isScript ? 'script' : 'doc')
+    downloadBlob(blob, safeFilename(name, format))
+  } catch (err) {
+    // These callers fire-and-forget, so surface the failure instead of a silent no-op.
+    console.error('document export failed', err)
+    window.alert(`Couldn't export as ${format.toUpperCase()}. Please try again.`)
+  }
 }
 
 // Export a stored doc node in the chosen format (reads its saved content).

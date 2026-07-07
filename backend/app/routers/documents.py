@@ -159,12 +159,18 @@ def export_document(req: ExportRequest, _user: User = Depends(get_current_user))
             headers={"Content-Disposition": f'attachment; filename="{_safe_filename(req.title, ext)}"'},
         )
 
+    # Strip <img> tags: pandoc would otherwise try to fetch each src to embed it,
+    # which is an SSRF / local-file-read vector (e.g. src="file:///etc/passwd").
+    # Our relative /media URLs don't embed anyway, so nothing useful is lost. This
+    # replaces pandoc's --sandbox, which (in pandoc 3.x) also blocks its own data
+    # files and so breaks docx/odt output entirely.
+    html = re.sub(r"(?is)<img\b[^>]*>", "", req.html)
     with tempfile.TemporaryDirectory() as td:
         out_path = os.path.join(td, f"out.{ext}")
         try:
             subprocess.run(
-                ["pandoc", "-f", "html", "-t", writer, "--sandbox", "-o", out_path],
-                input=req.html.encode("utf-8"),
+                ["pandoc", "-f", "html", "-t", writer, "-o", out_path],
+                input=html.encode("utf-8"),
                 capture_output=True,
                 timeout=30,
                 check=True,
