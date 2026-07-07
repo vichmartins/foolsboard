@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.98.1
+
+- fix: Context-menu submenus (e.g. **Export as ▸**) now reposition to stay on
+  screen — they shift up when near the bottom edge and flip side when needed,
+  instead of getting clipped.
+
 ## v0.98.0
 
 - feat: **Export documents in multiple formats** — PDF, Word (.docx), OpenDocument
