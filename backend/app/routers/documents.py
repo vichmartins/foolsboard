@@ -10,6 +10,7 @@ from __future__ import annotations
 import io
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 from html.parser import HTMLParser
@@ -49,6 +50,25 @@ class ExportRequest(BaseModel):
 def _safe_filename(title: str, ext: str) -> str:
     base = re.sub(r"[^\w.\- ]+", "", title or "").strip() or "document"
     return f"{base[:80]}.{ext}"
+
+
+def _pandoc_exe() -> str | None:
+    """Locate the pandoc binary. Prefer PATH, but fall back to well-known install
+    locations so a dev machine where pandoc isn't on the launching shell's PATH
+    (e.g. a per-user winget install on Windows) still works without a fussy
+    terminal restart. On the packaged Linux deploy pandoc is always on PATH."""
+    exe = shutil.which("pandoc")
+    if exe:
+        return exe
+    for c in (
+        os.path.expandvars(r"%LOCALAPPDATA%\Pandoc\pandoc.exe"),
+        os.path.expandvars(r"%ProgramFiles%\Pandoc\pandoc.exe"),
+        "/usr/bin/pandoc",
+        "/usr/local/bin/pandoc",
+    ):
+        if c and os.path.isfile(c):
+            return c
+    return None
 
 
 class _ScreenplayParser(HTMLParser):
@@ -165,11 +185,17 @@ def export_document(req: ExportRequest, _user: User = Depends(get_current_user))
     # replaces pandoc's --sandbox, which (in pandoc 3.x) also blocks its own data
     # files and so breaks docx/odt output entirely.
     html = re.sub(r"(?is)<img\b[^>]*>", "", req.html)
+    pandoc = _pandoc_exe()
+    if pandoc is None:
+        raise HTTPException(
+            status.HTTP_501_NOT_IMPLEMENTED,
+            "Document conversion isn't available on this server (pandoc not installed).",
+        )
     with tempfile.TemporaryDirectory() as td:
         out_path = os.path.join(td, f"out.{ext}")
         try:
             subprocess.run(
-                ["pandoc", "-f", "html", "-t", writer, "-o", out_path],
+                [pandoc, "-f", "html", "-t", writer, "-o", out_path],
                 input=html.encode("utf-8"),
                 capture_output=True,
                 timeout=30,
