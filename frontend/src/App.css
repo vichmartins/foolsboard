@@ -4648,6 +4648,34 @@ button.media-name:hover {
 .ctx-menu__item--danger:hover {
   background: rgba(239, 68, 68, 0.12);
 }
+/* Submenu (flyout) — a parent item + its nested menu. */
+.ctx-menu__sub-wrap {
+  position: relative;
+}
+.ctx-menu__item--parent {
+  gap: 12px;
+}
+.ctx-menu__item--open {
+  background: var(--bg-elev-2);
+}
+.ctx-menu__caret {
+  flex-shrink: 0;
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1;
+}
+.ctx-submenu {
+  position: absolute; /* override .ctx-menu's fixed — anchor to the parent item */
+  top: -5px;
+}
+.ctx-submenu--right {
+  left: calc(100% - 4px);
+  transform-origin: top left;
+}
+.ctx-submenu--left {
+  right: calc(100% - 4px);
+  transform-origin: top right;
+}
 
 /* --- Modal: gradient overlay + dialog ------------------------------------ */
 /* While dragging a gallery media tile onto the canvas, fade the overlay so the

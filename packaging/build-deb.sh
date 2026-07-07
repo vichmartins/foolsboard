@@ -54,6 +54,7 @@ install -m 0644 packaging/systemd/foolsboard.service "$STAGE/lib/systemd/system/
 # Backup script + daily timer + the interactive restore helper.
 install -m 0755 packaging/foolsboard-backup.sh              "$STAGE/opt/foolsboard/backup.sh"
 install -m 0755 packaging/foolsboard-restore.sh            "$STAGE/opt/foolsboard/restore.sh"
+install -m 0755 packaging/foolsboard-rotate-jwt.sh         "$STAGE/opt/foolsboard/rotate-jwt.sh"
 install -m 0644 packaging/systemd/foolsboard-backup.service "$STAGE/lib/systemd/system/foolsboard-backup.service"
 install -m 0644 packaging/systemd/foolsboard-backup.timer   "$STAGE/lib/systemd/system/foolsboard-backup.timer"
 install -m 0644 packaging/foolsboard.env.example      "$STAGE/usr/share/doc/foolsboard/foolsboard.env.example"
@@ -72,7 +73,8 @@ sed -i 's/\r$//' "$STAGE/lib/systemd/system/foolsboard.service" \
                  "$STAGE/lib/systemd/system/foolsboard-backup.service" \
                  "$STAGE/lib/systemd/system/foolsboard-backup.timer" \
                  "$STAGE/opt/foolsboard/backup.sh" \
-                 "$STAGE/opt/foolsboard/restore.sh"
+                 "$STAGE/opt/foolsboard/restore.sh" \
+                 "$STAGE/opt/foolsboard/rotate-jwt.sh"
 
 # 3. Build.
 mkdir -p build

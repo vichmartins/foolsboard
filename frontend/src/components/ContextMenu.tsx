@@ -7,7 +7,9 @@ const CLOSE_MS = 120
 
 export interface MenuItem {
   label: string
-  onClick: () => void
+  // A leaf item has onClick; a parent item has submenu (opens a flyout on hover).
+  onClick?: () => void
+  submenu?: MenuItem[]
   danger?: boolean
   // Single character that triggers this item while the menu is open. The first
   // matching letter in the label is underlined.
@@ -41,6 +43,27 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
   const ref = useRef<HTMLUListElement>(null)
   const [closing, setClosing] = useState(false)
   const timer = useRef<number | null>(null)
+  // Which parent item's submenu (flyout) is open, and a small close delay so the
+  // pointer can travel from the parent into the submenu without it collapsing.
+  const [openSub, setOpenSub] = useState<number | null>(null)
+  const subTimer = useRef<number | null>(null)
+  const openSubmenu = (i: number) => {
+    if (subTimer.current !== null) {
+      window.clearTimeout(subTimer.current)
+      subTimer.current = null
+    }
+    setOpenSub(i)
+  }
+  const scheduleCloseSubmenu = () => {
+    if (subTimer.current !== null) window.clearTimeout(subTimer.current)
+    subTimer.current = window.setTimeout(() => setOpenSub(null), 140)
+  }
+  useEffect(
+    () => () => {
+      if (subTimer.current !== null) clearTimeout(subTimer.current)
+    },
+    [],
+  )
   // Adaptive placement: default down-right from the cursor, but flip up and/or
   // left when the menu would overflow the viewport, then clamp to a small margin.
   // Measured in a layout effect so the corrected position paints without a flash.
@@ -99,9 +122,9 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return
       const item = itemsRef.current.find(
-        (it) => it.mnemonic && it.mnemonic.toLowerCase() === e.key.toLowerCase(),
+        (it) => it.onClick && it.mnemonic && it.mnemonic.toLowerCase() === e.key.toLowerCase(),
       )
-      if (item) {
+      if (item?.onClick) {
         e.preventDefault()
         item.onClick()
         requestClose()
@@ -134,20 +157,65 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
       style={{ top: pos.top, left: pos.left, transformOrigin: pos.origin }}
       onContextMenu={(e) => e.preventDefault()}
     >
-      {items.map((it, i) => (
-        <li key={i}>
-          <button
-            className={'ctx-menu__item' + (it.danger ? ' ctx-menu__item--danger' : '')}
-            onClick={() => {
-              it.onClick()
-              requestClose()
-            }}
-          >
-            <span>{renderLabel(it.label, it.mnemonic)}</span>
-            {it.shortcut && <span className="ctx-menu__sc">{it.shortcut}</span>}
-          </button>
-        </li>
-      ))}
+      {items.map((it, i) => {
+        if (it.submenu) {
+          // Open the flyout to whichever side has room (based on the menu's own edge).
+          const side = pos.left > window.innerWidth / 2 ? 'left' : 'right'
+          return (
+            <li
+              key={i}
+              className="ctx-menu__sub-wrap"
+              onMouseEnter={() => openSubmenu(i)}
+              onMouseLeave={scheduleCloseSubmenu}
+            >
+              <button
+                className={
+                  'ctx-menu__item ctx-menu__item--parent' +
+                  (openSub === i ? ' ctx-menu__item--open' : '')
+                }
+                onClick={() => setOpenSub(openSub === i ? null : i)}
+              >
+                <span>{renderLabel(it.label, it.mnemonic)}</span>
+                <span className="ctx-menu__caret" aria-hidden="true">
+                  ›
+                </span>
+              </button>
+              {openSub === i && (
+                <ul className={'ctx-menu ctx-submenu ctx-submenu--' + side}>
+                  {it.submenu.map((sub, j) => (
+                    <li key={j}>
+                      <button
+                        className={'ctx-menu__item' + (sub.danger ? ' ctx-menu__item--danger' : '')}
+                        onClick={() => {
+                          sub.onClick?.()
+                          requestClose()
+                        }}
+                      >
+                        <span>{renderLabel(sub.label, sub.mnemonic)}</span>
+                        {sub.shortcut && <span className="ctx-menu__sc">{sub.shortcut}</span>}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          )
+        }
+        return (
+          <li key={i}>
+            <button
+              className={'ctx-menu__item' + (it.danger ? ' ctx-menu__item--danger' : '')}
+              onClick={() => {
+                it.onClick?.()
+                requestClose()
+              }}
+            >
+              <span>{renderLabel(it.label, it.mnemonic)}</span>
+              {it.shortcut && <span className="ctx-menu__sc">{it.shortcut}</span>}
+            </button>
+          </li>
+        )
+      })}
     </ul>
   )
 }
