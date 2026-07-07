@@ -448,8 +448,13 @@ def absorb_nodes(
             )
         )
     )
+    # An edge survives if BOTH endpoints end up on the target board — i.e. each is
+    # either a moved node or a node already on the target. Only edges reaching a node
+    # left behind on the source board are severed. (Using just `moved_ids` here would
+    # wrongly delete a target board's own edges when a moved node was already on it.)
+    on_target = moved_ids | {n.id for n in existing}
     for e in edges:
-        if e.source_id in moved_ids and e.target_id in moved_ids:
+        if e.source_id in on_target and e.target_id in on_target:
             e.board_id = target.id
         else:
             db.delete(e)

@@ -119,6 +119,17 @@ function Workspace() {
   const [playReq, setPlayReq] = useState<{ nodeId: string; nonce: number } | null>(null)
   // Source boards to merge into the active board; handed to Canvas to import.
   const [mergeSourceIds, setMergeSourceIds] = useState<string[] | null>(null)
+  // The board the pending merge targets. The merge runs in the board-keyed Canvas,
+  // so we only hand it the sources when it IS that board — otherwise switching
+  // boards mid-merge would re-run the merge into the wrong board and delete the
+  // sources. Navigating away abandons the merge (see the effect below).
+  const [mergeInto, setMergeInto] = useState<string | null>(null)
+  useEffect(() => {
+    if (mergeInto && mergeInto !== activeId) {
+      setMergeSourceIds(null)
+      setMergeInto(null)
+    }
+  }, [activeId, mergeInto])
   // Selected object ids awaiting a move destination (opens the move dialog).
   const [moveIds, setMoveIds] = useState<string[] | null>(null)
   // Left explorer sidebar open/closed (remembered across reloads).
@@ -153,6 +164,11 @@ function Workspace() {
     nodeId: string
     open?: boolean
   } | null>(null)
+  // Abandon a pending focus once we're on a different board — otherwise it lingers
+  // and re-fires (panning + popping the editor open) if you return to that board.
+  useEffect(() => {
+    if (pendingFocus && pendingFocus.boardId !== activeId) setPendingFocus(null)
+  }, [activeId, pendingFocus])
   // "New version deployed" prompt (production only); dismissible.
   const updateAvailable = useUpdateAvailable()
   const [updateDismissed, setUpdateDismissed] = useState(false)
@@ -839,10 +855,11 @@ function Workspace() {
           <Canvas
             key={activeId}
             boardId={activeId}
-            mergeSourceIds={mergeSourceIds}
+            mergeSourceIds={mergeInto === activeId ? mergeSourceIds : null}
             onMergeHandled={(merged) => {
               const ids = mergeSourceIds
               setMergeSourceIds(null)
+              setMergeInto(null)
               // A successful merge consumes the source boards -- delete them.
               if (merged && ids?.length) {
                 void Promise.all(ids.map((id) => api.deleteBoard(id).catch(() => {}))).then(() => {
@@ -927,6 +944,7 @@ function Workspace() {
           targetName={activeBoard?.name ?? 'this board'}
           onConfirm={(ids) => {
             setMergeSourceIds(ids)
+            setMergeInto(activeId)
             setDialog(null)
           }}
           onCancel={() => setDialog(null)}
@@ -947,6 +965,7 @@ function Workspace() {
           confirmLabel="Merge"
           onConfirm={() => {
             setMergeSourceIds([mergeConfirm.id])
+            setMergeInto(activeId)
             setMergeConfirm(null)
           }}
           onCancel={() => setMergeConfirm(null)}

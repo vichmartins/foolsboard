@@ -217,6 +217,8 @@ def update_me(
         user.email = email
     if payload.username is not None:
         username = payload.username.strip()
+        if len(username) < 2:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Username is too short")
         if db.scalar(select(User).where(User.username == username, User.id != user.id)):
             raise HTTPException(status.HTTP_409_CONFLICT, "That username is taken")
         user.username = username

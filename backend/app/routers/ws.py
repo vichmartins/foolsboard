@@ -60,13 +60,24 @@ async def ws_endpoint(ws: WebSocket) -> None:
     try:
         while True:
             raw = await ws.receive_text()
-            await _handle(conn, user, raw)
+            # A single malformed/hostile message (e.g. NaN that blows up int()) must
+            # not tear down the whole session — ignore it and keep receiving.
+            try:
+                await _handle(conn, user, raw)
+            except Exception:
+                pass
     except WebSocketDisconnect:
         pass
     except Exception:
         pass
     finally:
         await hub.unregister(conn)
+        # Ensure the socket is actually closed so the client reconnects rather than
+        # believing a dead connection is still live.
+        try:
+            await ws.close()
+        except Exception:
+            pass
 
 
 async def _handle(conn, user: User, raw: str) -> None:

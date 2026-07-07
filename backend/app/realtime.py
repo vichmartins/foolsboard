@@ -176,11 +176,19 @@ class Hub:
             )
 
     async def _send_many(self, targets: list[Conn], msg: dict) -> None:
-        for c in targets:
+        # Send to everyone concurrently and cap each send, so one peer with a stalled
+        # socket (full send buffer: laptop asleep, dropped network) can't block the
+        # whole board's relay — and the sender's own receive loop — until the OS
+        # times the dead socket out. Failures/timeouts are ignored; that connection's
+        # own receive loop cleans it up.
+        async def _one(c: Conn) -> None:
             try:
-                await c.ws.send_json(msg)
+                await asyncio.wait_for(c.ws.send_json(msg), timeout=5)
             except Exception:
-                pass  # a dead socket is cleaned up by its own receive loop
+                pass
+
+        if targets:
+            await asyncio.gather(*(_one(c) for c in targets))
 
 
 hub = Hub()

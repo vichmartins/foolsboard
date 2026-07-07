@@ -62,6 +62,30 @@ def test_absorb_drops_cross_board_edge(client, admin):
     assert len(g2["nodes"]) == 2 and len(g2["edges"]) == 1
 
 
+def test_absorb_keeps_target_edge_when_moved_node_already_on_target(client, admin):
+    # Absorbing a node that already lives on the target must not delete the target's
+    # own edges to nodes outside the moved set.
+    token, _ = admin
+    t = new_board(client, token, "Target")
+    n1 = new_node(client, token, t, title="N1")
+    n2 = new_node(client, token, t, title="N2")
+    _edge(client, token, t, n1, n2)  # an edge already on the target board
+    src = new_board(client, token, "Src")
+    n3 = new_node(client, token, src, title="N3")
+
+    r = client.post(f"/api/boards/{t}/absorb", json={"node_ids": [n1, n3]}, headers=auth(token))
+    assert r.status_code == 204, r.text
+    g = client.get(f"/api/boards/{t}/graph", headers=auth(token)).json()
+    assert len(g["nodes"]) == 3
+    assert len(g["edges"]) == 1  # n1-n2 survives (both endpoints still on the target)
+
+
+def test_profile_rejects_blank_username(client, admin):
+    token, _ = admin
+    r = client.patch("/api/auth/me", json={"username": "  "}, headers=auth(token))
+    assert r.status_code == 400, r.text
+
+
 def test_absorb_rejects_foreign_nodes(client, admin):
     token, _ = admin
     mine = new_board(client, token, "Mine")

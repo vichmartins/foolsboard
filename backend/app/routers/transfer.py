@@ -346,8 +346,14 @@ def import_boards(
             return _do_import(zf, db, user)
 
 
+MAX_MANIFEST_BYTES = 64 * 1024 * 1024  # a graph manifest well beyond any real board
+
+
 def _do_import(zf: zipfile.ZipFile, db: Session, user: User) -> list[Board]:
     try:
+        # Guard against a tiny bundle whose manifest.json inflates to gigabytes.
+        if zf.getinfo(MANIFEST_NAME).file_size > MAX_MANIFEST_BYTES:
+            raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Bundle manifest is too large")
         manifest = json.loads(zf.read(MANIFEST_NAME))
     except KeyError:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bundle is missing manifest.json")
