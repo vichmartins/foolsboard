@@ -91,7 +91,7 @@ export class WsDocProvider {
     if (!this.outBuf.length) return
     const merged = this.outBuf.length === 1 ? this.outBuf[0] : Y.mergeUpdates(this.outBuf)
     this.outBuf = []
-    realtime.sendDocUpdate(this.nodeId, 'update', u8ToB64(merged))
+    realtime.sendDocUpdate(this.nodeId, 'update', merged)
   }
 
   private scheduleAwFlush = () => {
@@ -108,14 +108,14 @@ export class WsDocProvider {
     if (!this.awChanged.size) return
     const ids = [...this.awChanged]
     this.awChanged.clear()
-    realtime.sendDocAwareness(this.nodeId, u8ToB64(encodeAwarenessUpdate(this.awareness, ids)))
+    realtime.sendDocAwareness(this.nodeId, encodeAwarenessUpdate(this.awareness, ids))
   }
 
   private announce = () => {
-    realtime.sendDocUpdate(this.nodeId, 'sync-req', '')
+    realtime.sendDocUpdate(this.nodeId, 'sync-req', new Uint8Array(0))
     const ids = [...this.awareness.getStates().keys()]
     if (ids.length)
-      realtime.sendDocAwareness(this.nodeId, u8ToB64(encodeAwarenessUpdate(this.awareness, ids)))
+      realtime.sendDocAwareness(this.nodeId, encodeAwarenessUpdate(this.awareness, ids))
   }
 
   connect(): void {
@@ -150,26 +150,30 @@ export class WsDocProvider {
     type: string
     node_id: string
     sub?: string
-    update?: string
+    update?: string | Uint8Array
   }): void {
     if (msg.node_id !== this.nodeId) return
+    // Updates arrive as raw bytes (binary frames); tolerate base64 too so a peer
+    // still on the old JSON protocol during a deploy doesn't break sync.
+    const toU8 = (u: string | Uint8Array | undefined): Uint8Array =>
+      u == null ? new Uint8Array(0) : u instanceof Uint8Array ? u : b64ToU8(u)
     try {
       if (msg.type === 'doc_awareness') {
-        if (msg.update) applyAwarenessUpdate(this.awareness, b64ToU8(msg.update), 'remote')
+        if (msg.update != null) applyAwarenessUpdate(this.awareness, toU8(msg.update), 'remote')
         return
       }
       // doc_update
       if (msg.sub === 'sync-req') {
         // A peer just joined — hand them our full doc state + current cursors.
-        realtime.sendDocUpdate(this.nodeId, 'sync-state', u8ToB64(Y.encodeStateAsUpdate(this.doc)))
+        realtime.sendDocUpdate(this.nodeId, 'sync-state', Y.encodeStateAsUpdate(this.doc))
         const ids = [...this.awareness.getStates().keys()]
         if (ids.length)
-          realtime.sendDocAwareness(this.nodeId, u8ToB64(encodeAwarenessUpdate(this.awareness, ids)))
+          realtime.sendDocAwareness(this.nodeId, encodeAwarenessUpdate(this.awareness, ids))
         return
       }
-      if ((msg.sub === 'update' || msg.sub === 'sync-state') && msg.update) {
+      if ((msg.sub === 'update' || msg.sub === 'sync-state') && msg.update != null) {
         // origin=this so onDoc doesn't rebroadcast what we just merged.
-        Y.applyUpdate(this.doc, b64ToU8(msg.update), this)
+        Y.applyUpdate(this.doc, toU8(msg.update), this)
       }
     } catch (err) {
       console.warn('[collab] receive error', err)

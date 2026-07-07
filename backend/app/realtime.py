@@ -130,6 +130,16 @@ class Hub:
         ]
         await self._send_many(targets, msg)
 
+    async def relay_bytes(self, sender: Conn, data: bytes) -> None:
+        """Forward a raw binary frame (Yjs doc/awareness) to everyone else on the
+        sender's board. Not persisted; not echoed back to the sender."""
+        if sender.board_id is None:
+            return
+        targets = [
+            c for c in self._conns if c.board_id == sender.board_id and c is not sender
+        ]
+        await self._send_many_bytes(targets, data)
+
     async def send_to_user(self, user_id: UUID, msg: dict) -> None:
         """Push a message to every socket belonging to one user, on whatever board
         they're viewing -- for cross-board notifications like share invites."""
@@ -184,6 +194,17 @@ class Hub:
         async def _one(c: Conn) -> None:
             try:
                 await asyncio.wait_for(c.ws.send_json(msg), timeout=5)
+            except Exception:
+                pass
+
+        if targets:
+            await asyncio.gather(*(_one(c) for c in targets))
+
+    async def _send_many_bytes(self, targets: list[Conn], data: bytes) -> None:
+        # Same fan-out + per-send timeout as _send_many, but for raw binary frames.
+        async def _one(c: Conn) -> None:
+            try:
+                await asyncio.wait_for(c.ws.send_bytes(data), timeout=5)
             except Exception:
                 pass
 
