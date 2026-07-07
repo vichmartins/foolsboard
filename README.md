@@ -1,117 +1,98 @@
+<div align="center">
+
+<img src=".github/logo.svg" alt="foolsboard" width="120" height="120" />
+
 # foolsboard
 
-An infinite-canvas storyboard app for building **branching storylines**. Create
-objects (characters, scenes, dialog, events, ...), link them into an idea map,
-and attach rich media to each one. Think *Miro / tldraw* meets *Trello*, built
-for narrative.
+**An infinite-canvas storyboard for branching storylines.**
 
-## Stack
+Drop objects on a canvas — characters, scenes, dialog, events, notes, rich-text
+documents & screenplays — link them into an idea map, attach media to each, and
+play through your story by following the branches. Real-time co-editing, per-object
+media, and a Celtx-style screenplay mode. Self-hosted.
 
-| Layer        | Choice                                          |
-|--------------|-------------------------------------------------|
-| Frontend     | React + Vite + TypeScript + React Flow          |
-| Backend      | FastAPI (async JSON API)                         |
-| ORM          | SQLAlchemy 2.0 (database-agnostic)               |
-| Migrations   | Alembic                                          |
-| Database     | Postgres (active); SQLite for zero-install dev   |
-| Media        | Pluggable storage (local disk now, S3 later)    |
+<sub>Think *Miro / tldraw* meets *Trello*, built for narrative. · [Changelog](CHANGELOG.md)</sub>
 
-## Why it's portable
+</div>
 
-Nothing in the app code names a specific database. Models use portable column
-types (UUID, JSON, timestamps via `func.now()`), and the connection string lives
-only in `.env`. Switching databases is a one-line change followed by
-`alembic upgrade head`.
+---
 
-## Run it (Windows)
+## ✨ Highlights
+
+- **Infinite canvas** of connectable objects with branching links.
+- **Rich media** per object — images, video, audio, files, and link previews.
+- **Documents & screenplays** — a rich-text editor with a Celtx-style script mode,
+  element autocomplete, and PDF export.
+- **Real-time co-editing** with live cursors and presence.
+- **Playthrough mode** — read the story by walking the connections.
+- **Organize** with folders, categories, an Explorer sidebar, a workspace-wide
+  gallery, sharing, and templates.
+- **Self-hosted** — one Debian package serves the app, API, WebSocket, and media on
+  a single port, backed by a local PostgreSQL that installs itself. Nightly backups.
+
+## 🚀 Install (Debian / Ubuntu)
+
+foolsboard ships as a single self-contained `.deb`. On a Debian/Ubuntu server:
+
+```bash
+# 1. Build the package (needs dpkg-deb; Node only if the frontend isn't prebuilt)
+packaging/build-deb.sh
+
+# 2. Install it — auto-provisions PostgreSQL, config, media, and the service
+sudo apt install ./build/foolsboard_<version>_all.deb
+```
+
+Then open **http://\<host\>:9534** (allow TCP 9534 through the firewall if needed).
+
+The installer creates a `foolsboard` system user, a local Postgres database, a random
+JWT secret, media storage under `/var/lib/foolsboard`, and a running
+`foolsboard.service`. **The first account to register becomes the admin;** everyone
+after signs up with an invite code the admin generates.
+
+Manage it with systemd, and upgrade by installing a newer `.deb` (config + data are
+preserved):
+
+```bash
+systemctl status foolsboard      # health
+journalctl -u foolsboard -f      # logs
+systemctl restart foolsboard     # restart
+```
+
+Full packaging, backup/restore, and reverse-proxy notes live in
+[`packaging/README.md`](packaging/README.md).
+
+## 🛠️ Develop
+
+<details>
+<summary>Run the frontend + backend locally</summary>
 
 **Backend** (from `backend/`):
 
-```powershell
-py -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt -r requirements-postgres.txt
-copy .env.example .env          # then set DATABASE_URL (see below)
-.\.venv\Scripts\alembic.exe upgrade head
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```bash
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt -r requirements-postgres.txt
+cp .env.example .env          # set DATABASE_URL (Postgres, or sqlite:///./foolsboard.db)
+.venv/bin/alembic upgrade head
+.venv/bin/python -m uvicorn app.main:app --reload      # http://127.0.0.1:8000
 ```
 
 **Frontend** (from `frontend/`):
 
-```powershell
+```bash
 npm install
-npm run dev      # http://localhost:5173  (proxies /api -> backend)
+npm run dev      # http://localhost:5173  (proxies /api → the backend)
 ```
 
-- API: http://127.0.0.1:8000 · Swagger: http://127.0.0.1:8000/docs
-- Health: http://127.0.0.1:8000/api/health (reports the active DB dialect)
+</details>
 
-## Database
+## Stack
 
-Active connection (in `.env`):
+| Layer | Choice |
+|---|---|
+| Frontend | React 19 · Vite · TypeScript · React Flow · TipTap · Yjs |
+| Backend | FastAPI · SQLAlchemy 2 · Alembic |
+| Database | PostgreSQL (SQLite for zero-install dev) |
+| Media | Pluggable storage (local disk) |
+| Packaging | Self-contained Debian `.deb` (systemd + auto-provisioned Postgres) |
 
-```
-DATABASE_URL=postgresql+psycopg://foolsboard:<password>@127.0.0.1:5432/foolsboard
-```
-
-> Use `127.0.0.1`, not `localhost` — on this Windows + Postgres 18 setup
-> `localhost` resolves to IPv6 `::1`, which `pg_hba.conf` handles differently.
-
-One-time Postgres provisioning (as the `postgres` superuser):
-
-```sql
-CREATE ROLE foolsboard LOGIN PASSWORD '...';
-CREATE DATABASE foolsboard OWNER foolsboard;
-ALTER SCHEMA public OWNER TO foolsboard;   -- needed for table creation on PG 15+
-```
-
-To fall back to SQLite, point `DATABASE_URL` at `sqlite:///./foolsboard.db` and
-re-run `alembic upgrade head`.
-
-## API surface
-
-| Method | Path                                   | Purpose                         |
-|--------|----------------------------------------|---------------------------------|
-| GET    | `/api/health`                          | Liveness + active DB dialect    |
-| GET/POST | `/api/boards`                        | List / create boards            |
-| GET/PATCH/DELETE | `/api/boards/{id}`           | Read / update / delete a board  |
-| GET    | `/api/boards/{id}/graph`               | Whole board (nodes + edges)     |
-| GET/POST | `/api/boards/{id}/nodes`             | List / create nodes             |
-| PATCH/DELETE | `/api/boards/{id}/nodes/{nid}`   | Update / delete a node          |
-| GET/POST | `/api/boards/{id}/edges`             | List / create edges             |
-| PATCH/DELETE | `/api/boards/{id}/edges/{eid}`   | Update / delete an edge         |
-| GET/POST | `/api/nodes/{id}/assets`             | List / upload media             |
-| DELETE | `/api/nodes/{id}/assets/{aid}`         | Delete media                    |
-
-## Project layout
-
-```
-backend/
-  app/
-    config.py        # env-driven settings
-    database.py      # engine, session, Base
-    storage.py       # pluggable media storage
-    schemas.py       # Pydantic request/response models
-    models/          # Board, Node, Edge, Asset
-    routers/         # boards, nodes, edges, assets
-  alembic/           # migrations
-frontend/
-  src/
-    api.ts           # typed REST client
-    components/      # Canvas, StoryNodeCard, ContextPanel
-```
-
-## Status
-
-- [x] Backend: data model, CRUD API, media upload, migrations
-- [x] Frontend: React Flow canvas, right-click-create, edges, context panel
-- [x] Postgres: provisioned and active
-- [x] Board management: create / rename / delete (animated dialogs)
-- [x] Per-type structured node fields (scene/character/dialog/event/note)
-- [x] Delete confirmations (gradient overlay)
-- [x] Node card previews
-- [x] Connection editing: right-click menu (edit label / insert node / delete) + drag-to-reconnect / detach
-- [x] Connect from any side (handles on all four sides, loose mode)
-- [ ] Auth (when needed)
-
-See [CHANGELOG](CHANGELOG.md) for version history.
-```
+<div align="center"><sub>Built for narrative. See the <a href="CHANGELOG.md">changelog</a> for what's new.</sub></div>
