@@ -8,6 +8,7 @@ import TaskItem from '@tiptap/extension-task-item'
 import { TableKit } from '@tiptap/extension-table'
 import Image from '@tiptap/extension-image'
 import { ScreenplayElement } from './screenplay'
+import * as api from '../api'
 import type { StoryNode } from '../types'
 
 // Schema extensions needed to render a stored doc (content.doc JSON) back to HTML.
@@ -113,4 +114,64 @@ export function exportDocNodePdf(node: StoryNode): void {
   const mode = (node.content as { mode?: string } | undefined)?.mode
   const title = node.title?.trim() || 'Untitled document'
   printHtml(buildPrintHtml(title, docNodeToHtml(node), mode === 'script'))
+}
+
+export type DocExportFormat = 'pdf' | 'docx' | 'odt' | 'txt'
+
+// Human-readable labels for the export menu, in display order.
+export const DOC_EXPORT_FORMATS: { format: DocExportFormat; label: string }[] = [
+  { format: 'pdf', label: 'PDF' },
+  { format: 'docx', label: 'Word (.docx)' },
+  { format: 'odt', label: 'OpenDocument (.odt)' },
+  { format: 'txt', label: 'Plain text (.txt)' },
+]
+
+function safeFilename(title: string, ext: string): string {
+  const base =
+    (title || 'document')
+      .replace(/[^\w.\- ]+/g, '')
+      .trim()
+      .slice(0, 80) || 'document'
+  return `${base}.${ext}`
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+// Export a document (given its rendered body HTML) in the chosen format. PDF
+// prints locally; TXT strips the HTML to text locally; DOCX/ODT convert server-
+// side (screenplays get industry-formatted .docx). Used by both a stored node and
+// the live editor.
+export async function exportDocHtmlAs(
+  bodyHtml: string,
+  title: string,
+  format: DocExportFormat,
+  isScript: boolean,
+): Promise<void> {
+  const name = title.trim() || 'Untitled document'
+  if (format === 'pdf') {
+    printHtml(buildPrintHtml(name, bodyHtml, isScript))
+    return
+  }
+  if (format === 'txt') {
+    const text = new DOMParser().parseFromString(bodyHtml || '<p></p>', 'text/html').body.textContent
+    downloadBlob(new Blob([text ?? ''], { type: 'text/plain' }), safeFilename(name, 'txt'))
+    return
+  }
+  const blob = await api.exportDocument(bodyHtml, name, format, isScript ? 'script' : 'doc')
+  downloadBlob(blob, safeFilename(name, format))
+}
+
+// Export a stored doc node in the chosen format (reads its saved content).
+export function exportDocNodeAs(node: StoryNode, format: DocExportFormat): Promise<void> {
+  const isScript = (node.content as { mode?: string } | undefined)?.mode === 'script'
+  return exportDocHtmlAs(docNodeToHtml(node), node.title?.trim() || 'Untitled document', format, isScript)
 }

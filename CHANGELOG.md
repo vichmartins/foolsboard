@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.98.0
+
+- feat: **Export documents in multiple formats** — PDF, Word (.docx), OpenDocument
+  (.odt), and plain text (.txt). Right-click a document (Explorer or canvas) →
+  **Export as ▸**, or use the editor's new **Export ▾** dropdown. Screenplays
+  exported to .docx keep their industry formatting (Courier, scene/character/
+  dialogue indentation, uppercasing).
+- ops: **Rotate the JWT signing secret** with `sudo /opt/foolsboard/rotate-jwt.sh`
+  (invalidates all sessions — everyone logs in again).
+
 ## v0.97.0
 
 Security + reliability audit fixes.

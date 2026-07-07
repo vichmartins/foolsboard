@@ -386,6 +386,19 @@ export async function exportBoards(
   ).data
 }
 
+// Convert a document's HTML to a downloadable file (docx / odt / txt) via the
+// server's pandoc converter. Returns the file bytes as a Blob.
+export async function exportDocument(
+  html: string,
+  title: string,
+  format: 'docx' | 'odt' | 'txt',
+  mode: 'doc' | 'script' = 'doc',
+): Promise<Blob> {
+  return (
+    await http.post('/documents/export', { html, title, format, mode }, { responseType: 'blob' })
+  ).data
+}
+
 // Import boards from a .zip bundle; the server creates them and returns them.
 export async function importBoards(file: File): Promise<Board[]> {
   const form = new FormData()

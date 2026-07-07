@@ -3,7 +3,7 @@ Version: @VERSION@
 Section: web
 Priority: optional
 Architecture: @ARCH@
-Depends: python3 (>= 3.11), python3-venv, ffmpeg, adduser, postgresql, restic
+Depends: python3 (>= 3.11), python3-venv, ffmpeg, adduser, postgresql, restic, pandoc
 Maintainer: Victor <vich.martins@gmail.com>
 Homepage: https://foolsboard.home
 Description: foolsboard -- branching-storyline storyboard app

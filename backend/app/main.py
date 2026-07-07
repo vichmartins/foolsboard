@@ -37,6 +37,7 @@ from .routers import (
     assets,
     auth,
     boards,
+    documents,
     edges,
     folders,
     invites,
@@ -398,6 +399,7 @@ app.include_router(nodes.router)
 app.include_router(edges.router)
 app.include_router(assets.router)
 app.include_router(links.router)
+app.include_router(documents.router)
 
 
 @app.get("/api/health", tags=["meta"])

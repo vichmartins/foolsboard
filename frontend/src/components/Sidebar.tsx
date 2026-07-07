@@ -11,7 +11,7 @@ import { makeMatcher } from '../search'
 import { useGlobalPresence } from '../realtime'
 import ContextMenu from './ContextMenu'
 import ConfirmDialog from './ConfirmDialog'
-import { exportDocNodePdf } from './docExport'
+import { exportDocNodeAs, DOC_EXPORT_FORMATS } from './docExport'
 import ShareMark from './ShareMark'
 import {
   BoardIcon,
@@ -399,17 +399,13 @@ export default function Sidebar(props: Props) {
     }
     onObjectsMutated(bid)
   }
+  // Download a media object's file. Documents use the "Export as" submenu instead.
   const downloadObj = (n: StoryNode) => {
-    if (n.type === 'doc') {
-      exportDocNodePdf(n)
-      return
-    }
     const c = (n.content ?? {}) as MediaNodeContent
     if (c.url) downloadAsset({ url: c.url, filename: c.filename || 'file' })
   }
-  // Media objects can be downloaded (their file); documents export to PDF.
   const canDownload = (n: StoryNode): boolean =>
-    n.type === 'doc' || (n.type === 'media' && !!(n.content as MediaNodeContent)?.url)
+    n.type === 'media' && !!(n.content as MediaNodeContent)?.url
 
   const toggle = (set: Set<string>, key: string, id: string, save: (s: Set<string>) => void) => {
     const n = new Set(set)
@@ -1373,15 +1369,26 @@ export default function Sidebar(props: Props) {
                   },
                 ]
               : []),
-            ...(canDownload(objMenu.node)
+            ...(objMenu.node.type === 'doc'
               ? [
                   {
-                    label: objMenu.node.type === 'doc' ? 'Export as PDF' : 'Download',
-                    mnemonic: objMenu.node.type === 'doc' ? 'x' : 'w',
-                    onClick: () => downloadObj(objMenu.node),
+                    label: 'Export as',
+                    mnemonic: 'x',
+                    submenu: DOC_EXPORT_FORMATS.map((f) => ({
+                      label: f.label,
+                      onClick: () => void exportDocNodeAs(objMenu.node, f.format),
+                    })),
                   },
                 ]
-              : []),
+              : canDownload(objMenu.node)
+                ? [
+                    {
+                      label: 'Download',
+                      mnemonic: 'w',
+                      onClick: () => downloadObj(objMenu.node),
+                    },
+                  ]
+                : []),
             {
               label: 'Delete',
               mnemonic: 'l',

@@ -83,7 +83,7 @@ import FloatingEdge from './FloatingEdge'
 import MediaNodeCard from './MediaNodeCard'
 import DocNodeCard from './DocNodeCard'
 import DocEditor, { type DocStatus } from './DocEditor'
-import { exportDocNodePdf } from './docExport'
+import { exportDocNodeAs, DOC_EXPORT_FORMATS } from './docExport'
 import MinimapSelection from './MinimapSelection'
 import NodeGallery from './NodeGallery'
 import PromptDialog from './PromptDialog'
@@ -2319,9 +2319,12 @@ function CanvasInner({
             ...(menuStory?.type === 'doc'
               ? [
                   {
-                    label: 'Export as PDF',
+                    label: 'Export as',
                     mnemonic: 'x',
-                    onClick: () => exportDocNodePdf(menuStory),
+                    submenu: DOC_EXPORT_FORMATS.map((f) => ({
+                      label: f.label,
+                      onClick: () => void exportDocNodeAs(menuStory, f.format),
+                    })),
                   },
                 ]
               : []),

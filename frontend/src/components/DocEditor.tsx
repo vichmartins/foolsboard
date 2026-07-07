@@ -20,7 +20,8 @@ import type { StoryNode } from '../types'
 import { useAuth } from '../auth'
 import { collabColor } from '../collab'
 import { WsDocProvider, u8ToB64, b64ToU8 } from './docCollab'
-import { buildPrintHtml, printHtml } from './docExport'
+import { exportDocHtmlAs, DOC_EXPORT_FORMATS, type DocExportFormat } from './docExport'
+import ContextMenu from './ContextMenu'
 import {
   ScreenplayElement,
   ScreenplayKeys,
@@ -467,11 +468,12 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
   }
   const curEl = (editor?.getAttributes('paragraph').element as ScreenEl | undefined) ?? null
 
-  // Export to PDF via the browser's print dialog (Save as PDF) — real selectable
-  // text, paginated, styled for paper per the current mode.
-  const exportPdf = () => {
+  // Export the live editor content in the chosen format (PDF prints; DOCX/ODT/TXT
+  // download — screenplays get industry-formatted .docx).
+  const [exportMenu, setExportMenu] = useState<{ x: number; y: number } | null>(null)
+  const exportAs = (format: DocExportFormat) => {
     if (!editor) return
-    printHtml(buildPrintHtml(title.trim() || 'Untitled document', editor.getHTML(), mode === 'script'))
+    void exportDocHtmlAs(editor.getHTML(), title, format, mode === 'script')
   }
 
   return (
@@ -530,13 +532,32 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
         <span className="doc-editor__status">
           {status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : ''}
         </span>
-        <button className="btn" onClick={exportPdf} title="Export to PDF (opens your print dialog — choose Save as PDF)">
-          Export PDF
+        <button
+          className="btn"
+          onClick={(e) => {
+            const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+            setExportMenu(exportMenu ? null : { x: r.left, y: r.bottom + 4 })
+          }}
+          title="Export the document (PDF, Word, OpenDocument, or text)"
+        >
+          Export ▾
         </button>
         <button className="btn btn--primary doc-editor__done" onClick={close} title="Close (Esc)">
           Done
         </button>
       </div>
+
+      {exportMenu && (
+        <ContextMenu
+          x={exportMenu.x}
+          y={exportMenu.y}
+          items={DOC_EXPORT_FORMATS.map((f) => ({
+            label: f.label,
+            onClick: () => exportAs(f.format),
+          }))}
+          onClose={() => setExportMenu(null)}
+        />
+      )}
 
       {editor && (
         <div className="doc-tb">
