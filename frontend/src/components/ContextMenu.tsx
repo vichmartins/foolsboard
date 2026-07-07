@@ -47,6 +47,32 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
   // pointer can travel from the parent into the submenu without it collapsing.
   const [openSub, setOpenSub] = useState<number | null>(null)
   const subTimer = useRef<number | null>(null)
+  // The open submenu's measured placement: which side, and a vertical offset that
+  // shifts it up so it never runs past the bottom of the viewport.
+  const subRef = useRef<HTMLUListElement>(null)
+  const [subPos, setSubPos] = useState<{ top: number; side: 'left' | 'right' }>({
+    top: -5,
+    side: 'right',
+  })
+  useLayoutEffect(() => {
+    if (openSub === null) return
+    const el = subRef.current
+    const li = el?.parentElement
+    if (!el || !li) return
+    const m = 6
+    const liRect = li.getBoundingClientRect()
+    const w = el.offsetWidth
+    const h = el.offsetHeight
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+    // Prefer opening to the right of the item; flip left if it would overflow.
+    let side: 'left' | 'right' = 'right'
+    if (liRect.right + w > vw - m && liRect.left - w >= m) side = 'left'
+    // Default the top edge just above the item; shift up if the bottom overflows.
+    let top = -5
+    if (liRect.top + top + h > vh - m) top = Math.max(m - liRect.top, vh - m - h - liRect.top)
+    setSubPos({ top, side })
+  }, [openSub])
   const openSubmenu = (i: number) => {
     if (subTimer.current !== null) {
       window.clearTimeout(subTimer.current)
@@ -159,8 +185,6 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
     >
       {items.map((it, i) => {
         if (it.submenu) {
-          // Open the flyout to whichever side has room (based on the menu's own edge).
-          const side = pos.left > window.innerWidth / 2 ? 'left' : 'right'
           return (
             <li
               key={i}
@@ -181,7 +205,11 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
                 </span>
               </button>
               {openSub === i && (
-                <ul className={'ctx-menu ctx-submenu ctx-submenu--' + side}>
+                <ul
+                  ref={subRef}
+                  className={'ctx-menu ctx-submenu ctx-submenu--' + subPos.side}
+                  style={{ top: subPos.top }}
+                >
                   {it.submenu.map((sub, j) => (
                     <li key={j}>
                       <button
