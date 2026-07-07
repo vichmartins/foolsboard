@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.99.0
+
+- perf: **Real-time co-editing is much leaner on the wire.** Instead of sending
+  one WebSocket message per keystroke, local edits are now coalesced and sent as
+  a single merged update per ~40ms "tick" (like a game server's tick rate), and
+  cursor/selection updates are throttled the same way to their latest state. In a
+  fast typing burst that's roughly **5–10× fewer messages and ~70–80% less
+  traffic** on the doc channel, with no perceptible change in latency — your own
+  edits still apply instantly, and collaborators see changes within ~40ms.
+  Documents converge to byte-identical state (unchanged correctness).
+
 ## v0.98.3
 
 - fix: **Document export is more robust when pandoc isn't on the service PATH.**
