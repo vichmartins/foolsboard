@@ -188,9 +188,13 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
       // connections is editing.
       const byPerson = new Map<string, { name: string; color: string; status: DocStatus }>()
       // Any awareness state that claims to be ME but isn't my current connection is
-      // a ghost from a prior tab/refresh — page unload can't reliably broadcast its
-      // removal, so it lingers as a duplicate cursor + avatar until Yjs's ~30s
-      // timeout. Remove those (and broadcast it) so they clear for everyone at once.
+      // either a ghost from a prior tab/refresh or a live second tab of mine. Never
+      // show it as a peer. Only actively *remove* it (which also broadcasts, clearing
+      // it for everyone) once it's gone stale — a live tab heartbeats, so this won't
+      // fight it into a remove/re-add flicker; a dead ghost stops updating and is
+      // reaped here (or by Yjs's ~30s timeout as a backstop).
+      const GHOST_STALE_MS = 20_000
+      const meta = (aw as unknown as { meta?: Map<number, { lastUpdated: number }> }).meta
       const myGhosts: number[] = []
       aw.getStates().forEach((state, clientId) => {
         if (clientId === aw.clientID) return // skip my own connection
@@ -201,7 +205,8 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
         const u = s.user
         if (!u?.name) return
         if (meId && u.id === meId) {
-          myGhosts.push(clientId)
+          const last = meta?.get(clientId)?.lastUpdated ?? 0
+          if (Date.now() - last > GHOST_STALE_MS) myGhosts.push(clientId)
           return
         }
         const key = u.id || `c${clientId}`
@@ -273,10 +278,14 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
         render: (u: { name: string; color: string }) => {
           const caret = document.createElement('span')
           caret.className = 'collaboration-carets__caret'
-          caret.setAttribute('style', `border-color:${u.color}`)
+          // Assign via CSSOM, not setAttribute('style', …): a collaborator's color
+          // comes from untrusted awareness, and a raw style string would let them
+          // inject extra CSS declarations (a fixed-position overlay, a beacon url…).
+          // The CSSOM setter drops anything that isn't a valid color.
+          caret.style.borderColor = u.color
           const label = document.createElement('div')
           label.className = 'collaboration-carets__label'
-          label.setAttribute('style', `background-color:${u.color}`)
+          label.style.backgroundColor = u.color
           label.textContent = u.name
           caret.appendChild(label)
           return caret
@@ -334,8 +343,17 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
   }, [editor, setMyStatus])
 
   // --- Autosave (debounced) -------------------------------------------------
+  const maxSaveTimer = useRef<number | null>(null)
   const saveNow = useCallback(async () => {
     if (!editor) return
+    if (saveTimer.current) {
+      window.clearTimeout(saveTimer.current)
+      saveTimer.current = null
+    }
+    if (maxSaveTimer.current != null) {
+      window.clearTimeout(maxSaveTimer.current)
+      maxSaveTimer.current = null
+    }
     setStatus('saving')
     const content = {
       ...(node.content ?? {}),
@@ -367,6 +385,27 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
   const schedule = useCallback(() => {
     if (saveTimer.current) window.clearTimeout(saveTimer.current)
     saveTimer.current = window.setTimeout(() => saveRef.current(), 1200)
+    // Cap the debounce so continuous typing still persists at least every ~8s
+    // (otherwise a fast typist's work only lives in the unsaved Yjs state).
+    if (maxSaveTimer.current == null) {
+      maxSaveTimer.current = window.setTimeout(() => saveRef.current(), 8000)
+    }
+  }, [])
+  // Best-effort flush when the tab is hidden/closed, so work isn't lost if the
+  // window goes away between debounced saves.
+  useEffect(() => {
+    const flush = () => {
+      if (saveTimer.current || maxSaveTimer.current != null) void saveRef.current()
+    }
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [])
 
   useEffect(() => {
@@ -397,6 +436,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
     return () => {
       window.removeEventListener('keydown', onKey)
       if (saveTimer.current) window.clearTimeout(saveTimer.current)
+      if (maxSaveTimer.current != null) window.clearTimeout(maxSaveTimer.current)
       if (savedFlash.current) window.clearTimeout(savedFlash.current)
     }
   }, [close])

@@ -174,7 +174,14 @@ def _process_compression(asset_id: UUID) -> None:
                     asset.content_type = cct
                     asset.kind = _kind_from_content_type(cct)
                     asset.size = new_size
-                    storage.delete(old_key)
+                    db.flush()  # so this asset no longer counts as a referrer of old_key
+                    # A copy/reference made during the encode window shares old_key;
+                    # only delete the file when nothing else points at it.
+                    still_used = db.scalars(
+                        select(Asset.id).where(Asset.storage_key == old_key)
+                    ).first()
+                    if still_used is None:
+                        storage.delete(old_key)
             finally:
                 out_path.unlink(missing_ok=True)
         asset.processing = False

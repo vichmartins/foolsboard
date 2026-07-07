@@ -340,6 +340,7 @@ export default function Sidebar(props: Props) {
     const t = renameVal.trim()
     setRenamingId(null)
     if (!drill || !t || t === n.title) return
+    drillReq.current++ // invalidate any in-flight refresh so it can't revert this
     setDrillNodes((ns) => ns?.map((x) => (x.id === n.id ? { ...x, title: t } : x)) ?? null)
     try {
       await api.updateNode(drill.id, n.id, { title: t })
@@ -351,6 +352,7 @@ export default function Sidebar(props: Props) {
   const duplicateObj = async (n: StoryNode) => {
     if (!drill) return
     const bid = drill.id
+    drillReq.current++ // invalidate any in-flight refresh so it can't drop the copy
     try {
       let copy = await api.createNode(bid, {
         type: n.type,
@@ -388,6 +390,7 @@ export default function Sidebar(props: Props) {
     setDeleteObj(null)
     if (!drill) return
     const bid = drill.id
+    drillReq.current++ // invalidate any in-flight refresh so it can't resurrect the row
     setDrillNodes((ns) => (ns ?? []).filter((x) => x.id !== n.id))
     try {
       await api.deleteNode(bid, n.id)

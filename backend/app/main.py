@@ -48,8 +48,18 @@ from .routers import (
 )
 from .security import decode_token
 
+_DEFAULT_JWT_SECRET = "dev-insecure-change-me-please"
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
+    # A real deployment (one serving the built SPA) must not run on the shipped
+    # default signing key — anyone could forge a token for any user. Refuse to boot.
+    if settings.static_dir and settings.jwt_secret == _DEFAULT_JWT_SECRET:
+        raise RuntimeError(
+            "JWT_SECRET is unset (using the insecure default). Set a strong random "
+            "JWT_SECRET before serving the app."
+        )
     print_ready()
     # One-time maintenance/backfills run in a single background thread so they
     # never delay the server from accepting connections, and each is isolated so

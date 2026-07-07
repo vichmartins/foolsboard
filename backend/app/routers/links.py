@@ -6,20 +6,21 @@ dependencies. The route is declared `def` (not `async`) so FastAPI runs the
 blocking fetch in a threadpool.
 
 Security note: this fetches arbitrary user-supplied URLs. We reject non-http(s)
-schemes and hosts that resolve to private/loopback/link-local addresses to
-limit SSRF. Redirects are followed by urllib and only the initial host is
-re-checked, which is an accepted limitation for this local, single-user tool.
+schemes and hosts that resolve to private/loopback/link-local addresses to limit
+SSRF, and we re-run that check on every redirect hop (an attacker-controlled URL
+can't 302 us to an internal host). Decompression is bounded so a small gzip'd
+response can't expand to an OOM.
 """
 from __future__ import annotations
 
-import gzip
 import ipaddress
 import json
 import socket
 import zlib
 from html.parser import HTMLParser
+from urllib.error import HTTPError
 from urllib.parse import quote, unquote, urljoin, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -31,6 +32,7 @@ router = APIRouter(
 )
 
 MAX_BYTES = 600_000
+MAX_DECOMPRESSED = 8_000_000  # cap inflate output so a tiny gzip can't OOM us
 TIMEOUT = 6
 USER_AGENT = "Mozilla/5.0 (compatible; FoolsboardBot/1.0; +link-preview)"
 IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".avif", ".ico")
@@ -99,16 +101,40 @@ def _host_is_blocked(host: str) -> bool:
     return False
 
 
+# Reject a redirect to any host that fails the SSRF check (or a non-http scheme),
+# so a public URL can't bounce us to an internal address.
+class _SafeRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[override]
+        parsed = urlparse(newurl)
+        if (
+            parsed.scheme not in {"http", "https"}
+            or not parsed.hostname
+            or _host_is_blocked(parsed.hostname)
+        ):
+            raise HTTPError(newurl, code, "Unsafe redirect target", headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+# Opener that validates redirect targets (urllib caps the redirect count itself).
+_opener = build_opener(_SafeRedirect())
+
+
+def _bounded_inflate(raw: bytes, wbits: int) -> bytes:
+    """Inflate at most MAX_DECOMPRESSED bytes, then stop."""
+    d = zlib.decompressobj(wbits)
+    return d.decompress(raw, MAX_DECOMPRESSED)
+
+
 def _decompress(raw: bytes, encoding: str) -> bytes:
     encoding = (encoding or "").lower()
     try:
         if encoding == "gzip":
-            return gzip.decompress(raw)
+            return _bounded_inflate(raw, 16 + zlib.MAX_WBITS)
         if encoding == "deflate":
             try:
-                return zlib.decompress(raw)
+                return _bounded_inflate(raw, zlib.MAX_WBITS)
             except zlib.error:
-                return zlib.decompress(raw, -zlib.MAX_WBITS)
+                return _bounded_inflate(raw, -zlib.MAX_WBITS)
     except Exception:
         pass
     return raw
@@ -158,7 +184,7 @@ def _fetch(url: str) -> LinkPreview:
 
     req = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,*/*"})
     try:
-        with urlopen(req, timeout=TIMEOUT) as resp:  # noqa: S310 (scheme checked above)
+        with _opener.open(req, timeout=TIMEOUT) as resp:  # redirects re-checked by _SafeRedirect
             ctype = resp.headers.get("Content-Type", "")
             if ctype.lower().startswith("image/"):
                 return LinkPreview(url=url, image=url, title=_image_name(parsed.path))

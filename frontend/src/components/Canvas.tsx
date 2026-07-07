@@ -345,8 +345,15 @@ function CanvasInner({
       moveRaf.current = 0
       return
     }
-    setNodes((nds) =>
-      nds.map((n) => {
+    setNodes((nds) => {
+      // Drop targets whose node no longer exists (deleted mid-ease, or arrived
+      // before its node loaded) — otherwise the loop never empties and re-renders
+      // every frame forever.
+      if (targets.size) {
+        const live = new Set(nds.map((n) => n.id))
+        for (const id of [...targets.keys()]) if (!live.has(id)) targets.delete(id)
+      }
+      return nds.map((n) => {
         const t = targets.get(n.id)
         if (!t) return n
         if (isDragging.current && n.selected) {
@@ -361,8 +368,8 @@ function CanvasInner({
         }
         // Ease 40% of the remaining distance per frame: smooth but snappy.
         return { ...n, position: { x: n.position.x + dx * 0.4, y: n.position.y + dy * 0.4 } }
-      }),
-    )
+      })
+    })
     moveRaf.current = requestAnimationFrame(stepMoves)
   }, [setNodes])
   const startMoves = useCallback(() => {
@@ -421,12 +428,19 @@ function CanvasInner({
   // Load the whole board graph whenever the board changes.
   useEffect(() => {
     let active = true
-    api.getGraph(boardId).then((g) => {
-      if (!active) return
-      setNodes(g.nodes.map((n) => toRFNode(n)))
-      setEdges(g.edges.map(toRFEdge))
-      setSelectedId(null)
-    })
+    api
+      .getGraph(boardId)
+      .then((g) => {
+        if (!active) return
+        setNodes(g.nodes.map((n) => toRFNode(n)))
+        setEdges(g.edges.map(toRFEdge))
+        setSelectedId(null)
+      })
+      .catch(() => {
+        // Don't leave an unhandled rejection / blank canvas; a board_dirty or the
+        // next board switch will retry.
+        if (active) onToast?.('Could not load this board — retrying on the next change.')
+      })
     return () => {
       active = false
     }
@@ -772,11 +786,33 @@ function CanvasInner({
           return cx >= o.position.x && cx <= o.position.x + b.w && cy >= o.position.y && cy <= o.position.y + b.h
         })
         if (target) {
+          const beforeSnap = dragStartPos.current
           dragStartPos.current = null
           const mediaNodeId = node.id
           const objId = target.id
           setNodes((nds) => nds.filter((n) => n.id !== mediaNodeId)) // optimistic
           setSelectedId(null)
+          // The media node is filed away, but any OTHER nodes dragged along with it
+          // still moved — persist their positions and keep the move undoable.
+          if (beforeSnap) {
+            const after = new Map<string, { x: number; y: number }>()
+            getNodes().forEach((n) => {
+              if (n.id !== mediaNodeId && beforeSnap.has(n.id))
+                after.set(n.id, { x: n.position.x, y: n.position.y })
+            })
+            after.forEach((pos, id) => api.updateNode(boardId, id, pos).catch(() => {}))
+            const moved = [...after].some(([id, pos]) => {
+              const b = beforeSnap.get(id)
+              return b && (b.x !== pos.x || b.y !== pos.y)
+            })
+            if (moved) {
+              const beforeForMoved = new Map([...beforeSnap].filter(([id]) => after.has(id)))
+              pushUndo({
+                undo: () => applyPositions(beforeForMoved),
+                redo: () => applyPositions(after),
+              })
+            }
+          }
           void (async () => {
             // Copy the file onto the object BEFORE deleting the media node, so
             // its shared storage isn't removed out from under the new reference.
@@ -1540,6 +1576,7 @@ function CanvasInner({
   })
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.repeat) return // don't let a held key (e.g. D) spam create/export actions
       const t = e.target as HTMLElement | null
       if (
         t &&

@@ -400,7 +400,9 @@ const prefetchedGraphs = new Map<string, Promise<BoardGraph>>()
 export function prefetchGraph(boardId: string): void {
   if (prefetchedGraphs.has(boardId)) return
   const p = http.get(`/boards/${boardId}/graph`).then((r) => r.data as BoardGraph)
-  p.catch(() => {}) // suppress unhandled rejection if it's never consumed
+  // Drop the entry if it fails, so a rejected/stale promise can't be handed to a
+  // later getGraph() and leave the canvas permanently blank; the caller re-fetches.
+  p.catch(() => prefetchedGraphs.delete(boardId))
   prefetchedGraphs.set(boardId, p)
 }
 

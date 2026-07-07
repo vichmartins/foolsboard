@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.97.0
+
+Security + reliability audit fixes.
+
+- security: Link previews can no longer be redirected to internal/loopback/LAN
+  hosts (SSRF), and are bounded against decompression bombs; import guards its
+  manifest size too.
+- security: A collaborator's cursor color can no longer inject CSS into your
+  document editor. The server refuses to start on the default JWT secret.
+- fix: **Merge is bound to its target board** — switching boards mid-merge can no
+  longer merge into (and delete) the wrong board.
+- fix: **Document autosave** flushes on tab hide/close and at least every ~8s, so
+  fast typing or closing the tab no longer loses recent edits.
+- fix: Media compression no longer deletes a file still shared by a copied/
+  referenced object; "Absorb" no longer removes a target board's own edges.
+- fix: The Explorer object list no longer reverts a rename/duplicate/delete when a
+  refresh is in flight; a failed board prefetch no longer blanks the canvas; a
+  held key no longer mass-creates documents; a stale "jump to object" no longer
+  re-fires later.
+- fix: Sturdier real-time layer — a malformed message can't drop the connection,
+  one stalled peer can't freeze a board, and refreshing in a doc no longer flickers
+  duplicate cursors between your own tabs.
+
 ## v0.96.4
 
 - improve: **Autocomplete now covers all screenplay elements.** Action, Dialogue,
