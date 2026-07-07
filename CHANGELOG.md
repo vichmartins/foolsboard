@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.98.3
+
+- fix: **Document export is more robust when pandoc isn't on the service PATH.**
+  The converter now locates the pandoc binary via PATH first, then falls back to
+  well-known install locations, so DOCX/ODT export works even when the server
+  process was launched with an environment that doesn't include pandoc's
+  directory. No effect on the packaged Linux deploy (pandoc is always on PATH
+  there); this mainly smooths out local/dev machines.
+
 ## v0.98.2
 
 - fix: **Document export to Word (.docx) and OpenDocument (.odt) was failing** on
