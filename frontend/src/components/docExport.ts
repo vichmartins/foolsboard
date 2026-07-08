@@ -7,16 +7,17 @@ import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import { TableKit } from '@tiptap/extension-table'
 import Image from '@tiptap/extension-image'
-import { TextStyle, FontFamily } from '@tiptap/extension-text-style'
+import { TextStyle, FontFamily, FontSize, Color, BackgroundColor } from '@tiptap/extension-text-style'
+import TextAlign from '@tiptap/extension-text-align'
 import { ScreenplayElement } from './screenplay'
 import * as api from '../api'
 import type { StoryNode } from '../types'
 
 // Schema extensions needed to render a stored doc (content.doc JSON) back to HTML.
 // Must cover every node/mark the editor can produce; ScreenplayElement preserves
-// the data-element attribute so screenplay formatting still applies; TextStyle +
-// FontFamily preserve Document-mode font choices. No collaboration extensions —
-// this is static, read-only rendering.
+// the data-element attribute so screenplay formatting still applies; the text-style
+// marks + TextAlign preserve Document-mode font / size / color / highlight /
+// alignment choices. No collaboration extensions — this is static rendering.
 export const DOC_RENDER_EXTENSIONS = [
   StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: { openOnClick: false } }),
   TaskList,
@@ -25,6 +26,10 @@ export const DOC_RENDER_EXTENSIONS = [
   Image,
   TextStyle,
   FontFamily,
+  FontSize,
+  Color,
+  BackgroundColor,
+  TextAlign.configure({ types: ['heading', 'paragraph'] }),
   ScreenplayElement,
 ]
 

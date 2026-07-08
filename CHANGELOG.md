@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.101.0
+
+- feat: **More Document-mode formatting** — text **color** and **highlight**
+  (swatch palettes), **font size**, and paragraph **alignment** (left / center /
+  right / justify). Like the font picker, each applies to the selection, saves
+  with the document, syncs live to collaborators, previews on the card, and
+  carries into PDF export; all are hidden in Screenplay mode. The color and
+  highlight toolbar glyphs were restyled to sit cleanly among the other controls.
+
 ## v0.100.0
 
 - feat: **Fonts in Document mode.** A new **Font ▾** picker in the document

@@ -2666,14 +2666,13 @@ b.doc-tb__glyph {
   color: var(--text-dim);
   white-space: nowrap;
 }
-/* Font picker (Document mode only). */
-.doc-tb__fontwrap {
+/* Document-mode text-style popovers (font / size / color / highlight). */
+.doc-tb__pop {
   position: relative;
   display: inline-flex;
 }
-.doc-tb__fontbtn {
+.doc-tb__popbtn {
   gap: 5px;
-  min-width: 104px;
   padding: 0 8px;
   justify-content: space-between;
 }
@@ -2683,19 +2682,50 @@ b.doc-tb__glyph {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.doc-tb__fontcaret {
+.doc-tb__sizeval {
+  min-width: 20px;
+  text-align: center;
+}
+.doc-tb__popcaret {
   font-size: 10px;
   opacity: 0.7;
 }
-.doc-tb__fontmenu {
+/* Text-color glyph: an "A" (in the toolbar's own colour) underlined in the
+   chosen colour — a matched sibling of the highlight glyph below. */
+.doc-tb__colorglyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text);
+  border-bottom: 3px solid currentColor;
+  padding-bottom: 1px;
+}
+/* Highlight glyph: the same "A", gaining the chosen colour as a soft highlight
+   swipe behind it only when one is set (dark ink then, for contrast on the pale
+   tones). With no highlight it's just a light letter like B / I / U. */
+.doc-tb__hlglyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 3px;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text);
+  border-radius: 4px;
+}
+.doc-tb__popmenu {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
   z-index: 90;
-  margin: 0;
   padding: 5px;
-  list-style: none;
-  min-width: 190px;
+  min-width: 150px;
   max-height: 340px;
   overflow-y: auto;
   background: var(--bg-elev);
@@ -2703,7 +2733,12 @@ b.doc-tb__glyph {
   border-radius: 10px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
-.doc-tb__fontopt {
+.doc-tb__optlist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.doc-tb__opt {
   display: block;
   width: 100%;
   text-align: left;
@@ -2717,12 +2752,40 @@ b.doc-tb__glyph {
   cursor: pointer;
   white-space: nowrap;
 }
-.doc-tb__fontopt:hover {
+.doc-tb__opt:hover {
   background: var(--bg-elev-2);
 }
-.doc-tb__fontopt--on {
+.doc-tb__opt--on {
   background: var(--bg-elev-2);
   color: var(--accent);
+}
+/* Colour / highlight swatch grid. */
+.doc-tb__swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 22px);
+  gap: 6px;
+  padding: 2px;
+}
+.doc-tb__swatch {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0;
+  cursor: pointer;
+}
+.doc-tb__swatch--on {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.doc-tb__swatch--reset {
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1;
+}
+.doc-tb__swatch--reset:hover {
+  background: var(--bg-elev-2);
 }
 /* Screenplay mode: Courier + industry element indentation (Celtx-style). */
 .doc-editor--script .doc-editor__content .ProseMirror {
