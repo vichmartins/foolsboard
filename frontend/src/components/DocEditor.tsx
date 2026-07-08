@@ -11,6 +11,7 @@ import TaskItem from '@tiptap/extension-task-item'
 import { TableKit } from '@tiptap/extension-table'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
+import { TextStyle, FontFamily } from '@tiptap/extension-text-style'
 import Collaboration from '@tiptap/extension-collaboration'
 import CollaborationCaret from '@tiptap/extension-collaboration-caret'
 import * as Y from 'yjs'
@@ -59,6 +60,27 @@ const EXTENSIONS = [
   TableKit.configure({ table: { resizable: true } }),
   Image,
   Placeholder.configure({ placeholder: 'Start writing…' }),
+  TextStyle, // carries the font-family mark (Document mode only)
+  FontFamily,
+]
+
+// Font choices offered in Document mode. All are system font stacks — no web
+// fonts are loaded (the strict CSP blocks external font requests anyway). An
+// empty value clears the mark (back to the document default). Screenplay mode
+// stays locked to Courier and never shows this control.
+const DOC_FONTS: { label: string; value: string }[] = [
+  { label: 'Default', value: '' },
+  { label: 'Sans Serif', value: 'ui-sans-serif, system-ui, Arial, sans-serif' },
+  { label: 'Serif', value: 'Georgia, "Times New Roman", serif' },
+  { label: 'Monospace', value: 'ui-monospace, "Courier New", monospace' },
+  { label: 'Arial', value: 'Arial, Helvetica, sans-serif' },
+  { label: 'Georgia', value: 'Georgia, serif' },
+  { label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
+  { label: 'Courier New', value: '"Courier New", Courier, monospace' },
+  { label: 'Verdana', value: 'Verdana, Geneva, sans-serif' },
+  { label: 'Trebuchet MS', value: '"Trebuchet MS", Helvetica, sans-serif' },
+  { label: 'Garamond', value: 'Garamond, "Times New Roman", serif' },
+  { label: 'Comic Sans MS', value: '"Comic Sans MS", cursive' },
 ]
 
 interface Props {
@@ -468,6 +490,36 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
   }
   const curEl = (editor?.getAttributes('paragraph').element as ScreenEl | undefined) ?? null
 
+  // Font picker (Document mode only). Applies a font-family text-style mark to the
+  // selection; the menu items keep the editor selection via mousedown-preventDefault.
+  const [fontMenu, setFontMenu] = useState(false)
+  const fontWrapRef = useRef<HTMLSpanElement>(null)
+  const curFont = (editor?.getAttributes('textStyle').fontFamily as string | undefined) || ''
+  const curFontLabel = DOC_FONTS.find((f) => f.value === curFont)?.label ?? 'Font'
+  const applyFont = (value: string) => {
+    if (!editor) return
+    const chain = editor.chain().focus()
+    if (value) chain.setFontFamily(value).run()
+    else chain.unsetFontFamily().run()
+    setFontMenu(false)
+  }
+  // Close the font menu on outside click or Escape.
+  useEffect(() => {
+    if (!fontMenu) return
+    const onDown = (e: PointerEvent) => {
+      if (fontWrapRef.current && !fontWrapRef.current.contains(e.target as Node)) setFontMenu(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFontMenu(false)
+    }
+    window.addEventListener('pointerdown', onDown)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [fontMenu])
+
   // Export the live editor content in the chosen format (PDF prints; DOCX/ODT/TXT
   // download — screenplays get industry-formatted .docx).
   const [exportMenu, setExportMenu] = useState<{ x: number; y: number } | null>(null)
@@ -594,6 +646,40 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
             </>
           ) : (
             <>
+          <span className="doc-tb__fontwrap" ref={fontWrapRef}>
+            <button
+              type="button"
+              className="doc-tb__btn doc-tb__fontbtn"
+              title="Font"
+              onMouseDown={(e) => e.preventDefault()} // keep the editor selection
+              onClick={() => setFontMenu((v) => !v)}
+            >
+              <span className="doc-tb__fontname" style={{ fontFamily: curFont || undefined }}>
+                {curFontLabel}
+              </span>
+              <span className="doc-tb__fontcaret" aria-hidden="true">▾</span>
+            </button>
+            {fontMenu && (
+              <ul className="doc-tb__fontmenu" role="listbox">
+                {DOC_FONTS.map((f) => (
+                  <li key={f.label}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={curFont === f.value}
+                      className={'doc-tb__fontopt' + (curFont === f.value ? ' doc-tb__fontopt--on' : '')}
+                      style={{ fontFamily: f.value || undefined }}
+                      onMouseDown={(e) => e.preventDefault()} // keep the editor selection
+                      onClick={() => applyFont(f.value)}
+                    >
+                      {f.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </span>
+          <span className="doc-tb__sep" />
           <Btn title="Bold (Ctrl+B)" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
             <b className="doc-tb__glyph">B</b>
           </Btn>

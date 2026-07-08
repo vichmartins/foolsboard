@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.100.0
+
+- feat: **Fonts in Document mode.** A new **Font ▾** picker in the document
+  toolbar lets you set the typeface for selected text — Default, Sans Serif,
+  Serif, Monospace, plus Arial, Georgia, Times New Roman, Courier New, Verdana,
+  Trebuchet MS, Garamond, and Comic Sans MS, each previewed in its own face. The
+  choice saves with the document, syncs live to collaborators, shows in the card
+  preview, and carries into PDF export. All are system fonts (zero download,
+  CSP-safe); Screenplay mode is unaffected and stays in Courier.
+
 ## v0.99.2
 
 - change: **Screenplay autocomplete now matches Celtx 1:1.** Suggestions appear

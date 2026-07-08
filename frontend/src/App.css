@@ -2666,11 +2666,73 @@ b.doc-tb__glyph {
   color: var(--text-dim);
   white-space: nowrap;
 }
+/* Font picker (Document mode only). */
+.doc-tb__fontwrap {
+  position: relative;
+  display: inline-flex;
+}
+.doc-tb__fontbtn {
+  gap: 5px;
+  min-width: 104px;
+  padding: 0 8px;
+  justify-content: space-between;
+}
+.doc-tb__fontname {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doc-tb__fontcaret {
+  font-size: 10px;
+  opacity: 0.7;
+}
+.doc-tb__fontmenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 90;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  min-width: 190px;
+  max-height: 340px;
+  overflow-y: auto;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.doc-tb__fontopt {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.doc-tb__fontopt:hover {
+  background: var(--bg-elev-2);
+}
+.doc-tb__fontopt--on {
+  background: var(--bg-elev-2);
+  color: var(--accent);
+}
 /* Screenplay mode: Courier + industry element indentation (Celtx-style). */
 .doc-editor--script .doc-editor__content .ProseMirror {
   font-family: 'Courier New', Courier, monospace;
   font-size: 13px;
   line-height: 1.5;
+}
+/* A font-family mark set in Document mode must never override screenplay Courier. */
+.doc-editor--script .doc-editor__content .ProseMirror [style*='font-family'] {
+  font-family: 'Courier New', Courier, monospace !important;
 }
 .doc-editor--script .doc-editor__content p {
   margin: 0;
