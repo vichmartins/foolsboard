@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.99.2
+
+- change: **Screenplay autocomplete now matches Celtx 1:1.** Suggestions appear
+  only in the elements with a repeatable vocabulary — Scene, Character,
+  Transition, Shot — and offer only that element's own prior values plus its seed
+  list. Free-prose elements (Action, Dialogue, Parenthetical) no longer pop a
+  dropdown, and the previous cross-element conversion (typing a known name on an
+  Action line to turn it into a Character) has been removed, since Celtx doesn't
+  do that.
+
 ## v0.99.1
 
 - perf: **Co-editing now uses a compact binary WebSocket protocol.** The Yjs doc

@@ -1,19 +1,17 @@
 // Celtx-style autocomplete for screenplay mode. While the caret sits in a
-// Character / Scene / Transition / Shot element, a dropdown offers matching values
-// you've already used in this document (plus a little built-in vocabulary). It also
-// works cross-element: on an Action line, typing a known character name offers it
-// and — on accept — converts the line to a Character element (Celtx-style). Picking
+// Scene / Character / Transition / Shot element, a dropdown offers matching values
+// you've already used in this document (plus a little built-in vocabulary). Picking
 // a value fills it in; the element's indentation is applied by screenplay mode.
+// Free-prose elements (Action, Dialogue, Parenthetical) never autocomplete, exactly
+// as in Celtx.
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Editor } from '@tiptap/react'
-import { SCREEN_ELEMENTS, type ScreenEl } from './screenplay'
+import { type ScreenEl } from './screenplay'
 
-// Every element type is completable: its previously-used values are offered in
-// place, and it can be suggested from any other line (accepting converts the line
-// to that element). Ordered as in the screenplay element list.
-const VOCAB: ScreenEl[] = SCREEN_ELEMENTS.map((e) => e.el)
-const OWN_VOCAB = new Set<ScreenEl>(VOCAB)
+// Only elements with a repeatable, enumerable vocabulary autocomplete (Celtx-style);
+// free-prose elements — action, dialogue, parenthetical — never suggest.
+const COMPLETABLE = new Set<ScreenEl>(['scene', 'character', 'transition', 'shot'])
 
 // A little starter vocabulary, merged with what you've actually written.
 const SEED: Partial<Record<ScreenEl, string[]>> = {
@@ -32,11 +30,8 @@ const SEED: Partial<Record<ScreenEl, string[]>> = {
 const MAX_ITEMS = 6
 const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'])
 
-// A suggestion. `el` set means accepting it also converts the current paragraph to
-// that element (e.g. a character name offered on an Action line).
 interface AcItem {
   text: string
-  el?: ScreenEl
 }
 
 interface Props {
@@ -88,22 +83,19 @@ export default function ScreenplayAutocomplete({ editor, active }: Props) {
     return out
   }
 
-  // Suggestions for the paragraph the caret is in: this element's own values
-  // first (completed in place), then matching values of the other vocabulary
-  // element types (accepting converts the line to that element, Celtx-style).
+  // Suggestions for the paragraph the caret is in: this element's own previously
+  // used values plus its seed vocab, completed in place. Free-prose elements
+  // (action / dialogue / parenthetical) aren't completable, so they get nothing
+  // and no dropdown appears.
   const buildItems = (el: ScreenEl, query: string): AcItem[] => {
+    if (!COMPLETABLE.has(el)) return []
     const items: AcItem[] = []
     const seen = new Set<string>()
-    const push = (text: string, convertTo?: ScreenEl) => {
-      const key = text.toLowerCase()
-      if (seen.has(key)) return
+    for (const t of collectFor(el, query)) {
+      const key = t.toLowerCase()
+      if (seen.has(key)) continue
       seen.add(key)
-      items.push(convertTo ? { text, el: convertTo } : { text })
-    }
-    if (OWN_VOCAB.has(el)) for (const t of collectFor(el, query)) push(t)
-    for (const other of VOCAB) {
-      if (other === el) continue
-      for (const t of collectFor(other, query)) push(t, other)
+      items.push({ text: t })
     }
     return items.slice(0, MAX_ITEMS)
   }
@@ -111,13 +103,13 @@ export default function ScreenplayAutocomplete({ editor, active }: Props) {
   const accept = (item: AcItem) => {
     if (!editor) return
     const $from = editor.state.selection.$from
-    const chain = editor.chain().focus()
-    // Convert the paragraph's element first (e.g. Action -> Character), then replace
-    // its text — positions are unaffected by the attribute change.
-    if (item.el && item.el !== $from.parent.attrs.element) {
-      chain.updateAttributes('paragraph', { element: item.el })
-    }
-    chain.insertContentAt({ from: $from.start(), to: $from.end() }, item.text).run()
+    // Replace the paragraph's text with the picked value; its element (and thus
+    // indentation) is unchanged.
+    editor
+      .chain()
+      .focus()
+      .insertContentAt({ from: $from.start(), to: $from.end() }, item.text)
+      .run()
     suppress.current = true
     setAc(null)
   }
@@ -208,7 +200,7 @@ export default function ScreenplayAutocomplete({ editor, active }: Props) {
   return createPortal(
     <ul className="sp-ac" style={{ left: ac.x, top: ac.y + 4 }} role="listbox">
       {ac.items.map((it, i) => (
-        <li key={(it.el ?? '') + it.text}>
+        <li key={it.text}>
           <button
             type="button"
             className={'sp-ac__item' + (i === ac.index ? ' sp-ac__item--active' : '')}
@@ -220,7 +212,6 @@ export default function ScreenplayAutocomplete({ editor, active }: Props) {
             }}
           >
             <span className="sp-ac__text">{it.text}</span>
-            {it.el && <span className="sp-ac__tag">{it.el}</span>}
           </button>
         </li>
       ))}
