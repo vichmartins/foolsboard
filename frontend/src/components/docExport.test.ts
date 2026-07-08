@@ -33,4 +33,42 @@ describe('docExport font marks', () => {
     expect(html).toContain('Georgia')
     expect(html).toContain('plain')
   })
+
+  it('renders font-size, color, highlight, and alignment into the exported HTML', () => {
+    const node = {
+      content: {
+        doc: {
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              attrs: { textAlign: 'center' },
+              content: [
+                {
+                  type: 'text',
+                  marks: [
+                    {
+                      type: 'textStyle',
+                      attrs: {
+                        fontSize: '24px',
+                        color: '#ef4444',
+                        backgroundColor: '#fde047',
+                      },
+                    },
+                  ],
+                  text: 'Styled',
+                },
+              ],
+            },
+          ],
+        },
+      },
+    } as unknown as StoryNode
+
+    const html = docNodeToHtml(node)
+    expect(html).toContain('font-size: 24px')
+    expect(html).toContain('color: rgb(239, 68, 68)') // #ef4444 serialized as rgb()
+    expect(html).toMatch(/background-color/i)
+    expect(html).toContain('text-align: center')
+  })
 })

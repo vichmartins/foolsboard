@@ -11,7 +11,8 @@ import TaskItem from '@tiptap/extension-task-item'
 import { TableKit } from '@tiptap/extension-table'
 import Image from '@tiptap/extension-image'
 import Placeholder from '@tiptap/extension-placeholder'
-import { TextStyle, FontFamily } from '@tiptap/extension-text-style'
+import { TextStyle, FontFamily, FontSize, Color, BackgroundColor } from '@tiptap/extension-text-style'
+import TextAlign from '@tiptap/extension-text-align'
 import Collaboration from '@tiptap/extension-collaboration'
 import CollaborationCaret from '@tiptap/extension-collaboration-caret'
 import * as Y from 'yjs'
@@ -40,6 +41,10 @@ import {
   TableIcon,
   UndoIcon,
   RedoIcon,
+  AlignLeftIcon,
+  AlignCenterIcon,
+  AlignRightIcon,
+  AlignJustifyIcon,
 } from './icons'
 import PresenceBar from './PresenceBar'
 import ScreenplayAutocomplete from './ScreenplayAutocomplete'
@@ -60,8 +65,12 @@ const EXTENSIONS = [
   TableKit.configure({ table: { resizable: true } }),
   Image,
   Placeholder.configure({ placeholder: 'Start writing…' }),
-  TextStyle, // carries the font-family mark (Document mode only)
+  TextStyle, // carries the font-family / size / color marks (Document mode only)
   FontFamily,
+  FontSize,
+  Color,
+  BackgroundColor,
+  TextAlign.configure({ types: ['heading', 'paragraph'] }),
 ]
 
 // Font choices offered in Document mode. All are system font stacks — no web
@@ -81,6 +90,32 @@ const DOC_FONTS: { label: string; value: string }[] = [
   { label: 'Trebuchet MS', value: '"Trebuchet MS", Helvetica, sans-serif' },
   { label: 'Garamond', value: 'Garamond, "Times New Roman", serif' },
   { label: 'Comic Sans MS', value: '"Comic Sans MS", cursive' },
+]
+
+// Font sizes offered in Document mode (empty value clears back to the default).
+const FONT_SIZES: { label: string; value: string }[] = [
+  { label: 'Default', value: '' },
+  { label: '12', value: '12px' },
+  { label: '14', value: '14px' },
+  { label: '16', value: '16px' },
+  { label: '18', value: '18px' },
+  { label: '20', value: '20px' },
+  { label: '24', value: '24px' },
+  { label: '30', value: '30px' },
+  { label: '36', value: '36px' },
+]
+
+// Text-color swatches — saturated hues that read on the dark editor surface and
+// stay meaningful in the white PDF export.
+const TEXT_COLORS = [
+  '#ffffff', '#94a3b8', '#ef4444', '#f97316', '#eab308',
+  '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899',
+]
+
+// Highlight (background) swatches — pale marker tones.
+const HIGHLIGHT_COLORS = [
+  '#fde047', '#fdba74', '#86efac', '#5eead4',
+  '#93c5fd', '#d8b4fe', '#f9a8d4', '#e5e7eb',
 ]
 
 interface Props {
@@ -114,6 +149,58 @@ function Btn({
     >
       {children}
     </button>
+  )
+}
+
+// A toolbar button that opens a small popover (font/size/color/highlight menus).
+// Closes on outside click or Escape. The trigger keeps the editor selection via
+// mousedown-preventDefault; menu contents must do the same on their own buttons.
+function ToolbarPopover({
+  title,
+  trigger,
+  minWidth,
+  children,
+}: {
+  title: string
+  trigger: React.ReactNode
+  minWidth?: number
+  children: (close: () => void) => React.ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('pointerdown', onDown)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+  return (
+    <span className="doc-tb__pop" ref={wrapRef}>
+      <button
+        type="button"
+        className="doc-tb__btn doc-tb__popbtn"
+        title={title}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {trigger}
+        <span className="doc-tb__popcaret" aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div className="doc-tb__popmenu" style={minWidth ? { minWidth } : undefined}>
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </span>
   )
 }
 
@@ -490,35 +577,39 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
   }
   const curEl = (editor?.getAttributes('paragraph').element as ScreenEl | undefined) ?? null
 
-  // Font picker (Document mode only). Applies a font-family text-style mark to the
-  // selection; the menu items keep the editor selection via mousedown-preventDefault.
-  const [fontMenu, setFontMenu] = useState(false)
-  const fontWrapRef = useRef<HTMLSpanElement>(null)
+  // Document-mode text-style controls (font, size, color, highlight). Each applies
+  // a mark to the current selection; the popover items keep the editor selection
+  // via mousedown-preventDefault. All are hidden in screenplay mode.
   const curFont = (editor?.getAttributes('textStyle').fontFamily as string | undefined) || ''
   const curFontLabel = DOC_FONTS.find((f) => f.value === curFont)?.label ?? 'Font'
+  const curSize = (editor?.getAttributes('textStyle').fontSize as string | undefined) || ''
+  const curSizeLabel = FONT_SIZES.find((s) => s.value === curSize)?.label ?? 'Size'
+  const curColor = (editor?.getAttributes('textStyle').color as string | undefined) || ''
+  const curHighlight = (editor?.getAttributes('textStyle').backgroundColor as string | undefined) || ''
   const applyFont = (value: string) => {
     if (!editor) return
-    const chain = editor.chain().focus()
-    if (value) chain.setFontFamily(value).run()
-    else chain.unsetFontFamily().run()
-    setFontMenu(false)
+    const c = editor.chain().focus()
+    if (value) c.setFontFamily(value).run()
+    else c.unsetFontFamily().run()
   }
-  // Close the font menu on outside click or Escape.
-  useEffect(() => {
-    if (!fontMenu) return
-    const onDown = (e: PointerEvent) => {
-      if (fontWrapRef.current && !fontWrapRef.current.contains(e.target as Node)) setFontMenu(false)
-    }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setFontMenu(false)
-    }
-    window.addEventListener('pointerdown', onDown)
-    window.addEventListener('keydown', onKey)
-    return () => {
-      window.removeEventListener('pointerdown', onDown)
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [fontMenu])
+  const applySize = (value: string) => {
+    if (!editor) return
+    const c = editor.chain().focus()
+    if (value) c.setFontSize(value).run()
+    else c.unsetFontSize().run()
+  }
+  const applyColor = (value: string) => {
+    if (!editor) return
+    const c = editor.chain().focus()
+    if (value) c.setColor(value).run()
+    else c.unsetColor().run()
+  }
+  const applyHighlight = (value: string) => {
+    if (!editor) return
+    const c = editor.chain().focus()
+    if (value) c.setBackgroundColor(value).run()
+    else c.unsetBackgroundColor().run()
+  }
 
   // Export the live editor content in the chosen format (PDF prints; DOCX/ODT/TXT
   // download — screenplays get industry-formatted .docx).
@@ -646,31 +737,30 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
             </>
           ) : (
             <>
-          <span className="doc-tb__fontwrap" ref={fontWrapRef}>
-            <button
-              type="button"
-              className="doc-tb__btn doc-tb__fontbtn"
-              title="Font"
-              onMouseDown={(e) => e.preventDefault()} // keep the editor selection
-              onClick={() => setFontMenu((v) => !v)}
-            >
+          <ToolbarPopover
+            title="Font"
+            minWidth={190}
+            trigger={
               <span className="doc-tb__fontname" style={{ fontFamily: curFont || undefined }}>
                 {curFontLabel}
               </span>
-              <span className="doc-tb__fontcaret" aria-hidden="true">▾</span>
-            </button>
-            {fontMenu && (
-              <ul className="doc-tb__fontmenu" role="listbox">
+            }
+          >
+            {(close) => (
+              <ul className="doc-tb__optlist" role="listbox">
                 {DOC_FONTS.map((f) => (
                   <li key={f.label}>
                     <button
                       type="button"
                       role="option"
                       aria-selected={curFont === f.value}
-                      className={'doc-tb__fontopt' + (curFont === f.value ? ' doc-tb__fontopt--on' : '')}
+                      className={'doc-tb__opt' + (curFont === f.value ? ' doc-tb__opt--on' : '')}
                       style={{ fontFamily: f.value || undefined }}
-                      onMouseDown={(e) => e.preventDefault()} // keep the editor selection
-                      onClick={() => applyFont(f.value)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        applyFont(f.value)
+                        close()
+                      }}
                     >
                       {f.label}
                     </button>
@@ -678,7 +768,34 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
                 ))}
               </ul>
             )}
-          </span>
+          </ToolbarPopover>
+          <ToolbarPopover
+            title="Font size"
+            minWidth={84}
+            trigger={<span className="doc-tb__sizeval">{curSizeLabel}</span>}
+          >
+            {(close) => (
+              <ul className="doc-tb__optlist" role="listbox">
+                {FONT_SIZES.map((s) => (
+                  <li key={s.label}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={curSize === s.value}
+                      className={'doc-tb__opt' + (curSize === s.value ? ' doc-tb__opt--on' : '')}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        applySize(s.value)
+                        close()
+                      }}
+                    >
+                      {s.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ToolbarPopover>
           <span className="doc-tb__sep" />
           <Btn title="Bold (Ctrl+B)" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
             <b className="doc-tb__glyph">B</b>
@@ -692,6 +809,87 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
           <Btn title="Strikethrough (Ctrl+Shift+S)" active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
             <s className="doc-tb__glyph">S</s>
           </Btn>
+          <ToolbarPopover
+            title="Text color"
+            trigger={
+              <span className="doc-tb__colorglyph" style={{ borderBottomColor: curColor || 'currentColor' }}>
+                A
+              </span>
+            }
+          >
+            {(close) => (
+              <div className="doc-tb__swatches">
+                <button
+                  type="button"
+                  className="doc-tb__swatch doc-tb__swatch--reset"
+                  title="Default"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    applyColor('')
+                    close()
+                  }}
+                >
+                  ✕
+                </button>
+                {TEXT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={'doc-tb__swatch' + (curColor === c ? ' doc-tb__swatch--on' : '')}
+                    style={{ background: c }}
+                    title={c}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      applyColor(c)
+                      close()
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </ToolbarPopover>
+          <ToolbarPopover
+            title="Highlight"
+            trigger={
+              <span
+                className="doc-tb__hlglyph"
+                style={curHighlight ? { background: curHighlight, color: '#1f2937' } : undefined}
+              >
+                A
+              </span>
+            }
+          >
+            {(close) => (
+              <div className="doc-tb__swatches">
+                <button
+                  type="button"
+                  className="doc-tb__swatch doc-tb__swatch--reset"
+                  title="None"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    applyHighlight('')
+                    close()
+                  }}
+                >
+                  ✕
+                </button>
+                {HIGHLIGHT_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={'doc-tb__swatch' + (curHighlight === c ? ' doc-tb__swatch--on' : '')}
+                    style={{ background: c }}
+                    title={c}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      applyHighlight(c)
+                      close()
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </ToolbarPopover>
           <span className="doc-tb__sep" />
           <Btn title="Heading 1 (Ctrl+Alt+1)" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
             <span className="doc-tb__h">H1</span>
@@ -701,6 +899,19 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
           </Btn>
           <Btn title="Heading 3 (Ctrl+Alt+3)" active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
             <span className="doc-tb__h">H3</span>
+          </Btn>
+          <span className="doc-tb__sep" />
+          <Btn title="Align Left (Ctrl+Shift+L)" active={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
+            <AlignLeftIcon />
+          </Btn>
+          <Btn title="Align Center (Ctrl+Shift+E)" active={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()}>
+            <AlignCenterIcon />
+          </Btn>
+          <Btn title="Align Right (Ctrl+Shift+R)" active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
+            <AlignRightIcon />
+          </Btn>
+          <Btn title="Justify (Ctrl+Shift+J)" active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
+            <AlignJustifyIcon />
           </Btn>
           <span className="doc-tb__sep" />
           <Btn title="Bullet List (Ctrl+Shift+8)" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
