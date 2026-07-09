@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as api from './api'
 import { useAuth } from './auth'
+import { matches, isTypingTarget, hintSuffix, useKeymap } from './keymap'
 import AccountDialog from './components/AccountDialog'
 import PreferencesDialog from './components/PreferencesDialog'
 import WhatsNewDialog from './components/WhatsNewDialog'
@@ -139,16 +140,16 @@ function Workspace() {
   useEffect(() => {
     localStorage.setItem('foolsboard:sidebar', sidebarOpen ? '1' : '0')
   }, [sidebarOpen])
+  useKeymap() // re-render tooltips when a shortcut binding changes
   // Global shortcuts: Ctrl/Cmd-B toggles the Explorer sidebar (like VS Code);
   // Ctrl/Cmd-K opens the workspace search (the Gallery, with its search focused).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.altKey) return
-      const k = e.key.toLowerCase()
-      if (k === 'b' && !e.shiftKey) {
+      if (isTypingTarget(e)) return // let the editor / inputs own their keys
+      if (matches('sidebar', e)) {
         e.preventDefault()
         setSidebarOpen((o) => !o)
-      } else if (k === 'k' && !e.shiftKey) {
+      } else if (matches('search', e)) {
         e.preventDefault()
         setGalleryOpen(true)
       }
@@ -276,48 +277,38 @@ function Workspace() {
   // respects the same availability as its top-bar button; ignored while typing.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || !e.altKey || e.shiftKey) return
-      const t = e.target as HTMLElement | null
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
-      switch (e.code) {
-        case 'KeyN':
+      if (isTypingTarget(e)) return
+      if (matches('board-create', e)) {
+        e.preventDefault()
+        setDialog('new')
+      } else if (matches('board-rename', e)) {
+        if (activeBoard) {
           e.preventDefault()
-          setDialog('new')
-          break
-        case 'KeyR':
-          if (activeBoard) {
-            e.preventDefault()
-            setDialog('rename')
-          }
-          break
-        case 'KeyM':
-          if (activeBoard) {
-            e.preventDefault()
-            setMoveFolderBoard(activeBoard)
-          }
-          break
-        case 'KeyG':
-          if (boards.length >= 2) {
-            e.preventDefault()
-            setDialog('merge')
-          }
-          break
-        case 'KeyS':
-          if (activeBoard && !activeBoard.shared) {
-            e.preventDefault()
-            setShareTarget({ type: 'board', id: activeBoard.id, name: activeBoard.name })
-          }
-          break
-        case 'KeyD':
-          if (activeBoard && !activeBoard.shared) {
-            e.preventDefault()
-            setDeleteTarget(activeBoard)
-          }
-          break
-        case 'KeyE':
+          setDialog('rename')
+        }
+      } else if (matches('board-move', e)) {
+        if (activeBoard) {
           e.preventDefault()
-          setImpexOpen(true)
-          break
+          setMoveFolderBoard(activeBoard)
+        }
+      } else if (matches('board-merge', e)) {
+        if (boards.length >= 2) {
+          e.preventDefault()
+          setDialog('merge')
+        }
+      } else if (matches('board-share', e)) {
+        if (activeBoard && !activeBoard.shared) {
+          e.preventDefault()
+          setShareTarget({ type: 'board', id: activeBoard.id, name: activeBoard.name })
+        }
+      } else if (matches('board-delete', e)) {
+        if (activeBoard && !activeBoard.shared) {
+          e.preventDefault()
+          setDeleteTarget(activeBoard)
+        }
+      } else if (matches('board-io', e)) {
+        e.preventDefault()
+        setImpexOpen(true)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -621,7 +612,7 @@ function Workspace() {
         <BrandMenu />
         <button
           className={'icon-btn sidebar-toggle' + (sidebarOpen ? ' icon-btn--active' : '')}
-          title={(sidebarOpen ? 'Hide Explorer' : 'Show Explorer') + ' (Ctrl+B)'}
+          title={(sidebarOpen ? 'Hide Explorer' : 'Show Explorer') + hintSuffix('sidebar')}
           aria-label="Toggle Explorer"
           aria-pressed={sidebarOpen}
           onClick={() => setSidebarOpen((o) => !o)}
@@ -681,14 +672,14 @@ function Workspace() {
           <button
             className="icon-btn"
             onClick={() => setDialog('new')}
-            title="Create (Ctrl+Alt+N)"
+            title={`Create${hintSuffix('board-create')}`}
             aria-label="Create"
           >
             <PlusIcon />
           </button>
           <button
             className="icon-btn"
-            title="Rename (Ctrl+Alt+R)"
+            title={`Rename${hintSuffix('board-rename')}`}
             aria-label="Rename"
             onClick={() => setDialog('rename')}
             disabled={!activeBoard}
@@ -697,7 +688,7 @@ function Workspace() {
           </button>
           <button
             className="icon-btn"
-            title="Move (Ctrl+Alt+M)"
+            title={`Move board${hintSuffix('board-move')}`}
             aria-label="Move"
             onClick={() => activeBoard && setMoveFolderBoard(activeBoard)}
             disabled={!activeBoard}
@@ -708,7 +699,7 @@ function Workspace() {
             className="icon-btn"
             onClick={() => setDialog('merge')}
             disabled={boards.length < 2}
-            title="Merge (Ctrl+Alt+G)"
+            title={`Merge${hintSuffix('board-merge')}`}
             aria-label="Merge"
           >
             <MergeIcon />
@@ -716,7 +707,7 @@ function Workspace() {
           {!activeBoard?.shared && (
             <button
               className="icon-btn"
-              title="Share (Ctrl+Alt+S)"
+              title={`Share${hintSuffix('board-share')}`}
               aria-label="Share"
               onClick={() =>
                 activeBoard &&
@@ -750,7 +741,7 @@ function Workspace() {
           {!activeBoard?.shared && (
             <button
               className="icon-btn icon-btn--danger"
-              title="Delete (Ctrl+Alt+D)"
+              title={`Delete${hintSuffix('board-delete')}`}
               aria-label="Delete"
               onClick={() => activeBoard && setDeleteTarget(activeBoard)}
               disabled={!activeBoard}
@@ -762,7 +753,7 @@ function Workspace() {
           <button
             className="icon-btn"
             onClick={() => setGalleryOpen(true)}
-            title="Gallery (Ctrl+K)"
+            title={`Gallery${hintSuffix('search')}`}
             aria-label="Gallery"
             disabled={!activeBoard}
           >
@@ -780,7 +771,7 @@ function Workspace() {
           <button
             className="icon-btn"
             onClick={() => setImpexOpen(true)}
-            title="Import/Export (Ctrl+Alt+E)"
+            title={`Import/Export${hintSuffix('board-io')}`}
             aria-label="Import/Export"
           >
             <TransferIcon />

@@ -33,6 +33,7 @@ import Playthrough from './Playthrough'
 import '@xyflow/react/dist/style.css'
 
 import * as api from '../api'
+import { matches, getBinding, formatCombo } from '../keymap'
 import { BoardIdContext } from '../boardContext'
 import { NodeEditContext } from '../nodeEditContext'
 import {
@@ -1479,6 +1480,20 @@ function CanvasInner({
     if (ids.length) onMoveSelection?.(ids)
   }, [getNodes, onMoveSelection])
 
+  // Bring the selected object(s) to the front / send them to the back.
+  const doBringToFront = useCallback(() => {
+    getNodes().filter((n) => n.selected).forEach((n) => void setNodeZ(n.id, true))
+  }, [getNodes, setNodeZ])
+  const doSendToBack = useCallback(() => {
+    getNodes().filter((n) => n.selected).forEach((n) => void setNodeZ(n.id, false))
+  }, [getNodes, setNodeZ])
+  // Current binding of an action as a menu hint (e.g. "Ctrl+Shift+]"), or nothing
+  // if it's been left unbound. Reflects any custom keymap the user has set.
+  const shortcutHint = (id: string): string | undefined => {
+    const b = getBinding(id)
+    return b ? formatCombo(b).join('+') : undefined
+  }
+
   // Delete the selection (routes through onBeforeDelete -> confirm dialog).
   const doDelete = useCallback(() => {
     const sel = getNodes().filter((n) => n.selected)
@@ -1567,11 +1582,13 @@ function CanvasInner({
   const actionsRef = useRef({
     doCopy, doCut, doPaste, doDuplicate, undo, redo,
     zoomIn, zoomOut, fitView, exportImage, playFromSelection, createDoc,
+    doMove, doBringToFront, doSendToBack,
   })
   useEffect(() => {
     actionsRef.current = {
       doCopy, doCut, doPaste, doDuplicate, undo, redo,
       zoomIn, zoomOut, fitView, exportImage, playFromSelection, createDoc,
+      doMove, doBringToFront, doSendToBack,
     }
   })
   useEffect(() => {
@@ -1588,40 +1605,53 @@ function CanvasInner({
         return
       if (playOpenRef.current || docOpenRef.current) return // overlays handle their own keys
       const a = actionsRef.current
-      // Plain (no-modifier) canvas shortcuts mirroring the control buttons.
-      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-        switch (e.key) {
-          case '+':
-          case '=':
-            e.preventDefault()
-            a.zoomIn({ duration: 150 })
-            return
-          case '-':
-          case '_':
-            e.preventDefault()
-            a.zoomOut({ duration: 150 })
-            return
-          case 'f':
-          case 'F':
-            e.preventDefault()
-            a.fitView({ padding: 0.2, duration: 300 })
-            return
-          case 'p':
-          case 'P':
-            e.preventDefault()
-            a.playFromSelection()
-            return
-          case 'e':
-          case 'E':
-            e.preventDefault()
-            a.exportImage()
-            return
-          case 'd':
-          case 'D':
-            e.preventDefault()
-            void a.createDoc()
-            return
-        }
+      // View actions mirror the control buttons; each resolves through the keymap
+      // so it honors any custom binding.
+      if (matches('zoom-in', e)) {
+        e.preventDefault()
+        a.zoomIn({ duration: 150 })
+        return
+      }
+      if (matches('zoom-out', e)) {
+        e.preventDefault()
+        a.zoomOut({ duration: 150 })
+        return
+      }
+      if (matches('fit', e)) {
+        e.preventDefault()
+        a.fitView({ padding: 0.2, duration: 300 })
+        return
+      }
+      if (matches('play', e)) {
+        e.preventDefault()
+        a.playFromSelection()
+        return
+      }
+      if (matches('export-image', e)) {
+        e.preventDefault()
+        a.exportImage()
+        return
+      }
+      if (matches('new-doc', e)) {
+        e.preventDefault()
+        void a.createDoc()
+        return
+      }
+      // Object actions (act on the current selection; no-op if nothing selected).
+      if (matches('bring-to-front', e)) {
+        e.preventDefault()
+        a.doBringToFront()
+        return
+      }
+      if (matches('send-to-back', e)) {
+        e.preventDefault()
+        a.doSendToBack()
+        return
+      }
+      if (matches('object-move', e)) {
+        e.preventDefault()
+        a.doMove()
+        return
       }
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return // leave Ctrl+Alt+* to app shortcuts
       const k = e.key.toLowerCase()
@@ -2302,15 +2332,15 @@ function CanvasInner({
             { label: 'Copy', mnemonic: 'C', shortcut: 'Ctrl+C', onClick: () => doCopy() },
             { label: 'Cut', mnemonic: 't', shortcut: 'Ctrl+X', onClick: () => void doCut() },
             { label: 'Duplicate', mnemonic: 'D', shortcut: 'Ctrl+D', onClick: () => void doDuplicate() },
-            { label: 'Move', mnemonic: 'M', onClick: () => doMove() },
+            { label: 'Move', mnemonic: 'M', shortcut: shortcutHint('object-move'), onClick: () => doMove() },
             ...(clipboardHasContent()
               ? [{ label: 'Paste', mnemonic: 'P', shortcut: 'Ctrl+V', onClick: () => void doPaste() }]
               : []),
             ...(menuNodeId
               ? [
-                  { label: 'Bring to Front', mnemonic: 'f', onClick: () => void setNodeZ(menuNodeId, true) },
-                  { label: 'Send to Back', mnemonic: 'b', onClick: () => void setNodeZ(menuNodeId, false) },
-                  { label: 'Play from Here', mnemonic: 'y', shortcut: 'P', onClick: () => openPlaythrough(menuNodeId) },
+                  { label: 'Bring to Front', mnemonic: 'f', shortcut: shortcutHint('bring-to-front'), onClick: () => void setNodeZ(menuNodeId, true) },
+                  { label: 'Send to Back', mnemonic: 'b', shortcut: shortcutHint('send-to-back'), onClick: () => void setNodeZ(menuNodeId, false) },
+                  { label: 'Play from Here', mnemonic: 'y', shortcut: shortcutHint('play'), onClick: () => openPlaythrough(menuNodeId) },
                 ]
               : []),
             ...(menuMediaDl

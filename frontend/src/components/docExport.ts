@@ -19,7 +19,7 @@ import type { StoryNode } from '../types'
 // marks + TextAlign preserve Document-mode font / size / color / highlight /
 // alignment choices. No collaboration extensions — this is static rendering.
 export const DOC_RENDER_EXTENSIONS = [
-  StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: { openOnClick: false } }),
+  StarterKit.configure({ heading: { levels: [1, 2, 3, 4, 5] }, link: { openOnClick: false } }),
   TaskList,
   TaskItem.configure({ nested: true }),
   TableKit,
@@ -53,6 +53,8 @@ export function buildPrintHtml(title: string, bodyHtml: string, isScript: boolea
     h1 { font-size: 20pt; margin: .8em 0 .3em; }
     h2 { font-size: 16pt; margin: .8em 0 .3em; }
     h3 { font-size: 13pt; margin: .7em 0 .3em; }
+    h4 { font-size: 12pt; margin: .7em 0 .3em; }
+    h5 { font-size: 11pt; text-transform: uppercase; letter-spacing: .03em; margin: .7em 0 .3em; }
     p { margin: .5em 0; }
     ul, ol { padding-left: 1.5em; }
     blockquote { border-left: 3px solid #999; margin: .6em 0; padding-left: 1em; color: #333; }

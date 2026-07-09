@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.102.0
+
+- feat: **Customizable keyboard shortcuts.** Open **Keyboard Shortcuts**, click any
+  shortcut, and press a new combo to reassign it — with a conflict warning that
+  names the clashing action and a one-click **Replace**. Per-row reset (↺) and a
+  **Set to Default** button (with a confirmation) restore defaults. Bindings persist
+  locally and drive both the behavior and every hint shown in the app.
+- feat: **Switch Document ⇄ Screenplay with `Ctrl+Shift+M`** (works in both modes).
+- feat: **Object shortcuts** — Bring to front (`Ctrl+Shift+]`), Send to back
+  (`Ctrl+Shift+[`), and Move (`Ctrl+Shift+M`), shown in the object menu.
+- change: **Shortcut hints are now consistent app-wide** — every tooltip and menu
+  reads its shortcut from the one keymap, so a hint always matches the real binding
+  (and updates the moment you remap it).
+- change: **Context-menu mnemonics require Alt.** The underlined letters only appear
+  and activate while you hold **Alt** (e.g. `Alt+C` for Copy), so stray typing over
+  an open menu never triggers them. Shortcut hints in menus are also dimmed so they
+  don't look like the `›` submenu arrow.
+
 ## v0.101.0
 
 - feat: **More Document-mode formatting** — text **color** and **highlight**
