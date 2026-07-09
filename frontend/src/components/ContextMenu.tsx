@@ -25,9 +25,10 @@ interface Props {
   onClose: () => void
 }
 
-// Render the label with its mnemonic letter underlined (first match).
-function renderLabel(label: string, mnemonic?: string) {
-  if (!mnemonic) return label
+// Render the label, underlining its mnemonic letter (first match) only while Alt
+// is held — like classic Windows menus, where mnemonics reveal + activate on Alt.
+function renderLabel(label: string, mnemonic: string | undefined, showMnemonic: boolean) {
+  if (!mnemonic || !showMnemonic) return label
   const idx = label.toLowerCase().indexOf(mnemonic.toLowerCase())
   if (idx === -1) return label
   return (
@@ -43,6 +44,25 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
   const ref = useRef<HTMLUListElement>(null)
   const [closing, setClosing] = useState(false)
   const timer = useRef<number | null>(null)
+  // Mnemonics (underline + single-key activation) are only live while Alt is held.
+  const [altHeld, setAltHeld] = useState(false)
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') setAltHeld(true)
+    }
+    const up = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') setAltHeld(false)
+    }
+    const clear = () => setAltHeld(false)
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    window.addEventListener('blur', clear)
+    return () => {
+      window.removeEventListener('keydown', down)
+      window.removeEventListener('keyup', up)
+      window.removeEventListener('blur', clear)
+    }
+  }, [])
   // Which parent item's submenu (flyout) is open, and a small close delay so the
   // pointer can travel from the parent into the submenu without it collapsing.
   const [openSub, setOpenSub] = useState<number | null>(null)
@@ -146,9 +166,15 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
         requestClose()
         return
       }
-      if (e.ctrlKey || e.metaKey || e.altKey) return
+      // Mnemonics require Alt to be held (Alt+letter), so bare typing never fires them.
+      if (e.ctrlKey || e.metaKey || !e.altKey) return
+      const key = e.key.length === 1 ? e.key.toLowerCase() : ''
+      const codeLetter = e.code.startsWith('Key') ? e.code.slice(3).toLowerCase() : ''
       const item = itemsRef.current.find(
-        (it) => it.onClick && it.mnemonic && it.mnemonic.toLowerCase() === e.key.toLowerCase(),
+        (it) =>
+          it.onClick &&
+          it.mnemonic &&
+          (it.mnemonic.toLowerCase() === key || it.mnemonic.toLowerCase() === codeLetter),
       )
       if (item?.onClick) {
         e.preventDefault()
@@ -199,7 +225,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
                 }
                 onClick={() => setOpenSub(openSub === i ? null : i)}
               >
-                <span>{renderLabel(it.label, it.mnemonic)}</span>
+                <span>{renderLabel(it.label, it.mnemonic, altHeld)}</span>
                 <span className="ctx-menu__caret" aria-hidden="true">
                   ›
                 </span>
@@ -219,7 +245,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
                           requestClose()
                         }}
                       >
-                        <span>{renderLabel(sub.label, sub.mnemonic)}</span>
+                        <span>{renderLabel(sub.label, sub.mnemonic, altHeld)}</span>
                         {sub.shortcut && <span className="ctx-menu__sc">{sub.shortcut}</span>}
                       </button>
                     </li>
@@ -238,7 +264,7 @@ export default function ContextMenu({ x, y, items, onClose }: Props) {
                 requestClose()
               }}
             >
-              <span>{renderLabel(it.label, it.mnemonic)}</span>
+              <span>{renderLabel(it.label, it.mnemonic, altHeld)}</span>
               {it.shortcut && <span className="ctx-menu__sc">{it.shortcut}</span>}
             </button>
           </li>

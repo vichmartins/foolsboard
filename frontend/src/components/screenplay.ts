@@ -71,15 +71,13 @@ export const ScreenplayKeys = Extension.create<ScreenplayKeysOptions>({
   addOptions() {
     return { isScript: () => false }
   },
+  // Only the structural Tab (cycle) / Enter (auto-advance) keys live here; the
+  // per-element shortcuts (Ctrl+1..7) are owned by the customizable editor keymap.
   addKeyboardShortcuts() {
     const active = () => this.options.isScript()
     const curEl = (): ScreenEl =>
       (this.editor.getAttributes('paragraph').element as ScreenEl) || 'action'
-    const setEl = (el: ScreenEl) => () => {
-      if (!active()) return false
-      return this.editor.chain().focus().updateAttributes('paragraph', { element: el }).run()
-    }
-    const shortcuts: Record<string, () => boolean> = {
+    return {
       Tab: () => {
         if (!active()) return false
         const next = ORDER[(ORDER.indexOf(curEl()) + 1) % ORDER.length]
@@ -95,7 +93,5 @@ export const ScreenplayKeys = Extension.create<ScreenplayKeysOptions>({
           .run()
       },
     }
-    for (const { el, key } of SCREEN_ELEMENTS) shortcuts[`Mod-${key}`] = setEl(el)
-    return shortcuts
   },
 })

@@ -30,6 +30,8 @@ import {
   SCREEN_ELEMENTS,
   type ScreenEl,
 } from './screenplay'
+import { EditorKeymap } from './editorKeymap'
+import { hint, hintSuffix, useKeymap } from '../keymap'
 import {
   BulletListIcon,
   OrderedListIcon,
@@ -56,7 +58,7 @@ export type DocStatus = 'editing' | 'viewing' | 'afk'
 // code/code-block, link, underline, and undo/redo — so we only add the extras.
 const EXTENSIONS = [
   StarterKit.configure({
-    heading: { levels: [1, 2, 3] },
+    heading: { levels: [1, 2, 3, 4, 5] },
     link: { openOnClick: false, autolink: true },
     undoRedo: false, // Collaboration (Yjs) provides history instead
   }),
@@ -218,6 +220,15 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
   useEffect(() => {
     modeRef.current = mode
   }, [mode])
+  // Keyboard-shortcut callbacks that need component scope (link/image prompts,
+  // mode toggle). The editor keymap is built once, so it calls through this ref
+  // to always reach the latest closures.
+  const keymapCbRef = useRef({
+    onLink: () => {},
+    onImage: () => {},
+    onModeToggle: () => {},
+  })
+  useKeymap() // refresh toolbar tooltips when a shortcut binding changes
 
   const { user } = useAuth()
 
@@ -381,6 +392,14 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
       ...EXTENSIONS,
       ScreenplayElement,
       ScreenplayKeys.configure({ isScript: () => modeRef.current === 'script' }),
+      EditorKeymap.configure({
+        mode: () => (modeRef.current === 'script' ? 'script' : 'doc'),
+        fontSizes: FONT_SIZES.filter((s) => s.value).map((s) => s.value),
+        highlightColor: HIGHLIGHT_COLORS[0],
+        onLink: () => keymapCbRef.current.onLink(),
+        onImage: () => keymapCbRef.current.onImage(),
+        onModeToggle: () => keymapCbRef.current.onModeToggle(),
+      }),
       Collaboration.configure({ document: ydoc }),
       CollaborationCaret.configure({
         provider,
@@ -575,6 +594,14 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
     }
     schedule()
   }
+  // Keep the editor-keymap callbacks pointed at the latest closures each render.
+  useEffect(() => {
+    keymapCbRef.current = {
+      onLink: () => editor && promptLink(editor),
+      onImage: () => editor && promptImage(editor),
+      onModeToggle: () => switchMode(modeRef.current === 'script' ? 'doc' : 'script'),
+    }
+  })
   const curEl = (editor?.getAttributes('paragraph').element as ScreenEl | undefined) ?? null
 
   // Document-mode text-style controls (font, size, color, highlight). Each applies
@@ -610,6 +637,9 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
     if (value) c.setBackgroundColor(value).run()
     else c.unsetBackgroundColor().run()
   }
+  // Current block style for the paragraph-style dropdown (0 = normal paragraph).
+  const headingLevel = ([1, 2, 3, 4, 5] as const).find((l) => editor?.isActive('heading', { level: l })) ?? 0
+  const headingLabel = headingLevel ? `H${headingLevel}` : 'Normal'
 
   // Export the live editor content in the chosen format (PDF prints; DOCX/ODT/TXT
   // download — screenplays get industry-formatted .docx).
@@ -708,14 +738,14 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
             <button
               className={'doc-mode__btn' + (mode === 'doc' ? ' doc-mode__btn--on' : '')}
               onClick={() => switchMode('doc')}
-              title="Rich-text document"
+              title={`Rich-text document${hintSuffix('mode-toggle')}`}
             >
               Document
             </button>
             <button
               className={'doc-mode__btn' + (mode === 'script' ? ' doc-mode__btn--on' : '')}
               onClick={() => switchMode('script')}
-              title="Celtx-style screenplay"
+              title={`Celtx-style screenplay${hintSuffix('mode-toggle')}`}
             >
               Screenplay
             </button>
@@ -797,16 +827,16 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
             )}
           </ToolbarPopover>
           <span className="doc-tb__sep" />
-          <Btn title="Bold (Ctrl+B)" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
+          <Btn title={`Bold${hintSuffix('bold')}`} active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
             <b className="doc-tb__glyph">B</b>
           </Btn>
-          <Btn title="Italic (Ctrl+I)" active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
+          <Btn title={`Italic${hintSuffix('italic')}`} active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
             <i className="doc-tb__glyph">I</i>
           </Btn>
-          <Btn title="Underline (Ctrl+U)" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+          <Btn title={`Underline${hintSuffix('underline')}`} active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
             <u className="doc-tb__glyph">U</u>
           </Btn>
-          <Btn title="Strikethrough (Ctrl+Shift+S)" active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
+          <Btn title={`Strikethrough${hintSuffix('strike')}`} active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
             <s className="doc-tb__glyph">S</s>
           </Btn>
           <ToolbarPopover
@@ -849,7 +879,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
             )}
           </ToolbarPopover>
           <ToolbarPopover
-            title="Highlight"
+            title={`Highlight${hintSuffix('highlight')}`}
             trigger={
               <span
                 className="doc-tb__hlglyph"
@@ -891,52 +921,86 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
             )}
           </ToolbarPopover>
           <span className="doc-tb__sep" />
-          <Btn title="Heading 1 (Ctrl+Alt+1)" active={editor.isActive('heading', { level: 1 })} onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}>
-            <span className="doc-tb__h">H1</span>
-          </Btn>
-          <Btn title="Heading 2 (Ctrl+Alt+2)" active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>
-            <span className="doc-tb__h">H2</span>
-          </Btn>
-          <Btn title="Heading 3 (Ctrl+Alt+3)" active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>
-            <span className="doc-tb__h">H3</span>
-          </Btn>
+          <ToolbarPopover
+            title="Paragraph style"
+            minWidth={172}
+            trigger={<span className="doc-tb__hlabel">{headingLabel}</span>}
+          >
+            {(close) => (
+              <ul className="doc-tb__optlist" role="listbox">
+                <li>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={headingLevel === 0}
+                    className={'doc-tb__opt' + (headingLevel === 0 ? ' doc-tb__opt--on' : '')}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      editor.chain().focus().setParagraph().run()
+                      close()
+                    }}
+                  >
+                    <span>Normal text</span>
+                  </button>
+                </li>
+                {[1, 2, 3, 4, 5].map((l) => (
+                  <li key={l}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={headingLevel === l}
+                      className={'doc-tb__opt' + (headingLevel === l ? ' doc-tb__opt--on' : '')}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        editor.chain().focus().toggleHeading({ level: l as 1 | 2 | 3 | 4 | 5 }).run()
+                        close()
+                      }}
+                    >
+                      <span className={`doc-tb__hopt doc-tb__hopt--${l}`}>Heading {l}</span>
+                      <span className="doc-tb__optsc">{hint(`h${l}`)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ToolbarPopover>
           <span className="doc-tb__sep" />
-          <Btn title="Align Left (Ctrl+Shift+L)" active={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
+          <Btn title={`Align Left${hintSuffix('align-left')}`} active={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()}>
             <AlignLeftIcon />
           </Btn>
-          <Btn title="Align Center (Ctrl+Shift+E)" active={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()}>
+          <Btn title={`Align Center${hintSuffix('align-center')}`} active={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()}>
             <AlignCenterIcon />
           </Btn>
-          <Btn title="Align Right (Ctrl+Shift+R)" active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
+          <Btn title={`Align Right${hintSuffix('align-right')}`} active={editor.isActive({ textAlign: 'right' })} onClick={() => editor.chain().focus().setTextAlign('right').run()}>
             <AlignRightIcon />
           </Btn>
-          <Btn title="Justify (Ctrl+Shift+J)" active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
+          <Btn title={`Justify${hintSuffix('align-justify')}`} active={editor.isActive({ textAlign: 'justify' })} onClick={() => editor.chain().focus().setTextAlign('justify').run()}>
             <AlignJustifyIcon />
           </Btn>
           <span className="doc-tb__sep" />
-          <Btn title="Bullet List (Ctrl+Shift+8)" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
+          <Btn title={`Bullet List${hintSuffix('bullet-list')}`} active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
             <BulletListIcon />
           </Btn>
-          <Btn title="Numbered List (Ctrl+Shift+7)" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
+          <Btn title={`Numbered List${hintSuffix('ordered-list')}`} active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
             <OrderedListIcon />
           </Btn>
-          <Btn title="Checklist (Ctrl+Shift+9)" active={editor.isActive('taskList')} onClick={() => editor.chain().focus().toggleTaskList().run()}>
+          <Btn title={`Checklist${hintSuffix('task-list')}`} active={editor.isActive('taskList')} onClick={() => editor.chain().focus().toggleTaskList().run()}>
             <TaskListIcon />
           </Btn>
           <span className="doc-tb__sep" />
-          <Btn title="Quote (Ctrl+Shift+B)" active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
+          <Btn title={`Quote${hintSuffix('quote')}`} active={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()}>
             <QuoteIcon />
           </Btn>
-          <Btn title="Code Block (Ctrl+Alt+C)" active={editor.isActive('codeBlock')} onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
+          <Btn title={`Code Block${hintSuffix('code-block')}`} active={editor.isActive('codeBlock')} onClick={() => editor.chain().focus().toggleCodeBlock().run()}>
             <CodeIcon />
           </Btn>
-          <Btn title="Link (Ctrl+Shift+K)" active={editor.isActive('link')} onClick={() => promptLink(editor)}>
+          <Btn title={`Link${hintSuffix('link')}`} active={editor.isActive('link')} onClick={() => promptLink(editor)}>
             <LinkIcon />
           </Btn>
-          <Btn title="Image by URL (Ctrl+Alt+I)" onClick={() => promptImage(editor)}>
+          <Btn title={`Image by URL${hintSuffix('image')}`} onClick={() => promptImage(editor)}>
             <ImageIcon />
           </Btn>
-          <Btn title="Insert Table (Ctrl+Alt+T)" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+          <Btn title={`Insert Table${hintSuffix('table')}`} onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
             <TableIcon />
           </Btn>
             </>
