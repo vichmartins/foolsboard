@@ -750,7 +750,6 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
               Screenplay
             </button>
           </div>
-          <span className="doc-tb__sep" />
           {mode === 'script' ? (
             <>
               {SCREEN_ELEMENTS.map(({ el, label, key }) => (
@@ -1005,13 +1004,14 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
           </Btn>
             </>
           )}
-          <span className="doc-tb__sep" />
-          <Btn title="Undo (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()}>
-            <UndoIcon />
-          </Btn>
-          <Btn title="Redo (Ctrl+Shift+Z)" onClick={() => editor.chain().focus().redo().run()}>
-            <RedoIcon />
-          </Btn>
+          <span className="doc-tb__end">
+            <Btn title="Undo (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()}>
+              <UndoIcon />
+            </Btn>
+            <Btn title="Redo (Ctrl+Shift+Z)" onClick={() => editor.chain().focus().redo().run()}>
+              <RedoIcon />
+            </Btn>
+          </span>
         </div>
       )}
 
