@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.103.0
+
+- feat: **Drag-and-drop (or paste) images into a document.** Dropped/pasted image
+  files upload as assets owned by the doc and insert at the drop point, with a
+  drop-zone overlay while dragging. Persists and syncs to collaborators.
+- change: **Link and image insertion use in-app dialogs** instead of the browser's
+  native prompt, matching the app's look.
+- change: **File-drop overlays are unified** — the document uses the same overlay
+  as the canvas/drawer/edit window, and all of them now spawn the prompt card with
+  a pop-in animation before it pulses.
+
 ## v0.102.3
 
 - change: **Video and audio objects now cast the app's object drop shadow**, so
