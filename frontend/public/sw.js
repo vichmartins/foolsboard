@@ -5,17 +5,29 @@
  *
  * Strategy:
  *  - Navigations (the HTML shell): NETWORK-FIRST, so a new deploy is always
- *    picked up; fall back to the cached shell only when offline.
+ *    picked up; when offline, show the offline fallback page (the app itself is
+ *    useless without /api data, so a clear "you're offline" screen beats a broken
+ *    shell). The cached shell is used only if the fallback is somehow missing.
  *  - /assets/* (content-hashed, immutable): CACHE-FIRST -> instant.
  *  - Other same-origin static (favicon, manifest): stale-while-revalidate.
  *  - /api, /media, /version.json, the WebSocket: never touched (must stay live).
  *
  * Bump CACHE to invalidate everything on a future SW logic change.
  */
-const CACHE = 'foolsboard-cache-v1'
+const CACHE = 'foolsboard-cache-v2'
 const SHELL = '/index.html'
+const OFFLINE = '/offline.html'
 
-self.addEventListener('install', () => {
+self.addEventListener('install', (event) => {
+  // Precache the offline fallback so it's available even on the very first
+  // network drop. Ignore failures (e.g. a flaky install) — the fetch handler
+  // still falls back to the cached shell.
+  event.waitUntil(
+    caches
+      .open(CACHE)
+      .then((cache) => cache.add(OFFLINE))
+      .catch(() => {}),
+  )
   self.skipWaiting()
 })
 
@@ -53,8 +65,10 @@ self.addEventListener('fetch', (event) => {
           cache.put(SHELL, fresh.clone())
           return fresh
         } catch {
+          // Offline: show the friendly fallback page (or the cached shell if the
+          // fallback isn't cached yet).
           const cache = await caches.open(CACHE)
-          return (await cache.match(SHELL)) || Response.error()
+          return (await cache.match(OFFLINE)) || (await cache.match(SHELL)) || Response.error()
         }
       })(),
     )

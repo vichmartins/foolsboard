@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>foolsboard — Offline</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: #0f1115;
+        color: #e6e8ef;
+        font-family:
+          ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+        text-align: center;
+      }
+      .card {
+        max-width: 420px;
+      }
+      .mark {
+        width: auto;
+        height: 54px;
+        margin: 0 auto 22px;
+        display: block;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      p {
+        margin: 0 auto 22px;
+        max-width: 34ch;
+        line-height: 1.6;
+        color: #9aa0b0;
+        font-size: 14.5px;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 22px;
+        font-size: 12.5px;
+        color: #f59e0b;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #f59e0b;
+        animation: pulse 1.4s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        50% {
+          opacity: 0.35;
+        }
+      }
+      button {
+        appearance: none;
+        border: none;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 600;
+        font-size: 14px;
+        padding: 10px 22px;
+        border-radius: 9px;
+        color: #fff;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      }
+      button:hover {
+        filter: brightness(1.08);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+        filter: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <svg class="mark" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 48 46"><path fill="#863bff" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z" style="fill:#863bff;fill:color(display-p3 .5252 .23 1);fill-opacity:1"/></svg>
+      <div class="status"><span class="dot"></span><span id="state">You're offline</span></div>
+      <h1>foolsboard needs a connection</h1>
+      <p>
+        Your boards live on the server, so they can't load without a network connection. This page
+        will reconnect on its own the moment you're back online.
+      </p>
+      <button id="retry" type="button">Try again</button>
+    </div>
+    <script>
+      var retry = document.getElementById('retry')
+      var state = document.getElementById('state')
+      retry.addEventListener('click', function () {
+        retry.disabled = true
+        state.textContent = 'Reconnecting…'
+        location.reload()
+      })
+      // Auto-reload as soon as the browser reports the connection is back.
+      window.addEventListener('online', function () {
+        state.textContent = 'Back online — reloading…'
+        location.reload()
+      })
+    </script>
+  </body>
+</html>
