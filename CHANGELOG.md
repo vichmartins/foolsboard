@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.102.1
+
+- feat: **Offline fallback page.** When the installed app (PWA) is opened without a
+  connection, it now shows a branded "foolsboard needs a connection" screen that
+  auto-reloads the moment you're back online, instead of a broken shell. The
+  service worker precaches it (cache bumped to v2). (foolsboard's data is
+  server-side, so this is a graceful fallback, not offline editing.)
+
 ## v0.102.0
 
 - feat: **Customizable keyboard shortcuts.** Open **Keyboard Shortcuts**, click any
