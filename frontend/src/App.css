@@ -2058,6 +2058,12 @@
   padding: 0;
   gap: 2px;
 }
+/* Video and audio carry the app's object card shadow; images stay flat (they're
+   just the artwork, often transparent). */
+.media-node--video,
+.media-node--audio {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
 .media-node--image .media-node__caption {
   padding: 1px 6px;
   border-radius: 6px;
