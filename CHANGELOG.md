@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.102.3
+
+- change: **Video and audio objects now cast the app's object drop shadow**, so
+  they match the other cards on the canvas; image objects stay flat (they're just
+  the artwork, often transparent).
+
 ## v0.102.2
 
 - change: **Document editor toolbar is now three zones** — the Document/Screenplay
