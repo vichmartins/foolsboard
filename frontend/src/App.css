@@ -2643,6 +2643,17 @@ b.doc-tb__glyph {
   border-radius: 7px;
   overflow: hidden;
 }
+/* Three-zone toolbar: mode toggle pinned left, the function group centered, and
+   undo/redo pinned right. The two auto margins (before the first function and
+   before the undo/redo group) split the free space evenly, centering the middle. */
+.doc-mode + * {
+  margin-left: auto;
+}
+.doc-tb__end {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
 .doc-mode__btn {
   padding: 5px 12px;
   border: none;

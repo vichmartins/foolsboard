@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.102.2
+
+- change: **Document editor toolbar is now three zones** — the Document/Screenplay
+  toggle pinned left, the formatting functions centered, and undo/redo pinned right.
+
 ## v0.102.1
 
 - feat: **Offline fallback page.** When the installed app (PWA) is opened without a
