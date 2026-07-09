@@ -24,6 +24,7 @@ import { collabColor } from '../collab'
 import { WsDocProvider, u8ToB64, b64ToU8 } from './docCollab'
 import { exportDocHtmlAs, DOC_EXPORT_FORMATS, type DocExportFormat } from './docExport'
 import ContextMenu from './ContextMenu'
+import PromptDialog from './PromptDialog'
 import {
   ScreenplayElement,
   ScreenplayKeys,
@@ -546,6 +547,79 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
     }
   }, [editor, schedule])
 
+  // Drag-drop / paste image files: upload each as an asset owned by this doc node,
+  // then insert it (at the drop point, or the caret for a paste). Inserting fires
+  // the editor 'update' above, so it autosaves + syncs to collaborators. A
+  // drop-zone overlay (dragActive) tells the user they can release the file.
+  const [dragActive, setDragActive] = useState(false)
+  useEffect(() => {
+    if (!editor) return
+    const dom = editor.view.dom as HTMLElement
+    const isFileDrag = (e: DragEvent) => !!e.dataTransfer?.types?.includes('Files')
+    const imagesFrom = (list: FileList | null | undefined) =>
+      list ? Array.from(list).filter((f) => f.type.startsWith('image/')) : []
+
+    const uploadAndInsert = async (files: File[], at: number) => {
+      let pos = at
+      for (const file of files) {
+        try {
+          const asset = await api.uploadAsset(node.id, file)
+          if (asset.url) {
+            editor.chain().insertContentAt(pos, { type: 'image', attrs: { src: asset.url } }).run()
+            pos = editor.state.selection.to // insert the next one after this
+          }
+        } catch (err) {
+          console.error('image upload failed', err)
+          window.alert(`Couldn't add "${file.name}". Please try again.`)
+        }
+      }
+    }
+
+    // Overlay visibility is driven by dragover (which fires continuously) plus a
+    // short hide timer — far steadier than dragenter/leave counting, which
+    // flickers over ProseMirror's shifting DOM.
+    let hideTimer: number | undefined
+    const hideDrag = () => {
+      if (hideTimer) window.clearTimeout(hideTimer)
+      hideTimer = undefined
+      setDragActive(false)
+    }
+    const onDragOver = (e: DragEvent) => {
+      if (!isFileDrag(e)) return
+      e.preventDefault() // allow the drop
+      setDragActive(true)
+      if (hideTimer) window.clearTimeout(hideTimer)
+      hideTimer = window.setTimeout(() => setDragActive(false), 120)
+    }
+    const onDrop = (e: DragEvent) => {
+      hideDrag()
+      const imgs = imagesFrom(e.dataTransfer?.files)
+      if (!imgs.length) return
+      e.preventDefault()
+      e.stopPropagation()
+      const coords = editor.view.posAtCoords({ left: e.clientX, top: e.clientY })
+      void uploadAndInsert(imgs, coords ? coords.pos : editor.state.selection.from)
+    }
+    const onPaste = (e: ClipboardEvent) => {
+      const imgs = imagesFrom(e.clipboardData?.files)
+      if (!imgs.length) return // let normal text/html paste through
+      e.preventDefault()
+      e.stopPropagation()
+      void uploadAndInsert(imgs, editor.state.selection.from)
+    }
+
+    dom.addEventListener('dragover', onDragOver, true)
+    dom.addEventListener('drop', onDrop, true)
+    dom.addEventListener('paste', onPaste, true)
+    return () => {
+      if (hideTimer) window.clearTimeout(hideTimer)
+      dom.removeEventListener('dragover', onDragOver, true)
+      dom.removeEventListener('drop', onDrop, true)
+      dom.removeEventListener('paste', onPaste, true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor])
+
   // Save on close / unmount (flush any pending debounce first).
   const close = useCallback(() => {
     if (saveTimer.current) window.clearTimeout(saveTimer.current)
@@ -570,16 +644,26 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
     }
   }, [close])
 
+  // Link / image URL entry uses the app's in-app dialog (not a native prompt).
+  const [urlPrompt, setUrlPrompt] = useState<{ kind: 'link' | 'image'; initial: string } | null>(null)
   const promptLink = (ed: Editor) => {
-    const prev = ed.getAttributes('link').href as string | undefined
-    const url = window.prompt('Link URL', prev ?? 'https://')
-    if (url === null) return
-    if (url === '') ed.chain().focus().extendMarkRange('link').unsetLink().run()
-    else ed.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+    const prev = (ed.getAttributes('link').href as string | undefined) || 'https://'
+    setUrlPrompt({ kind: 'link', initial: prev })
   }
-  const promptImage = (ed: Editor) => {
-    const url = window.prompt('Image URL')
-    if (url) ed.chain().focus().setImage({ src: url }).run()
+  const promptImage = (_ed: Editor) => {
+    setUrlPrompt({ kind: 'image', initial: '' })
+  }
+  const submitUrl = (value: string) => {
+    if (editor) {
+      if (urlPrompt?.kind === 'link') {
+        const chain = editor.chain().focus().extendMarkRange('link')
+        if (value) chain.setLink({ href: value }).run()
+        else chain.unsetLink().run() // empty clears an existing link
+      } else if (value) {
+        editor.chain().focus().setImage({ src: value }).run()
+      }
+    }
+    setUrlPrompt(null)
   }
 
   // Switch between rich-document and screenplay modes (same content, different
@@ -1019,6 +1103,30 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
         <EditorContent className="doc-editor__content" editor={editor} />
       </div>
       <ScreenplayAutocomplete editor={editor} active={mode === 'script'} />
+
+      {urlPrompt && (
+        <PromptDialog
+          title={urlPrompt.kind === 'link' ? 'Add Link' : 'Insert Image'}
+          label={urlPrompt.kind === 'link' ? 'Link URL' : 'Image URL'}
+          placeholder={urlPrompt.kind === 'link' ? 'https://example.com' : 'https://…/image.png'}
+          initialValue={urlPrompt.initial}
+          confirmLabel={urlPrompt.kind === 'link' ? 'Apply' : 'Insert'}
+          allowEmpty={urlPrompt.kind === 'link'}
+          onSubmit={submitUrl}
+          onCancel={() => setUrlPrompt(null)}
+        />
+      )}
+
+      {dragActive && (
+        <div className="drop-overlay drop-overlay--ready" aria-hidden="true">
+          <div className="drop-overlay__card">
+            <div className="drop-overlay__icon">
+              <ImageIcon />
+            </div>
+            <div className="drop-overlay__text">Drop image to add it</div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -4575,17 +4575,30 @@ button.media-name:hover {
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   text-align: center;
+  /* Spawn/pop-in entrance for every file-drop overlay (canvas, drawer, edit
+     window, document). The state-specific rules layer their looping animation on
+     top, delayed until the spawn finishes. */
+  animation: dialog-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
 }
 .drop-overlay--ready .drop-overlay__card {
   border-color: var(--accent);
-  animation: drop-pulse 1.1s ease-in-out infinite;
+  animation:
+    dialog-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.25) both,
+    drop-pulse 1.1s 0.34s ease-in-out infinite;
 }
 .drop-overlay--blocked .drop-overlay__card {
-  animation: drop-shake 0.4s ease;
+  animation:
+    dialog-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1.25) both,
+    drop-shake 0.4s 0.34s ease;
 }
 .drop-overlay__icon {
   font-size: 40px;
   line-height: 1;
+}
+/* An SVG icon (e.g. the doc image-drop overlay) sized to match the text glyphs. */
+.drop-overlay__icon svg {
+  width: 40px;
+  height: 40px;
 }
 .drop-overlay__text {
   font-size: 16px;
