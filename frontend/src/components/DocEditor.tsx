@@ -48,9 +48,11 @@ import {
   AlignCenterIcon,
   AlignRightIcon,
   AlignJustifyIcon,
+  PanelLeftIcon,
 } from './icons'
 import PresenceBar from './PresenceBar'
 import ScreenplayAutocomplete from './ScreenplayAutocomplete'
+import ScreenplayNavigator from './ScreenplayNavigator'
 import type { MemberActivity } from '../realtime'
 
 export type DocStatus = 'editing' | 'viewing' | 'afk'
@@ -214,6 +216,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
   const [mode, setMode] = useState<'doc' | 'script'>(
     node.content?.mode === 'script' ? 'script' : 'doc',
   )
+  const [navOpen, setNavOpen] = useState(false) // screenplay Scene Navigator panel
   const savedFlash = useRef<number | null>(null)
   const saveTimer = useRef<number | null>(null)
   // Screenplay keys read the live mode via this ref (the editor is shared).
@@ -836,6 +839,14 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
           </div>
           {mode === 'script' ? (
             <>
+              <Btn
+                title="Scene navigator"
+                active={navOpen}
+                onClick={() => setNavOpen((v) => !v)}
+              >
+                <PanelLeftIcon />
+              </Btn>
+              <span className="doc-tb__sep" />
               {SCREEN_ELEMENTS.map(({ el, label, key }) => (
                 <Btn
                   key={el}
@@ -1099,8 +1110,13 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
         </div>
       )}
 
-      <div className="doc-editor__scroll">
-        <EditorContent className="doc-editor__content" editor={editor} />
+      <div className="doc-editor__main">
+        {navOpen && mode === 'script' && editor && (
+          <ScreenplayNavigator editor={editor} onClose={() => setNavOpen(false)} />
+        )}
+        <div className="doc-editor__scroll">
+          <EditorContent className="doc-editor__content" editor={editor} />
+        </div>
       </div>
       <ScreenplayAutocomplete editor={editor} active={mode === 'script'} />
 
