@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.104.0
+
+- feat: **Smarter screenplay autocomplete.** Scene headings now complete in the
+  Celtx prefix → location → time pattern: an empty scene line offers INT./EXT./
+  EST., the prefix offers locations you've used before, and ` - ` offers a
+  time-of-day list (DAY, NIGHT, CONTINUOUS, LATER…). Character lines also offer the
+  (V.O.) / (O.S.) / (CONT'D) extensions once a name is in place.
+- feat: **Scene Navigator.** A toggle in the screenplay toolbar opens a left panel
+  listing every scene heading, numbered; click to jump to a scene, with the current
+  one highlighted and the list kept in sync as you write.
+
 ## v0.103.0
 
 - feat: **Drag-and-drop (or paste) images into a document.** Dropped/pasted image

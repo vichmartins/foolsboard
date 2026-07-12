@@ -2914,11 +2914,108 @@ b.doc-tb__glyph {
   border-color: var(--accent);
 }
 /* Google-Docs-style page: a sheet centred on a darker backdrop. */
+/* Editor body: an optional left Scene Navigator + the scrolling page. */
+.doc-editor__main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
 .doc-editor__scroll {
   flex: 1;
   overflow: auto;
   background: var(--bg);
   padding: 32px 0 100px;
+}
+/* Screenplay Scene Navigator — a left outline of scene headings. */
+.scene-nav {
+  flex: none;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elev);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+.scene-nav__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px 12px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.scene-nav__title {
+  flex: 1;
+}
+.scene-nav__count {
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.scene-nav__close {
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 5px;
+}
+.scene-nav__close:hover {
+  background: var(--bg-elev-2);
+  color: var(--text);
+}
+.scene-nav__empty {
+  padding: 16px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.scene-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+}
+.scene-nav__item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.scene-nav__item:hover {
+  background: var(--bg-elev-2);
+}
+.scene-nav__item--active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.scene-nav__num {
+  flex: none;
+  min-width: 18px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--accent);
+}
+.scene-nav__text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: uppercase;
 }
 .doc-editor__content {
   width: 816px;
