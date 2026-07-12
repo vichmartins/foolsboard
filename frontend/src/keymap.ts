@@ -91,6 +91,7 @@ export const ACTIONS: ActionDef[] = [
   { id: 'sp-parenthetical', group: 'Screenplay mode', label: 'Element: Parenthetical', scope: 'screenplay', def: c(true, false, false, 'Digit5') },
   { id: 'sp-transition', group: 'Screenplay mode', label: 'Element: Transition', scope: 'screenplay', def: c(true, false, false, 'Digit6') },
   { id: 'sp-shot', group: 'Screenplay mode', label: 'Element: Shot', scope: 'screenplay', def: c(true, false, false, 'Digit7') },
+  { id: 'scene-navigator', group: 'Screenplay mode', label: 'Toggle Scene Navigator', scope: 'screenplay', def: c(true, false, true, 'KeyO') },
 ]
 
 const BY_ID = new Map(ACTIONS.map((a) => [a.id, a]))

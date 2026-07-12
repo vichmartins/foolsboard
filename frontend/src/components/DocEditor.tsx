@@ -231,6 +231,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
     onLink: () => {},
     onImage: () => {},
     onModeToggle: () => {},
+    onToggleNavigator: () => {},
   })
   useKeymap() // refresh toolbar tooltips when a shortcut binding changes
 
@@ -403,6 +404,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
         onLink: () => keymapCbRef.current.onLink(),
         onImage: () => keymapCbRef.current.onImage(),
         onModeToggle: () => keymapCbRef.current.onModeToggle(),
+        onToggleNavigator: () => keymapCbRef.current.onToggleNavigator(),
       }),
       Collaboration.configure({ document: ydoc }),
       CollaborationCaret.configure({
@@ -687,6 +689,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
       onLink: () => editor && promptLink(editor),
       onImage: () => editor && promptImage(editor),
       onModeToggle: () => switchMode(modeRef.current === 'script' ? 'doc' : 'script'),
+      onToggleNavigator: () => setNavOpen((v) => !v),
     }
   })
   const curEl = (editor?.getAttributes('paragraph').element as ScreenEl | undefined) ?? null
@@ -840,7 +843,7 @@ export default function DocEditor({ node, boardId, onClose, onSaved, onStatusCha
           {mode === 'script' ? (
             <>
               <Btn
-                title="Scene navigator"
+                title={`Scene Navigator${hintSuffix('scene-navigator')}`}
                 active={navOpen}
                 onClick={() => setNavOpen((v) => !v)}
               >

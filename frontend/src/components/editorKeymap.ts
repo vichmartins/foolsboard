@@ -38,6 +38,7 @@ export interface EditorKeymapOptions {
   onLink: () => void
   onImage: () => void
   onModeToggle: () => void
+  onToggleNavigator: () => void
 }
 
 function stepFont(editor: Editor, sizes: string[], dir: number): boolean {
@@ -71,6 +72,7 @@ function runAction(editor: Editor, opts: EditorKeymapOptions, id: string): boole
     case 'table': return c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
     case 'link': opts.onLink(); return true
     case 'image': opts.onImage(); return true
+    case 'scene-navigator': opts.onToggleNavigator(); return true
     case 'highlight': {
       const bg = editor.getAttributes('textStyle').backgroundColor
       return bg ? c.unsetBackgroundColor().run() : c.setBackgroundColor(opts.highlightColor).run()
@@ -92,6 +94,7 @@ export const EditorKeymap = Extension.create<EditorKeymapOptions>({
       onLink: () => {},
       onImage: () => {},
       onModeToggle: () => {},
+      onToggleNavigator: () => {},
     }
   },
   addProseMirrorPlugins() {

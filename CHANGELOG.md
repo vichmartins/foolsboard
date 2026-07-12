@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.104.1
+
+- feat: **Shortcut for the Scene Navigator** (`Ctrl+Shift+O` by default, screenplay
+  mode only) — fully remappable in the Keyboard Shortcuts dialog, and the toolbar
+  toggle's tooltip shows the current binding.
+
 ## v0.104.0
 
 - feat: **Smarter screenplay autocomplete.** Scene headings now complete in the
