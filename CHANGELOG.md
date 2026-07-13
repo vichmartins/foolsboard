@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.104.2
+
+- revert: **Removed the smart scene-heading / extension autocomplete** (v0.104.0).
+  Screenplay autocomplete is back to suggesting only values already used in the
+  document plus the seed vocab. The Scene Navigator (and its shortcut) stays.
+
 ## v0.104.1
 
 - feat: **Shortcut for the Scene Navigator** (`Ctrl+Shift+O` by default, screenplay

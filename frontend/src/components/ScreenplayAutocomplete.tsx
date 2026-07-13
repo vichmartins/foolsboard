@@ -30,30 +30,6 @@ const SEED: Partial<Record<ScreenEl, string[]>> = {
 const MAX_ITEMS = 6
 const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'])
 
-// Smart scene-heading parts + character extensions (Celtx-style).
-const SCENE_PREFIXES = ['INT. ', 'EXT. ', 'INT./EXT. ', 'EST. ']
-const TIME_OF_DAY = [
-  'DAY', 'NIGHT', 'MORNING', 'AFTERNOON', 'EVENING', 'DUSK', 'DAWN',
-  'CONTINUOUS', 'LATER', 'MOMENTS LATER', 'SAME TIME',
-]
-const CHAR_EXT = [' (V.O.)', ' (O.S.)', " (CONT'D)"]
-
-// The location part of a scene heading: strip a known prefix and the trailing
-// " - TIME" so remembered locations can be re-offered.
-function extractLocation(heading: string): string {
-  let s = heading.toUpperCase().trim()
-  for (const p of SCENE_PREFIXES) {
-    const pt = p.trim()
-    if (s.startsWith(pt)) {
-      s = s.slice(pt.length).trim()
-      break
-    }
-  }
-  const d = s.lastIndexOf(' - ')
-  if (d !== -1) s = s.slice(0, d).trim()
-  return s
-}
-
 interface AcItem {
   text: string
 }
@@ -107,98 +83,15 @@ export default function ScreenplayAutocomplete({ editor, active }: Props) {
     return out
   }
 
-  // Distinct prior values written for an element type (unfiltered), for the smart
-  // scene / character completions below.
-  const priorValues = (el: ScreenEl): string[] => {
-    if (!editor) return []
-    const seen = new Set<string>()
-    const out: string[] = []
-    editor.state.doc.descendants((node) => {
-      if (node.type.name === 'paragraph' && node.attrs.element === el) {
-        const t = node.textContent.trim()
-        const k = t.toLowerCase()
-        if (t && !seen.has(k)) {
-          seen.add(k)
-          out.push(t)
-        }
-      }
-      return true
-    })
-    return out
-  }
-
-  // Scene headings complete in the Celtx pattern PREFIX -> LOCATION -> TIME: detect
-  // which part is being typed and offer prefixes, remembered locations, or the
-  // time-of-day vocabulary accordingly (plus any matching full prior heading).
-  const sceneItems = (text: string): AcItem[] => {
-    const upper = text.toUpperCase()
-    const headings = priorValues('scene').filter((h) => h.toUpperCase() !== upper)
-    const out: AcItem[] = []
-    const seen = new Set<string>()
-    const push = (s: string) => {
-      const k = s.toLowerCase()
-      if (s.trim() && !seen.has(k)) {
-        seen.add(k)
-        out.push({ text: s })
-      }
-    }
-    const matchHeadings = () => {
-      for (const h of headings) if (h.toUpperCase().includes(upper)) push(h)
-    }
-
-    const dash = upper.lastIndexOf(' - ')
-    if (dash !== -1) {
-      const before = text.slice(0, dash + 3) // keep the " - " separator
-      const frag = upper.slice(dash + 3).trim()
-      for (const t of TIME_OF_DAY) if (!frag || t.startsWith(frag)) push(before + t)
-      matchHeadings()
-      return out.slice(0, MAX_ITEMS)
-    }
-
-    const prefix = SCENE_PREFIXES.find((p) => upper.startsWith(p.trim()))
-    if (!prefix) {
-      for (const p of SCENE_PREFIXES) if (!upper || p.toUpperCase().startsWith(upper)) push(p)
-      matchHeadings()
-      return out.slice(0, MAX_ITEMS)
-    }
-
-    const locFrag = upper.slice(prefix.trim().length).trim()
-    const locations = Array.from(new Set(priorValues('scene').map(extractLocation).filter(Boolean)))
-    for (const loc of locations) if (!locFrag || loc.includes(locFrag)) push(prefix + loc)
-    matchHeadings()
-    return out.slice(0, MAX_ITEMS)
-  }
-
-  // Character names complete from prior names; once a name is in place (an exact
-  // match, or a trailing space / "(") the (V.O.) / (O.S.) / (CONT'D) extensions
-  // are offered too.
-  const characterItems = (text: string): AcItem[] => {
-    const out: AcItem[] = []
-    const seen = new Set<string>()
-    const push = (s: string) => {
-      const k = s.toLowerCase()
-      if (s.trim() && !seen.has(k)) {
-        seen.add(k)
-        out.push({ text: s })
-      }
-    }
-    for (const n of collectFor('character', text)) push(n)
-    const base = text.replace(/[ (]+$/, '').trim()
-    const known = new Set(priorValues('character').map((v) => v.toUpperCase()))
-    const wantsExt = !!base && !base.includes('(') && (known.has(base.toUpperCase()) || /[ (]$/.test(text))
-    if (wantsExt) for (const e of CHAR_EXT) push(base + e)
-    return out.slice(0, MAX_ITEMS)
-  }
-
-  // Free-prose elements (action / dialogue / parenthetical) aren't completable, so
-  // they get nothing and no dropdown appears.
-  const buildItems = (el: ScreenEl, text: string): AcItem[] => {
-    if (el === 'scene') return sceneItems(text)
-    if (el === 'character') return characterItems(text)
+  // Suggestions for the paragraph the caret is in: this element's own previously
+  // used values plus its seed vocab, completed in place. Free-prose elements
+  // (action / dialogue / parenthetical) aren't completable, so they get nothing
+  // and no dropdown appears.
+  const buildItems = (el: ScreenEl, query: string): AcItem[] => {
     if (!COMPLETABLE.has(el)) return []
     const items: AcItem[] = []
     const seen = new Set<string>()
-    for (const t of collectFor(el, text)) {
+    for (const t of collectFor(el, query)) {
       const key = t.toLowerCase()
       if (seen.has(key)) continue
       seen.add(key)
@@ -237,9 +130,10 @@ export default function ScreenplayAutocomplete({ editor, active }: Props) {
         return
       }
       const para = sel.$from.parent
+      // An untagged line in script mode reads as Action (the default), so it can
+      // still offer character conversions.
       const el = ((para.attrs.element as ScreenEl | null) ?? 'action') as ScreenEl
-      // An empty line stays quiet, except a Scene line offers its INT./EXT. prefixes.
-      if (!para.textContent.trim() && el !== 'scene') {
+      if (!para.textContent.trim()) {
         setAc(null)
         return
       }
