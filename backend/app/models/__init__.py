@@ -6,6 +6,7 @@ imported; this single import point guarantees that.
 from .appsetting import AppSetting
 from .asset import Asset
 from .board import Board
+from .board_template import BoardTemplate
 from .edge import Edge
 from .folder import Folder
 from .invite import InviteCode
@@ -19,6 +20,7 @@ __all__ = [
     "AppSetting",
     "Asset",
     "Board",
+    "BoardTemplate",
     "Edge",
     "ErrorLog",
     "Folder",

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from ..audit import log_event
 from ..database import get_db
 from ..deps import can_access_board, get_current_user
-from ..models import Asset, Board, Edge, Folder, Node, Share, User
+from ..models import Asset, Board, BoardTemplate, Edge, Folder, Node, Share, User
 from ..schemas import (
     AssetOut,
     BoardAbsorb,
@@ -82,9 +82,16 @@ def _accessible_boards(db: Session, user: User) -> list[Board]:
 
 
 def _board_out(
-    board: Board, user: User, db: Session, owner_names: dict, shared_out_ids: set
+    board: Board,
+    user: User,
+    db: Session,
+    owner_names: dict,
+    shared_out_ids: set,
+    template_ids: set,
 ) -> BoardOut:
     item = BoardOut.model_validate(board)
+    # Template status is per-user, not a property of the board.
+    item.is_template = board.id in template_ids
     if board.owner_id != user.id:
         item.shared = True
         if board.owner_id not in owner_names:
@@ -94,6 +101,13 @@ def _board_out(
     elif board.id in shared_out_ids:
         item.shared_out = True  # I own it and it's shared with someone
     return item
+
+
+def _template_board_ids(db: Session, user: User) -> set:
+    """The set of board ids the given user has marked as their own templates."""
+    return set(
+        db.scalars(select(BoardTemplate.board_id).where(BoardTemplate.user_id == user.id))
+    )
 
 
 @router.get("", response_model=list[BoardOut])
@@ -174,9 +188,10 @@ def list_boards(
                     members[bid].add(uid)
 
     owner_names: dict = {}
+    template_ids = _template_board_ids(db, user)
     outs = []
     for b in result:
-        item = _board_out(b, user, db, owner_names, shared_out_ids)
+        item = _board_out(b, user, db, owner_names, shared_out_ids, template_ids)
         item.member_ids = list(members.get(b.id, {b.owner_id}))
         outs.append(item)
     return outs
@@ -289,7 +304,7 @@ def get_board(
             )
         )
     )
-    return _board_out(board, user, db, {}, shared_out_ids)
+    return _board_out(board, user, db, {}, shared_out_ids, _template_board_ids(db, user))
 
 
 @router.get("/{board_id}/graph", response_model=BoardGraph)
@@ -398,7 +413,7 @@ def copy_board(
     db.refresh(new)
     log_event(db, user=user, action="board.copy", entity_type="board", entity_id=new.id,
               summary=f"made a private copy of “{src.name}”")
-    return _board_out(new, user, db, {}, set())
+    return _board_out(new, user, db, {}, set(), set())  # a fresh copy is nobody's template
 
 
 @router.post("/{board_id}/absorb", status_code=status.HTTP_204_NO_CONTENT)
@@ -493,17 +508,40 @@ def update_board(
     payload: BoardUpdate,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
-) -> Board:
+) -> BoardOut:
     board = _get_board(board_id, db, user)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    # Template status is per-user: toggle the caller's own marking rather than
+    # mutating a board-wide flag (which would star a shared board for everyone).
+    make_template = data.pop("is_template", None)
+    for field, value in data.items():
         setattr(board, field, value)
+    if make_template is not None:
+        existing = db.scalar(
+            select(BoardTemplate).where(
+                BoardTemplate.user_id == user.id, BoardTemplate.board_id == board.id
+            )
+        )
+        if make_template and existing is None:
+            db.add(BoardTemplate(user_id=user.id, board_id=board.id))
+        elif not make_template and existing is not None:
+            db.delete(existing)
     db.commit()
     db.refresh(board)
     log_event(
         db, user=user, action="board.update", entity_type="board",
         entity_id=board.id, summary=f"updated board “{board.name}”",
     )
-    return board
+    shared_out_ids = set(
+        db.scalars(
+            select(Share.board_id).where(
+                Share.owner_id == user.id,
+                Share.board_id == board.id,
+                Share.status.in_(["pending", "accepted"]),
+            )
+        )
+    )
+    return _board_out(board, user, db, {}, shared_out_ids, _template_board_ids(db, user))
 
 
 @router.delete("/{board_id}", status_code=status.HTTP_204_NO_CONTENT)
