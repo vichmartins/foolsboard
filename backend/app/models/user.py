@@ -4,8 +4,9 @@ boards (Board.owner_id)."""
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import Boolean, String, Text, Uuid
+from sqlalchemy import Boolean, DateTime, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -21,6 +22,21 @@ class User(UUIDMixin, TimestampMixin, Base):
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     # Suspended accounts can't authenticate (set by an admin).
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    # An admin can force the user to pick a new password on next sign-in. When
+    # true, the app routes the user to a "set a new password" screen and refuses
+    # everything else until they do (see auth.complete_reset).
+    must_change_password: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+
+    # When an admin issues a *temporary* password, this is when it stops working.
+    # login() rejects a temp password past this instant, so a temp password is
+    # both time-limited and single-use (it's cleared the moment the user sets a
+    # real one). Null means the current password is a normal, non-expiring one.
+    temp_password_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Storage key of the profile image (avatar), if one was uploaded.
     avatar_key: Mapped[str | None] = mapped_column(String(500), nullable=True)

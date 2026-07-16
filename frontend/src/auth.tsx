@@ -15,6 +15,9 @@ interface AuthContextValue {
     password: string
     invite_code?: string
   }) => Promise<void>
+  // Finish an admin-forced password reset: set a new password, clearing the
+  // must_change_password flag on the current user.
+  completeReset: (newPassword: string) => Promise<void>
   logout: () => void
 }
 
@@ -50,6 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser,
     login: async (identifier, password) => setUser(await api.login(identifier, password)),
     register: async (data) => setUser(await api.register(data)),
+    completeReset: async (newPassword) => setUser(await api.completeReset(newPassword)),
     logout: () => {
       void api.logout()
       setUser(null)

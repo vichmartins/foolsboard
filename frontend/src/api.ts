@@ -2,6 +2,7 @@
 import axios from 'axios'
 import type {
   ActivityLog,
+  AdminPasswordResetResult,
   AdminUser,
   Asset,
   Board,
@@ -85,6 +86,21 @@ export async function login(identifier: string, password: string): Promise<User>
   return res.data.user
 }
 
+// Whether this instance has no accounts yet (first-run). Public, unauthenticated.
+export async function getSetupStatus(): Promise<{ needs_setup: boolean }> {
+  return (await http.get('/auth/setup')).data
+}
+
+// A user forced to change their password (after an admin reset) picks a new one.
+// The server re-issues a token; swap it in so the session stays valid.
+export async function completeReset(newPassword: string): Promise<User> {
+  const res = await http.post<AuthResult>('/auth/me/complete-reset', {
+    new_password: newPassword,
+  })
+  setToken(res.data.access_token)
+  return res.data.user
+}
+
 export async function getMe(): Promise<User> {
   return (await http.get('/auth/me')).data
 }
@@ -159,6 +175,14 @@ export async function updateUser(
 }
 export async function deleteUser(id: string): Promise<void> {
   await http.delete(`/admin/users/${id}`)
+}
+// Reset a user's password: mode 'set' installs `password` directly; mode 'temp'
+// mints a single-use, expiring temporary password (returned once).
+export async function adminResetPassword(
+  id: string,
+  body: { mode: 'set'; password: string; require_change?: boolean } | { mode: 'temp' },
+): Promise<AdminPasswordResetResult> {
+  return (await http.post(`/admin/users/${id}/password`, body)).data
 }
 export async function listActivityLogs(params: {
   limit?: number

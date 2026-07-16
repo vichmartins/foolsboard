@@ -6,6 +6,7 @@ import * as api from '../api'
 import { useAuth } from '../auth'
 import type { AdminUser } from '../types'
 import ConfirmDialog from './ConfirmDialog'
+import ResetPasswordDialog from './ResetPasswordDialog'
 
 function when(ts: string): string {
   return new Date(ts).toLocaleDateString(undefined, {
@@ -21,6 +22,7 @@ export default function AdminUsers() {
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null)
+  const [resetUser, setResetUser] = useState<AdminUser | null>(null)
   // Explains why a self-row action is blocked (these guards are by design).
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -81,6 +83,11 @@ export default function AdminUsers() {
               <div className="admin-user__badges">
                 {u.is_admin && <span className="admin-badge admin-badge--admin">Admin</span>}
                 {!u.is_active && <span className="admin-badge admin-badge--suspended">Suspended</span>}
+                {u.must_change_password && (
+                  <span className="admin-badge admin-badge--reset" title="This user must set a new password on next sign-in">
+                    Reset pending
+                  </span>
+                )}
                 <span className="admin-user__since">{when(u.created_at)}</span>
               </div>
               <div className="admin-user__actions">
@@ -114,6 +121,18 @@ export default function AdminUsers() {
                   {u.is_active ? 'Suspend' : 'Activate'}
                 </button>
                 <button
+                  className={'btn admin-action admin-action--reset' + (self ? ' admin-action--self' : '')}
+                  disabled={busy}
+                  title="Set a new password or issue a temporary one"
+                  onClick={() =>
+                    self
+                      ? setNotice('To change your own password, use your profile settings.')
+                      : setResetUser(u)
+                  }
+                >
+                  Reset password
+                </button>
+                <button
                   className={'btn admin-action admin-action--delete' + (self ? ' admin-action--self' : '')}
                   disabled={busy}
                   onClick={() =>
@@ -129,6 +148,20 @@ export default function AdminUsers() {
           )
         })}
       </ul>
+
+      {resetUser && (
+        <ResetPasswordDialog
+          user={resetUser}
+          onClose={() => setResetUser(null)}
+          onReset={(mustChange) =>
+            setUsers((list) =>
+              list.map((x) =>
+                x.id === resetUser.id ? { ...x, must_change_password: mustChange } : x,
+              ),
+            )
+          }
+        />
+      )}
 
       {confirmDelete && (
         <ConfirmDialog

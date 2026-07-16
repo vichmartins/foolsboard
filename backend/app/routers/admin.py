@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import UUID
 
@@ -25,14 +25,20 @@ from ..sysstats import collect as collect_sysstats
 from ..models import ActivityLog, Asset, Board, ErrorLog, Node, RequestLog, User
 from ..schemas import (
     ActivityLogOut,
+    AdminPasswordReset,
+    AdminPasswordResetOut,
     AdminUserOut,
     AdminUserUpdate,
     ErrorLogOut,
     RequestLogOut,
 )
+from ..security import generate_temp_password, hash_password
 from .assets import gc_orphan_files
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+# How long an admin-issued temporary password stays valid before login rejects it.
+TEMP_PASSWORD_TTL_HOURS = 24
 
 
 @router.get("/users", response_model=list[AdminUserOut])
@@ -80,6 +86,72 @@ def update_user(
             summary=f"{', '.join(changed)} {target.username}",
         )
     return target
+
+
+@router.post("/users/{user_id}/password", response_model=AdminPasswordResetOut)
+def reset_user_password(
+    user_id: UUID,
+    payload: AdminPasswordReset,
+    admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> AdminPasswordResetOut:
+    """Reset another user's password. mode='set' installs a chosen password (they
+    sign in with it as usual; optionally force a change on next sign-in). mode='temp'
+    mints a random temporary password, returned once for the admin to hand over,
+    that expires after TEMP_PASSWORD_TTL_HOURS and forces the user to pick a new
+    one — after which it can never be used again (see auth.login / complete_reset)."""
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "User not found")
+    if target.id == admin.id:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Use your own profile settings to change your password",
+        )
+
+    if payload.mode == "set":
+        pw = payload.password or ""
+        if len(pw) < 8:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, "Password must be at least 8 characters"
+            )
+        target.password_hash = hash_password(pw)
+        target.must_change_password = payload.require_change
+        target.temp_password_expires_at = None
+        db.commit()
+        log_event(
+            db,
+            user=admin,
+            action="admin.user.password",
+            entity_type="user",
+            entity_id=target.id,
+            summary=f"set a new password for {target.username}",
+        )
+        return AdminPasswordResetOut(
+            mode="set", must_change_password=payload.require_change
+        )
+
+    # mode == "temp": generate a single-use, expiring temporary password.
+    temp = generate_temp_password()
+    expires = datetime.now(timezone.utc) + timedelta(hours=TEMP_PASSWORD_TTL_HOURS)
+    target.password_hash = hash_password(temp)
+    target.must_change_password = True
+    target.temp_password_expires_at = expires
+    db.commit()
+    log_event(
+        db,
+        user=admin,
+        action="admin.user.password",
+        entity_type="user",
+        entity_id=target.id,
+        summary=f"issued a temporary password for {target.username}",
+    )
+    return AdminPasswordResetOut(
+        mode="temp",
+        must_change_password=True,
+        temp_password=temp,
+        temp_password_expires_at=expires,
+    )
 
 
 @router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
