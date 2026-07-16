@@ -4,6 +4,7 @@ import {
   fileExt,
   isMediaNodeType,
   KIND_COLORS,
+  liveMediaFields,
   mediaKind,
   NODE_TYPES,
   nodePreview,
@@ -50,6 +51,54 @@ describe('mediaKind', () => {
     expect(mediaKind(asset('audio/ogg'))).toBe('audio')
     expect(mediaKind(asset('application/zip'))).toBe('file')
     expect(mediaKind(asset(''))).toBe('file')
+  })
+})
+
+describe('liveMediaFields', () => {
+  const asset = (over: Partial<Asset>): Asset =>
+    ({
+      id: 'a1',
+      node_id: 'n1',
+      kind: 'audio',
+      filename: 'clip.ogg',
+      content_type: 'audio/ogg',
+      size: 1,
+      url: '/media/new.ogg',
+      thumbnail_url: null,
+      processing: false,
+      created_at: '',
+      ...over,
+    }) as Asset
+
+  it('prefers the live asset over the cached content (transcode swap)', () => {
+    // Node was uploaded as an m4a; a background re-encode swapped it for an ogg.
+    const content = {
+      assetId: 'a1',
+      url: '/media/old.m4a',
+      filename: 'Jobless Jim.m4a',
+      mediaKind: 'audio',
+      thumbnailUrl: '',
+    }
+    const byId = new Map([['a1', asset({ filename: 'Jobless Jim.ogg', url: '/media/new.ogg' })]])
+    const r = liveMediaFields(content, byId)
+    expect(r.url).toBe('/media/new.ogg')
+    expect(r.filename).toBe('Jobless Jim.ogg')
+    expect(r.mediaKind).toBe('audio')
+  })
+
+  it('falls back to cached content when the asset is unknown (e.g. links)', () => {
+    const content = { url: 'https://example.com', filename: 'link', mediaKind: '' }
+    const r = liveMediaFields(content, new Map())
+    expect(r.url).toBe('https://example.com')
+    expect(r.filename).toBe('link')
+  })
+
+  it('falls back to cached content when the live asset has no url yet', () => {
+    const content = { assetId: 'a1', url: '/media/old.m4a', filename: 'x.m4a', mediaKind: 'audio' }
+    const byId = new Map([['a1', asset({ url: null })]])
+    const r = liveMediaFields(content, byId)
+    expect(r.url).toBe('/media/old.m4a')
+    expect(r.filename).toBe('x.m4a')
   })
 })
 

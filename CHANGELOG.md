@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.105.1
+
+- fix: **Audio/video nodes no longer break after their background re-encode.** A
+  media node cached its file's URL at upload time, but audio/video are transcoded
+  in the background (e.g. an `.m4a` becomes an `.ogg` and the original is deleted),
+  leaving the canvas pointing at a file that no longer exists — the player rendered
+  "smooshed" and unplayable, and the name stayed `.m4a`. The canvas now resolves a
+  media node's URL/name from the live asset, so it always shows the current file.
+  Already-affected nodes fix themselves on the next load — no re-upload needed.
+- fix: When a background re-encode finishes it now nudges open boards to refresh,
+  so the swapped-in file appears within a moment instead of on the next reload.
+
 ## v0.105.0
 
 - feat: **Admins can reset a user's password.** From Admin › Users, "Reset password"

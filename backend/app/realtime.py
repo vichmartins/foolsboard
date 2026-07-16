@@ -158,6 +158,23 @@ class Hub:
         except RuntimeError:
             pass
 
+    async def _broadcast_board(self, board_id: UUID, msg: dict) -> None:
+        targets = [c for c in self._conns if c.board_id == board_id]
+        await self._send_many(targets, msg)
+
+    def notify_board(self, board_id: UUID, msg: dict) -> None:
+        """Push a message to everyone currently viewing a board, from synchronous
+        code (e.g. a background media re-encode). Unlike relay() there's no sender
+        to exclude — the uploader's own canvas needs the signal too. No-op until a
+        connection has captured the event loop."""
+        loop = self._loop
+        if loop is None:
+            return
+        try:
+            asyncio.run_coroutine_threadsafe(self._broadcast_board(board_id, msg), loop)
+        except RuntimeError:
+            pass
+
     def set_user_color(self, user_id: UUID, color: str) -> None:
         """Apply a user's newly-chosen color to their live connections and tell
         collaborators, so cursors/highlights recolor without a refresh. Called

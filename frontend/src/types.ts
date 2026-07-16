@@ -205,6 +205,35 @@ export function mediaKind(a: Asset): MediaKind {
   return 'file'
 }
 
+// A media node caches its asset's url/filename/kind in `content` at upload time.
+// But audio/video are re-encoded in the background (e.g. an .m4a is transcoded to
+// .ogg and the original file deleted), which leaves that cache pointing at a file
+// that no longer exists. Resolve the display fields from the live asset (looked
+// up by content.assetId) whenever we have it, falling back to the cached values
+// (links have no asset, so they always use the cache).
+export function liveMediaFields(
+  content: Record<string, unknown>,
+  assetsById: Map<string, Asset>,
+): { url: string; filename: string; mediaKind: string; thumbnailUrl: string } {
+  const str = (k: string) => (typeof content[k] === 'string' ? (content[k] as string) : '')
+  const assetId = str('assetId')
+  const live = assetId ? assetsById.get(assetId) : undefined
+  if (live && live.url) {
+    return {
+      url: live.url,
+      filename: live.filename,
+      mediaKind: mediaKind(live),
+      thumbnailUrl: live.thumbnail_url ?? '',
+    }
+  }
+  return {
+    url: str('url'),
+    filename: str('filename'),
+    mediaKind: str('mediaKind'),
+    thumbnailUrl: str('thumbnailUrl'),
+  }
+}
+
 export function fileExt(filename: string): string {
   const i = filename.lastIndexOf('.')
   return i > 0 ? filename.slice(i + 1).toUpperCase() : ''
