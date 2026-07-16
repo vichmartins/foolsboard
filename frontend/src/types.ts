@@ -61,6 +61,7 @@ export interface User {
   avatar_url: string | null
   color: string | null
   last_board_id: string | null
+  must_change_password: boolean
 }
 
 export interface AdminUser {
@@ -70,6 +71,16 @@ export interface AdminUser {
   is_admin: boolean
   is_active: boolean
   created_at: string
+  must_change_password: boolean
+}
+
+// Result of an admin password reset. For mode 'temp', temp_password is the
+// plaintext to hand the user — shown once, never retrievable again.
+export interface AdminPasswordResetResult {
+  mode: 'set' | 'temp'
+  must_change_password: boolean
+  temp_password: string | null
+  temp_password_expires_at: string | null
 }
 
 export interface ActivityLog {

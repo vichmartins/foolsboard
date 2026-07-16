@@ -21,11 +21,13 @@ from ..schemas import (
     CategoriesPayload,
     ColorsOut,
     ColorUpdate,
+    CompleteResetIn,
     LastBoardIn,
     LoginIn,
     PasswordUpdate,
     ProfileUpdate,
     RegisterIn,
+    SetupStatus,
     Token,
     UserOut,
 )
@@ -128,8 +130,51 @@ def login(payload: LoginIn, request: Request, db: Session = Depends(get_db)) -> 
         )
     if not user.is_active:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Your account has been suspended")
+    # A temporary (admin-issued) password stops working past its expiry, so a
+    # forgotten reset can't linger. The password is validated above; here we only
+    # gate on the clock. Once the user sets a real password (complete_reset) this
+    # timestamp is cleared, which is what makes the temp password single-use.
+    if user.temp_password_expires_at is not None:
+        exp = user.temp_password_expires_at
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)  # SQLite returns naive UTC
+        if exp <= datetime.now(timezone.utc):
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                "This temporary password has expired. Ask an admin to issue a new one.",
+            )
     login_limiter.reset(ip)  # a successful sign-in clears the IP's failures
     log_event(db, user=user, action="auth.login", summary="signed in")
+    return Token(access_token=create_access_token(user.id), user=_user_out(user))
+
+
+@router.get("/setup", response_model=SetupStatus)
+def setup_status(db: Session = Depends(get_db)) -> SetupStatus:
+    """Public: whether this instance has no accounts yet. The login screen uses
+    this to offer a first-run "create the admin account" flow instead of sign-in."""
+    return SetupStatus(needs_setup=db.scalar(select(func.count()).select_from(User)) == 0)
+
+
+@router.post("/me/complete-reset", response_model=Token)
+def complete_reset(
+    payload: CompleteResetIn,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Token:
+    """A user flagged must_change_password (after an admin reset) sets their own
+    new password. No current password is required — they're already authenticated
+    by their bearer token, having just signed in with a temporary or admin-set
+    password. Only valid while a change is actually pending, so this can't be used
+    to bypass the normal current-password check."""
+    if not user.must_change_password:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "No password reset is pending")
+    user.password_hash = hash_password(payload.new_password)
+    user.must_change_password = False
+    user.temp_password_expires_at = None  # retires any temporary password
+    db.commit()
+    db.refresh(user)
+    log_event(db, user=user, action="auth.reset_complete", summary="set a new password")
+    # Re-issue a token so the client keeps a clean, valid session afterward.
     return Token(access_token=create_access_token(user.id), user=_user_out(user))
 
 

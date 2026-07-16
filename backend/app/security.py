@@ -11,10 +11,21 @@ import hashlib
 import hmac
 import json
 import os
+import secrets
 import time
 from uuid import UUID
 
 from .config import settings
+
+# Unambiguous alphabet for generated temporary passwords: no 0/O, 1/I/l, so a
+# user reading one off the screen can't misread it.
+_TEMP_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"
+
+
+def generate_temp_password(length: int = 14) -> str:
+    """A random, high-entropy temporary password for an admin-issued reset.
+    ~5.7 bits/char over a 54-char alphabet (~80 bits at the default length)."""
+    return "".join(secrets.choice(_TEMP_ALPHABET) for _ in range(length))
 
 
 # --- Password hashing -------------------------------------------------------

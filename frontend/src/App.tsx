@@ -14,6 +14,7 @@ import ConfirmDialog from './components/ConfirmDialog'
 import FolderSelect from './components/FolderSelect'
 import ImportExportDialog from './components/ImportExportDialog'
 import LoginScreen from './components/LoginScreen'
+import ForceResetScreen from './components/ForceResetScreen'
 import PresenceBar from './components/PresenceBar'
 import ProfileMenu from './components/ProfileMenu'
 import Sidebar from './components/Sidebar'
@@ -1121,7 +1122,7 @@ function Workspace() {
   )
 }
 
-type Screen = 'login' | 'app'
+type Screen = 'login' | 'app' | 'reset'
 const CURTAIN_COVER_MS = 200
 const CURTAIN_REVEAL_MS = 260
 
@@ -1131,7 +1132,9 @@ const CURTAIN_REVEAL_MS = 260
 // (token check) swaps without a curtain.
 export default function App() {
   const { user, loading } = useAuth()
-  const target: Screen = user ? 'app' : 'login'
+  // A user whom an admin forced to reset their password is held at a dedicated
+  // "set a new password" screen until they do; everything else is off-limits.
+  const target: Screen = !user ? 'login' : user.must_change_password ? 'reset' : 'app'
   const [displayed, setDisplayed] = useState<Screen | null>(null)
   const [curtain, setCurtain] = useState<'none' | 'in' | 'out'>('none')
   const displayedRef = useRef<Screen | null>(null)
@@ -1166,7 +1169,13 @@ export default function App() {
 
   return (
     <>
-      {displayed === 'app' ? <Workspace /> : <LoginScreen />}
+      {displayed === 'app' ? (
+        <Workspace />
+      ) : displayed === 'reset' ? (
+        <ForceResetScreen />
+      ) : (
+        <LoginScreen />
+      )}
       {curtain !== 'none' && (
         <div
           className={'auth-curtain' + (curtain === 'out' ? ' auth-curtain--out' : '')}

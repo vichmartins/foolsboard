@@ -6,6 +6,7 @@ ORM. `from_attributes=True` lets us return ORM objects directly.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -273,6 +274,14 @@ class PasswordUpdate(BaseModel):
     new_password: str = Field(min_length=8, max_length=200)
 
 
+class CompleteResetIn(BaseModel):
+    """A user forced to change their password (must_change_password) picks a new
+    one. No current password: they may have signed in with a temporary one, and
+    the server already authenticated them via their bearer token."""
+
+    new_password: str = Field(min_length=8, max_length=200)
+
+
 class ColorUpdate(BaseModel):
     color: str = Field(min_length=4, max_length=7)
 
@@ -304,6 +313,9 @@ class UserOut(ORMModel):
     avatar_url: str | None = None
     color: str | None = None
     last_board_id: UUID | None = None
+    # True while the user still owes a fresh password after an admin reset; the
+    # app gates the whole workspace behind a "set a new password" screen.
+    must_change_password: bool = False
 
 
 class LastBoardIn(BaseModel):
@@ -317,11 +329,42 @@ class AdminUserOut(ORMModel):
     is_admin: bool
     is_active: bool
     created_at: datetime
+    must_change_password: bool = False
 
 
 class AdminUserUpdate(BaseModel):
     is_admin: bool | None = None
     is_active: bool | None = None
+
+
+class AdminPasswordReset(BaseModel):
+    """Admin resets another user's password. mode='set' installs the given
+    password directly (the user can sign in with it as normal). mode='temp'
+    ignores `password`, has the server mint a random single-use temporary
+    password, and forces the user to choose a new one at next sign-in."""
+
+    mode: Literal["set", "temp"] = "temp"
+    # Required only for mode='set'. Same strength rule as a normal password.
+    password: str | None = Field(default=None, min_length=8, max_length=200)
+    # For mode='set': also force a change on next sign-in (default: don't).
+    require_change: bool = False
+
+
+class AdminPasswordResetOut(BaseModel):
+    """Result of an admin reset. For mode='temp', `temp_password` is the plaintext
+    to hand to the user — shown once, never stored or retrievable again."""
+
+    mode: Literal["set", "temp"]
+    must_change_password: bool
+    temp_password: str | None = None
+    temp_password_expires_at: datetime | None = None
+
+
+class SetupStatus(BaseModel):
+    """Public, unauthenticated: whether this instance has no accounts yet, so the
+    login screen can offer first-run "create the admin account" instead."""
+
+    needs_setup: bool
 
 
 class ActivityLogOut(ORMModel):

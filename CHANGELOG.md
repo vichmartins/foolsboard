@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.105.0
+
+- feat: **Admins can reset a user's password.** From Admin › Users, "Reset password"
+  offers two paths: set a password for them directly (optionally forcing a change on
+  next sign-in), or generate a **temporary password** — shown once, copyable — that
+  expires in 24 hours and is single-use: the user signs in with it, is required to
+  choose a new password, and the temporary one can never be used again.
+- feat: **First-run setup.** A brand-new instance greets the first person with a
+  themed "set up your foolsboard" flow that creates the administrator account and
+  signs them straight in — no invite code, no guessing that a blank invite means
+  "first account". Existing installs are unchanged.
+- feat: **Forced password change screen.** A user whose password an admin reset is
+  held at a matching "choose a new password" card until they set one, then dropped
+  into the app.
+
 ## v0.104.2
 
 - revert: **Removed the smart scene-heading / extension autocomplete** (v0.104.0).
