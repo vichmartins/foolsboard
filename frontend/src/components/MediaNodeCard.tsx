@@ -16,6 +16,7 @@ import { useRegisterNodeEdit } from '../nodeEditContext'
 import { collabColor } from '../collab'
 import { realtime } from '../realtime'
 import { FlipIcon, ResizeGripIcon, RotateIcon } from './icons'
+import AudioPlayer from './AudioPlayer'
 
 const SIDES: Position[] = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
@@ -402,7 +403,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
         {thumb && (
           <img className="media-node__audio-cover" src={thumb} alt="" draggable={false} />
         )}
-        <audio key={url} className="media-node__audio-el nodrag" src={url} controls preload="metadata" />
+        <AudioPlayer key={url} src={url} />
       </div>
     )
   } else {

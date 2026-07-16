@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.105.4
+
+- change: **Audio objects now use a custom player** (play button, scrubber, time)
+  instead of the browser's native `<audio>` control, which rendered inconsistently
+  across browsers (clipped/awkward in some) and was prone to getting stuck in a
+  broken state. The new player looks the same everywhere, matches the app's theme,
+  and reloads cleanly when a file is swapped.
+
 ## v0.105.3
 
 - fix: **Audio/video nodes no longer stay stuck in a broken, collapsed player.**
