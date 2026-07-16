@@ -8,9 +8,10 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react'
 import * as api from '../api'
-import { safeHref, type Asset, type StoryNode } from '../types'
+import { liveMediaFields, safeHref, type Asset, type StoryNode } from '../types'
 import { useAuth } from '../auth'
 import { useBoardId } from '../boardContext'
+import { useMediaAssets } from '../mediaAssetContext'
 import { useRegisterNodeEdit } from '../nodeEditContext'
 import { collabColor } from '../collab'
 import { realtime } from '../realtime'
@@ -41,6 +42,9 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   const content = (d.story?.content ?? {}) as Record<string, unknown>
   const str = (k: string) => (typeof content[k] === 'string' ? (content[k] as string) : '')
   const assetId = str('assetId')
+  // Prefer the live asset's url/filename/kind over the (possibly stale) copy in
+  // node content, so a background re-encode's new file is shown, not a deleted one.
+  const live = liveMediaFields(content, useMediaAssets())
 
   // Resize: a corner grip drives the media's width; height follows (aspect kept).
   // Stored on node.width so it survives reloads.
@@ -186,7 +190,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
 
   // Rename: double-click the caption to edit the filename (extension stays
   // locked, like the panel). Updates the asset + the node's cached title.
-  const filename = str('filename') || d.title || 'file'
+  const filename = live.filename || d.title || 'file'
   const [editing, setEditing] = useState(false)
   const [nameVal, setNameVal] = useState('')
   function startRename() {
@@ -338,9 +342,9 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   }
 
   // --- File-based media (image / video / audio / file) -------------------
-  const mk = str('mediaKind') || 'file'
-  const url = str('url')
-  const thumb = str('thumbnailUrl')
+  const mk = live.mediaKind || 'file'
+  const url = live.url
+  const thumb = live.thumbnailUrl
 
   // Created node before its upload finished: show a placeholder.
   if (!url) {

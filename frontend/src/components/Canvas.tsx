@@ -35,6 +35,7 @@ import '@xyflow/react/dist/style.css'
 import * as api from '../api'
 import { matches, getBinding, formatCombo } from '../keymap'
 import { BoardIdContext } from '../boardContext'
+import { MediaAssetContext } from '../mediaAssetContext'
 import { NodeEditContext } from '../nodeEditContext'
 import {
   besideOffset,
@@ -288,6 +289,17 @@ function CanvasInner({
   // so the reader can show images/video/audio that live on story objects.
   const [playAssets, setPlayAssets] = useState<Map<string, Asset[]>>(new Map())
 
+  // The board's live assets (asset id -> asset), so media nodes render the
+  // current file even after a background re-encode swapped it (see
+  // liveMediaFields). Refreshed on load and whenever the board changes.
+  const [assetsById, setAssetsById] = useState<Map<string, Asset>>(new Map())
+  const refreshAssets = useCallback(() => {
+    api
+      .listBoardAssets(boardId)
+      .then((list) => setAssetsById(new Map(list.map((a) => [a.id, a]))))
+      .catch(() => {})
+  }, [boardId])
+
   const openPlaythrough = useCallback(
     (start: string | null) => {
       setPlayStart(start)
@@ -429,6 +441,8 @@ function CanvasInner({
   // Load the whole board graph whenever the board changes.
   useEffect(() => {
     let active = true
+    setAssetsById(new Map()) // drop the previous board's assets while loading
+    refreshAssets()
     api
       .getGraph(boardId)
       .then((g) => {
@@ -477,6 +491,7 @@ function CanvasInner({
               onBoardChangedRef.current?.()
             })
             .catch(() => {})
+          refreshAssets() // a re-encode may have swapped a media file's url
         }, 250)
       }
     })
@@ -510,6 +525,7 @@ function CanvasInner({
         setEdges(g.edges.map(toRFEdge))
       })
       .catch(() => {})
+    refreshAssets()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshNonce])
 
@@ -2050,6 +2066,7 @@ function CanvasInner({
   // Every item + connection on the board, for the gallery.
   return (
     <BoardIdContext.Provider value={boardId}>
+    <MediaAssetContext.Provider value={assetsById}>
     <NodeEditContext.Provider value={handleNodeEdited}>
     <div
       className="canvas-wrap"
@@ -2448,6 +2465,7 @@ function CanvasInner({
         })()}
     </div>
     </NodeEditContext.Provider>
+    </MediaAssetContext.Provider>
     </BoardIdContext.Provider>
   )
 }

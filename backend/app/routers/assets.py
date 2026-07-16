@@ -33,6 +33,7 @@ from ..config import settings
 from ..database import SessionLocal, get_db
 from ..deps import can_access_board, get_current_user, get_owned_node
 from ..models import Asset, Board, Node, User
+from ..realtime import hub
 from ..schemas import AssetOut
 from ..storage import storage
 from ..thumbnails import generate_image_thumbnail, generate_thumbnail
@@ -152,6 +153,8 @@ def _process_compression(asset_id: UUID) -> None:
         asset = db.get(Asset, asset_id)
         if asset is None:
             return
+        node_id = asset.node_id
+        swapped = False
         src = _local_path(asset.storage_key)
         try:
             if src.exists():
@@ -174,6 +177,7 @@ def _process_compression(asset_id: UUID) -> None:
                     asset.content_type = cct
                     asset.kind = _kind_from_content_type(cct)
                     asset.size = new_size
+                    swapped = True
                     db.flush()  # so this asset no longer counts as a referrer of old_key
                     # A copy/reference made during the encode window shares old_key;
                     # only delete the file when nothing else points at it.
@@ -186,6 +190,24 @@ def _process_compression(asset_id: UUID) -> None:
                 out_path.unlink(missing_ok=True)
         asset.processing = False
         db.commit()
+    finally:
+        db.close()
+
+    # The swap changed the asset's url/filename, but the media node still caches
+    # the pre-encode values (and the old file is now gone). Nudge open canvases to
+    # refetch the board's assets so they render the new file, not a dead link.
+    if swapped:
+        board_id = db_board_id_for_node(node_id)
+        if board_id is not None:
+            hub.notify_board(board_id, {"type": "board_dirty", "board_id": str(board_id)})
+
+
+def db_board_id_for_node(node_id: UUID) -> UUID | None:
+    """The board a node belongs to (its own session; called after the compression
+    session has closed)."""
+    db = SessionLocal()
+    try:
+        return db.scalar(select(Node.board_id).where(Node.id == node_id))
     finally:
         db.close()
 
