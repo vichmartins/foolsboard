@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.105.3
+
+- fix: **Audio/video nodes no longer stay stuck in a broken, collapsed player.**
+  When a node briefly rendered a stale/deleted source (before the live asset URL
+  resolved) the media element errored, and swapping its `src` to the real file
+  didn't recover it — a media element that has failed to load won't reload from a
+  `src` change alone. The element is now keyed on its URL, so a changed URL mounts
+  a fresh player that loads the current file cleanly.
+
 ## v0.105.2
 
 - fix: **Uploaded audio/video is only kept as-is when the browser can actually

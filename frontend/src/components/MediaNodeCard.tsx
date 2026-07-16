@@ -373,6 +373,12 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
   } else if (mk === 'video') {
     body = (
       <video
+        // key on the url so that when a background re-encode swaps the file
+        // (e.g. a briefly-shown stale/deleted source is replaced by the live
+        // one), React mounts a fresh element instead of reusing an errored one —
+        // a media element that has failed to load won't recover from just a
+        // `src` attribute change.
+        key={url}
         ref={(el) => {
           mediaRef.current = el
         }}
@@ -396,7 +402,7 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
         {thumb && (
           <img className="media-node__audio-cover" src={thumb} alt="" draggable={false} />
         )}
-        <audio className="media-node__audio-el nodrag" src={url} controls preload="metadata" />
+        <audio key={url} className="media-node__audio-el nodrag" src={url} controls preload="metadata" />
       </div>
     )
   } else {
