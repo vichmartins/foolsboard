@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.105.5
+
+- chore: Added `scripts/backfill_media_urls.py` — a one-off pass that rewrites a
+  media node's cached url/filename to match its live asset, so stored content is
+  consistent after a background re-encode (the canvas already resolved this at
+  render time; this removes the brief load-time flicker and tidies the data).
+- fix: Repaired `scripts/recompress_existing.py`, which was broken against the
+  current `compress()` API (it treated the returned temp-file path as bytes) and
+  now also deletes the superseded file dedup-safely.
+
 ## v0.105.4
 
 - change: **Audio objects now use a custom player** (play button, scrubber, time)

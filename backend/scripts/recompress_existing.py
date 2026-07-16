@@ -23,6 +23,8 @@ from app.routers.assets import _kind_from_content_type
 from app.storage import storage
 from app.thumbnails import generate_thumbnail
 
+# NOTE: compress() returns a temp-file *path* (not bytes) -- stream it to storage.
+
 
 def _local_path(key: str) -> Path:
     return Path(settings.storage_local_dir) / key
@@ -49,19 +51,29 @@ def main() -> None:
 
             result = compress(src, a.content_type, a.filename)
             if result is not None:
-                data, cname, cct = result
-                if len(data) < orig_size:
-                    old_key = a.storage_key
-                    a.storage_key = storage.save(io.BytesIO(data), cname)
-                    a.filename = cname
-                    a.content_type = cct
-                    a.kind = _kind_from_content_type(cct)
-                    a.size = len(data)
-                    storage.delete(old_key)
-                    new_size = len(data)
-                    changed += 1
-                    pct = round(100 * (1 - new_size / orig_size))
-                    print(f"  ~ {cname}: {orig_size:,} -> {new_size:,} bytes (-{pct}%)")
+                out_path, cname, cct = result
+                try:
+                    result_size = out_path.stat().st_size
+                    if result_size < orig_size:
+                        old_key = a.storage_key
+                        with out_path.open("rb") as f:  # streamed to storage
+                            a.storage_key = storage.save(f, cname)
+                        a.filename = cname
+                        a.content_type = cct
+                        a.kind = _kind_from_content_type(cct)
+                        a.size = result_size
+                        db.flush()  # so this asset no longer counts as a referrer of old_key
+                        # Dedup-safe: only drop the old file if nothing else uses it.
+                        if db.scalars(
+                            select(Asset.id).where(Asset.storage_key == old_key)
+                        ).first() is None:
+                            storage.delete(old_key)
+                        new_size = result_size
+                        changed += 1
+                        pct = round(100 * (1 - new_size / orig_size))
+                        print(f"  ~ {cname}: {orig_size:,} -> {new_size:,} bytes (-{pct}%)")
+                finally:
+                    out_path.unlink(missing_ok=True)
 
             # Backfill a thumbnail for audio/video that lacks one.
             if a.kind in {"video", "audio"} and not a.thumbnail_key:
