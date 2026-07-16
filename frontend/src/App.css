@@ -2091,6 +2091,68 @@
 .media-node__audio-el {
   width: 100%;
 }
+/* Custom audio player (replaces the native <audio controls>, which renders
+   inconsistently across browsers). Compact: play button + scrubber + time. */
+.audio-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+.audio-player__btn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: filter 0.12s ease, transform 0.06s ease;
+}
+.audio-player__btn:hover {
+  filter: brightness(1.1);
+}
+.audio-player__btn:active {
+  transform: scale(0.94);
+}
+.audio-player__btn:disabled {
+  background: var(--border);
+  cursor: default;
+}
+.audio-player__bar {
+  flex: 1;
+  min-width: 40px;
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-dim) 35%, transparent);
+  cursor: pointer;
+  overflow: hidden;
+}
+.audio-player__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.audio-player__time {
+  flex: none;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.audio-player--err .audio-player__time {
+  color: var(--danger);
+}
 .media-node__caption {
   font-size: 11px;
   color: var(--text-dim);
