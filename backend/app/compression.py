@@ -116,17 +116,64 @@ def _bitrate(info: dict, stream: dict) -> int:
     return 0
 
 
+def _formats(info: dict) -> set[str]:
+    """The container's ffprobe format names (a comma-separated list -- e.g. an
+    mp4 reports "mov,mp4,m4a,3gp,3g2,mj2"; an mkv/webm both report "matroska,webm")."""
+    raw = info.get("format", {}).get("format_name", "") or ""
+    return {f.strip() for f in raw.split(",") if f.strip()}
+
+
+def _is_web_video(info: dict) -> bool:
+    """Whether the file is already a browser-playable video *as-is*. Playability
+    needs BOTH a web container AND codecs that container supports in the browser:
+    H.264(+AAC/MP3) only inside MP4, and VP8/VP9/AV1(+Opus/Vorbis) only inside
+    WebM. An H.264 stream in a Matroska/AVI container is NOT playable -- which is
+    why the old codec-only check let `.mkv` files through unplayable."""
+    fmts = _formats(info)
+    v = _stream(info, "video")
+    if v is None:
+        return False
+    a = _stream(info, "audio")
+    vcodec = v.get("codec_name")
+    acodec = a.get("codec_name") if a else None
+    if fmts & {"mp4", "mov", "m4a", "3gp", "3g2"}:
+        return vcodec == "h264" and acodec in {None, "aac", "mp3"}
+    if fmts & {"webm", "matroska"}:  # ffprobe can't tell .webm from .mkv apart --
+        # so gate on the codecs: only the WebM subset actually plays in browsers.
+        return vcodec in {"vp8", "vp9", "av1"} and acodec in {None, "opus", "vorbis"}
+    return False
+
+
+def _is_web_audio(info: dict) -> bool:
+    """Whether the file is already a browser-playable audio file as-is. MP4-family
+    audio (i.e. AAC in `.m4a`) is deliberately excluded so it transcodes to Opus,
+    which every browser can decode (some Chromium builds ship without AAC)."""
+    fmts = _formats(info)
+    a = _stream(info, "audio")
+    if a is None:
+        return False
+    acodec = a.get("codec_name")
+    if "mp3" in fmts:
+        return acodec == "mp3"
+    if "ogg" in fmts:
+        return acodec in {"opus", "vorbis"}
+    if "wav" in fmts:
+        return bool(acodec) and acodec.startswith("pcm")
+    if fmts & {"webm", "matroska"}:
+        return acodec in {"opus", "vorbis"}
+    return False
+
+
 def _skip_video(src: Path) -> bool:
+    """Skip re-encoding only when the file is already web-playable AND already
+    small enough that re-encoding wouldn't help."""
     cap = settings.video_skip_bitrate
     if cap <= 0:
         return False
     info = _probe(src)
-    if not info:
+    if not info or not _is_web_video(info):
         return False
-    v = _stream(info, "video")
-    if not v or v.get("codec_name") != "h264":
-        return False
-    br = _bitrate(info, v)
+    br = _bitrate(info, _stream(info, "video"))
     return 0 < br <= cap
 
 
@@ -135,12 +182,9 @@ def _skip_audio(src: Path) -> bool:
     if cap <= 0:
         return False
     info = _probe(src)
-    if not info:
+    if not info or not _is_web_audio(info):
         return False
-    a = _stream(info, "audio")
-    if not a or a.get("codec_name") not in {"opus", "aac", "mp3", "vorbis"}:
-        return False
-    br = _bitrate(info, a)
+    br = _bitrate(info, _stream(info, "audio"))
     return 0 < br <= cap
 
 

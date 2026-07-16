@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.105.2
+
+- fix: **Uploaded audio/video is only kept as-is when the browser can actually
+  play it.** The "skip re-encode, it's already efficient" check looked at the
+  codec but not the container, so an H.264 `.mkv` or an AAC `.m4a` could be stored
+  untouched in a container browsers can't play. It now requires a web-playable
+  container too (H.264 only inside MP4; VP8/VP9/AV1 inside WebM; MP3/Ogg/WAV audio),
+  so anything else is transcoded to MP4 or Ogg-Opus.
+- chore: Added `scripts/retranscode_unplayable.py`, a one-off pass that converts
+  already-stored media stuck in an unplayable container (run with `--dry-run` to
+  preview). Canvas nodes self-heal to the new file on next load.
+
 ## v0.105.1
 
 - fix: **Audio/video nodes no longer break after their background re-encode.** A
