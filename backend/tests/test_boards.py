@@ -43,6 +43,39 @@ def test_mark_template_and_copy_is_plain_board(client, admin):
     copy = client.post(f"/api/boards/{bid}/copy", headers=auth(token))
     assert copy.status_code == 201, copy.text
     assert copy.json()["is_template"] is False
+    # Unmarking clears it again.
+    cleared = client.patch(f"/api/boards/{bid}", json={"is_template": False}, headers=auth(token))
+    assert cleared.status_code == 200 and cleared.json()["is_template"] is False
+
+
+def test_template_marking_is_per_user_on_shared_boards(client, admin):
+    """A board's template star belongs only to the account that set it -- a
+    collaborator on a shared board must not inherit the owner's template mark."""
+    admin_token, _ = admin
+    code = client.post(
+        "/api/invites", json={"expires_in_minutes": 60}, headers=auth(admin_token)
+    ).json()["code"]
+    btoken = register(client, "bob", invite=code).json()["access_token"]
+
+    bid = new_board(client, admin_token, "Shared Starter")
+    sid = client.post(
+        "/api/shares", json={"recipient": "bob", "board_id": bid}, headers=auth(admin_token)
+    ).json()["id"]
+    assert client.post(f"/api/shares/{sid}/accept", headers=auth(btoken)).status_code == 200
+
+    # Owner marks it as their template.
+    client.patch(f"/api/boards/{bid}", json={"is_template": True}, headers=auth(admin_token))
+
+    def is_tmpl_in_list(tok):
+        row = [b for b in client.get("/api/boards", headers=auth(tok)).json() if b["id"] == bid]
+        assert row, "board missing from list"
+        return row[0]["is_template"]
+
+    assert is_tmpl_in_list(admin_token) is True   # the owner who set it sees the star
+    assert is_tmpl_in_list(btoken) is False       # the collaborator does NOT
+    # GET single board is per-user too.
+    assert client.get(f"/api/boards/{bid}", headers=auth(btoken)).json()["is_template"] is False
+    assert client.get(f"/api/boards/{bid}", headers=auth(admin_token)).json()["is_template"] is True
 
 
 def test_other_user_cannot_access_unshared_board(client, admin):

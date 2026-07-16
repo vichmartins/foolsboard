@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.105.6
+
+- fix: **Templates are now per-account.** Marking a board as a template used to set
+  a board-wide flag, so on a shared board a collaborator saw (and could be confused
+  by) a template star they never set. Template status is now stored per user — your
+  templates are yours alone. Existing template marks are migrated to each board's
+  owner.
+
 ## v0.105.5
 
 - chore: Added `scripts/backfill_media_urls.py` — a one-off pass that rewrites a
