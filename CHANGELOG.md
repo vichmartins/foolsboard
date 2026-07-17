@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.108.11
+
+- fix: In the **light theme**, primary buttons now darken slightly on hover
+  instead of brightening — the previous brighten washed the accent toward the
+  pale background and faded the white label.
+
 ## v0.108.10
 
 - revert: Restored the template banner's original **Create From Template / Unlock
