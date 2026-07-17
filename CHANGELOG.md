@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.108.12
+
+- polish: The template banner buttons are now tinted in the theme's accent hue —
+  **Create From Template** on a light-purple (accent) fill, **Unlock to Edit** a
+  lighter tone of the same colour — deepening on hover instead of going solid.
+
 ## v0.108.11
 
 - fix: In the **light theme**, primary buttons now darken slightly on hover
