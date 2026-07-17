@@ -129,6 +129,9 @@ interface CanvasProps {
   // The live doc-editor status (editing / viewing / away), or null when closed,
   // so the board presence bar can mirror what the user is actually doing.
   onDocStatusChange?: (status: DocStatus | null) => void
+  // The board is one of the caller's templates -> open it read-only (no edits;
+  // remove it from templates to edit, or duplicate to use it).
+  readOnly?: boolean
 }
 
 const PASTE_OFFSET = 48 // px nudge when pasting/duplicating within the same board
@@ -207,7 +210,12 @@ function CanvasInner({
   playSignal,
   newDocSignal,
   onDocStatusChange,
+  readOnly,
 }: CanvasProps) {
+  const ro = !!readOnly
+  // Read the flag inside stable useCallbacks without re-creating them on toggle.
+  const readOnlyRef = useRef(ro)
+  readOnlyRef.current = ro
   const {
     screenToFlowPosition,
     getNodes,
@@ -1063,7 +1071,7 @@ function CanvasInner({
     async (event: MouseEvent | TouchEvent) => {
       const start = connectStart.current
       connectStart.current = null
-      if (!start) return
+      if (!start || readOnlyRef.current) return
 
       const point =
         'changedTouches' in event ? event.changedTouches[0] : event
@@ -1109,6 +1117,7 @@ function CanvasInner({
   const onPaneContextMenu = useCallback(
     async (event: React.MouseEvent | MouseEvent) => {
       event.preventDefault()
+      if (readOnlyRef.current) return // template board: no creating
       const pos = screenToFlowPosition({ x: event.clientX, y: event.clientY })
       const created = await api.createNode(boardId, {
         type: '',
@@ -1140,6 +1149,7 @@ function CanvasInner({
   // Create a new rich-text doc node, uniformly: centred in the current view,
   // selected (highlighted), with the ease-in animation, then open its editor.
   const createDoc = useCallback(async () => {
+    if (readOnlyRef.current) return
     const c = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
     const pos = { x: c.x - 105, y: c.y - 60 } // offset so the ~210px card is centred
     const created = await api.createNode(boardId, {
@@ -1206,6 +1216,7 @@ function CanvasInner({
   // uploaded and folded into the node's content so it renders.
   const createMediaNodesAt = useCallback(
     async (files: File[], clientX: number, clientY: number) => {
+      if (readOnlyRef.current) return
       const base = screenToFlowPosition({ x: clientX, y: clientY })
       let i = 0
       for (const file of files) {
@@ -1252,6 +1263,7 @@ function CanvasInner({
   // Drop a link onto the canvas -> a link node with its preview at that point.
   const createLinkNodeAt = useCallback(
     async (url: string, clientX: number, clientY: number) => {
+      if (readOnlyRef.current) return
       const pos = screenToFlowPosition({ x: clientX, y: clientY })
       let content: Record<string, unknown> = { url }
       let title = url
@@ -1328,6 +1340,7 @@ function CanvasInner({
   // Reuses importPortableAt (which also gives media copies their own asset).
   const createNodeCopyAt = useCallback(
     (payload: NodeDragPayload, clientX: number, clientY: number) => {
+      if (readOnlyRef.current) return
       const pos = screenToFlowPosition({ x: clientX, y: clientY })
       void importPortableAt(
         {
@@ -1368,6 +1381,7 @@ function CanvasInner({
   // Gate every deletion (objects and/or connections) behind a confirm dialog.
   const onBeforeDelete = useCallback(
     ({ nodes: delNodes, edges: delEdges }: { nodes: Node[]; edges: Edge[] }) => {
+      if (readOnlyRef.current) return Promise.resolve(false) // template: no deleting
       if (delNodes.length === 0 && delEdges.length === 0) return Promise.resolve(true)
       return new Promise<boolean>((resolve) =>
         setPendingDelete({ nodes: delNodes, edges: delEdges, resolve }),
@@ -1463,6 +1477,7 @@ function CanvasInner({
   // --- Edge editing --------------------------------------------------------
   const onEdgeContextMenu = useCallback((event: React.MouseEvent, edge: Edge) => {
     event.preventDefault()
+    if (readOnlyRef.current) return
     setEdgeMenu({ x: event.clientX, y: event.clientY, edge })
   }, [])
 
@@ -1471,6 +1486,7 @@ function CanvasInner({
   const onNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
       event.preventDefault()
+      if (readOnlyRef.current) return
       const isSelected = getNodes().find((n) => n.id === node.id)?.selected
       if (!isSelected) {
         setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === node.id })))
@@ -1485,6 +1501,7 @@ function CanvasInner({
   // whole selection). React Flow's overlay intercepts the per-node handler.
   const onSelectionContextMenu = useCallback((event: React.MouseEvent) => {
     event.preventDefault()
+    if (readOnlyRef.current) return
     setMenuNodeId(null) // multi-selection: "Play from here" doesn't apply
     setNodeMenu({ x: event.clientX, y: event.clientY })
   }, [])
@@ -1653,6 +1670,12 @@ function CanvasInner({
         void a.createDoc()
         return
       }
+      // On a read-only template board, allow only Copy; block every mutating
+      // shortcut (reorder / move / cut / paste / duplicate).
+      if (readOnlyRef.current) {
+        if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'c') a.doCopy()
+        return
+      }
       // Object actions (act on the current selection; no-op if nothing selected).
       if (matches('bring-to-front', e)) {
         e.preventDefault()
@@ -1813,7 +1836,8 @@ function CanvasInner({
   useEffect(() => {
     if (!focusNodeId || !getNodes().some((n) => n.id === focusNodeId)) return
     const run = () => {
-      focusNode(focusNodeId, { open: focusOpen, duration: focusOpen ? 300 : 180 })
+      // On a read-only template board, pan to the node but never open its editor.
+      focusNode(focusNodeId, { open: focusOpen && !ro, duration: focusOpen && !ro ? 300 : 180 })
       onFocusHandled?.()
     }
     if (rfReady.current) {
@@ -2069,7 +2093,7 @@ function CanvasInner({
     <MediaAssetContext.Provider value={assetsById}>
     <NodeEditContext.Provider value={handleNodeEdited}>
     <div
-      className="canvas-wrap"
+      className={'canvas-wrap' + (ro ? ' canvas-wrap--readonly' : '')}
       style={{ '--me-color': myColor } as React.CSSProperties}
       onPointerMove={broadcastCursor}
       // Element-level file-drop zone. Some Chromium setups (e.g. a VPN/privacy
@@ -2101,9 +2125,9 @@ function CanvasInner({
         edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        nodesDraggable={!locked}
-        nodesConnectable={!locked}
-        elementsSelectable={!locked}
+        nodesDraggable={!locked && !ro}
+        nodesConnectable={!locked && !ro}
+        elementsSelectable={!locked && !ro}
         connectionMode={ConnectionMode.Loose}
         deleteKeyCode={['Delete', 'Backspace']}
         onNodesChange={onNodesChange}
@@ -2117,6 +2141,7 @@ function CanvasInner({
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
         onNodeDoubleClick={(_, n) => {
+          if (ro) return // template board: don't open editors
           const st = n.data?.story as StoryNode | undefined
           if (st?.type === 'doc') openDoc(n.id)
           else openPanel(n.id)

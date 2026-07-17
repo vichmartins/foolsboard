@@ -1505,6 +1505,45 @@
      doesn't briefly add a horizontal scrollbar that jolts the layout. */
   overflow: hidden;
 }
+/* Read-only template board: nodes are view-only (no double-click editors, inline
+   buttons, or drag). Panning/zooming the canvas still works. */
+.canvas-wrap--readonly .react-flow__node {
+  pointer-events: none;
+}
+
+/* Banner shown over a template board explaining it's read-only. */
+.template-lock {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  max-width: calc(100% - 24px);
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+  color: var(--text);
+}
+.template-lock__icon {
+  font-size: 14px;
+}
+.template-lock__text {
+  color: var(--text-dim);
+}
+.template-lock__text strong {
+  color: var(--text);
+}
+.template-lock__btn {
+  flex: none;
+  padding: 4px 11px;
+  font-size: 12px;
+}
 .loading {
   display: grid;
   place-items: center;

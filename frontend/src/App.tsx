@@ -372,6 +372,13 @@ function Workspace() {
     }
   }
 
+  // Mark/unmark a board as the current account's template. While it's a template
+  // the canvas opens read-only, so you have to remove it here to edit it.
+  async function setBoardTemplate(b: Board, isTemplate: boolean) {
+    const updated = await api.updateBoard(b.id, { is_template: isTemplate })
+    setBoards((bs) => bs.map((x) => (x.id === b.id ? updated : x)))
+  }
+
   // Stop sharing a board: owner unshares it for everyone, a recipient leaves it.
   // A recipient loses access, so drop it from view if it was open.
   async function unshareBoard(board: Board) {
@@ -763,9 +770,9 @@ function Workspace() {
           <button
             className="icon-btn"
             onClick={() => setDocNonce((n) => n + 1)}
-            title="New Document (D)"
+            title={activeBoard?.is_template ? 'Templates are read-only' : 'New Document (D)'}
             aria-label="New document"
-            disabled={!activeBoard}
+            disabled={!activeBoard || !!activeBoard?.is_template}
           >
             <DocIcon />
           </button>
@@ -829,10 +836,7 @@ function Workspace() {
           }}
           onUnshareBoard={unshareBoard}
           onCreatePrivateCopy={(b) => setCopyTarget(b)}
-          onSetTemplate={async (b, isTemplate) => {
-            const updated = await api.updateBoard(b.id, { is_template: isTemplate })
-            setBoards((bs) => bs.map((x) => (x.id === b.id ? updated : x)))
-          }}
+          onSetTemplate={setBoardTemplate}
           onCreateCategory={createCategory}
           onRenameCategory={renameCategory}
           onDeleteCategory={deleteCategory}
@@ -881,9 +885,30 @@ function Workspace() {
             onBoardChanged={bumpBoardRev}
             refreshNonce={canvasRefresh}
             playSignal={playReq}
+            readOnly={!!activeBoard?.is_template}
           />
         ) : (
           <div className="loading">Loading…</div>
+        )}
+        {activeBoard?.is_template && (
+          <div className="template-lock">
+            <span className="template-lock__icon" aria-hidden="true">🔒</span>
+            <span className="template-lock__text">
+              This board is a <strong>template</strong> — read-only.
+            </span>
+            <button
+              className="btn btn--primary template-lock__btn"
+              onClick={() => setCopyTarget(activeBoard)}
+            >
+              Duplicate to use
+            </button>
+            <button
+              className="btn template-lock__btn"
+              onClick={() => void setBoardTemplate(activeBoard, false)}
+            >
+              Remove from Templates to edit
+            </button>
+          </div>
         )}
         </main>
       </div>
