@@ -3,7 +3,7 @@
 // at the top. Drag a board/folder onto a category to file it; drag a board onto a
 // folder to move it inside. The "+" on a category creates a folder or board in it.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { Board, Category, Folder, StoryNode, MediaNodeContent, DocNodeContent } from '../types'
+import type { Board, Category, Folder, SharedTemplate, StoryNode, MediaNodeContent, DocNodeContent } from '../types'
 import { KIND_COLORS, OBJECT_COLOR, typeLabel, nodePreview, isMediaNodeType } from '../types'
 import { downloadAsset } from '../types'
 import * as api from '../api'
@@ -69,6 +69,13 @@ interface Props {
   onUnshareBoard: (board: Board) => void
   onCreatePrivateCopy: (board: Board) => void
   onSetTemplate: (board: Board, isTemplate: boolean) => void
+  // Team (workspace-wide) templates.
+  sharedTemplates: SharedTemplate[]
+  myUsername: string
+  isAdmin: boolean
+  onPublishTeam: (board: Board) => void
+  onUnpublishTeam: (boardId: string) => void
+  onUseSharedTemplate: (t: SharedTemplate) => void
   onCreateCategory: (name: string) => void
   onRenameCategory: (id: string, name: string) => void
   onDeleteCategory: (id: string) => void
@@ -166,6 +173,12 @@ export default function Sidebar(props: Props) {
     onUnshareBoard,
     onCreatePrivateCopy,
     onSetTemplate,
+    sharedTemplates,
+    myUsername,
+    isAdmin,
+    onPublishTeam,
+    onUnpublishTeam,
+    onUseSharedTemplate,
     onCreateCategory,
     onRenameCategory,
     onDeleteCategory,
@@ -179,6 +192,7 @@ export default function Sidebar(props: Props) {
   const [expanded, setExpanded] = useState<Set<string>>(() => loadSet(EXPANDED_KEY))
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(() => loadSet(COLLAPSED_CATS_KEY))
   const [templatesOpen, setTemplatesOpen] = useState(true)
+  const [teamOpen, setTeamOpen] = useState(true)
 
   // Drop ids of folders/categories that no longer exist from the persisted
   // expand/collapse sets, so deleting them doesn't leave them accumulating in
@@ -651,6 +665,15 @@ export default function Sidebar(props: Props) {
     ids.splice(idx, 0, draggedId)
     onReorderCategories(ids)
   }
+
+  // Publish/unpublish a board as a team template. Anyone with access can publish;
+  // only the publisher or an admin can remove one (the backend enforces this too).
+  const teamMenuItems = (b: Board) =>
+    b.shared_template
+      ? b.shared_template_by === myUsername || isAdmin
+        ? [{ label: 'Remove from Team Templates', mnemonic: 'e', onClick: () => onUnpublishTeam(b.id) }]
+        : []
+      : [{ label: 'Publish to Team', mnemonic: 'p', onClick: () => onPublishTeam(b) }]
 
   // --- renderers ------------------------------------------------------------
   const boardRow = (b: Board, container: string) => {
@@ -1263,6 +1286,62 @@ export default function Sidebar(props: Props) {
                 </div>
               </div>
             )}
+
+            {/* Team templates: boards anyone in the workspace published. Start a
+                copy with "Use"; the publisher or an admin can remove one. */}
+            {sharedTemplates.length > 0 && (
+              <div className="tree-cat tree-cat--templates tree-cat--team">
+                <div className="tree-cat__row">
+                  <button
+                    className={'tree-chevron' + (teamOpen ? ' tree-chevron--open' : '')}
+                    onClick={() => setTeamOpen((o) => !o)}
+                    aria-label={teamOpen ? 'Collapse' : 'Expand'}
+                  >
+                    <ChevronIcon />
+                  </button>
+                  <button className="tree-cat__name" onClick={() => setTeamOpen((o) => !o)}>
+                    <span className="tree-cat__icon">
+                      <TemplateIcon />
+                    </span>
+                    <span className="tree-cat__label">Team Templates</span>
+                  </button>
+                  <span className="tree-cat__count">{sharedTemplates.length}</span>
+                </div>
+                <div className="tree-collapse" data-open={teamOpen} aria-hidden={!teamOpen}>
+                  <div className="tree-children">
+                    {sharedTemplates.map((t) => {
+                      const canManage = t.published_by === myUsername || isAdmin
+                      return (
+                        <div
+                          className="team-tmpl"
+                          key={t.id}
+                          title={`Team template${t.published_by ? ` · by ${t.published_by}` : ''}`}
+                        >
+                          <span className="team-tmpl__name">{t.name}</span>
+                          <button
+                            className="team-tmpl__use"
+                            onClick={() => onUseSharedTemplate(t)}
+                            title="Start a new board from this template"
+                          >
+                            Use
+                          </button>
+                          {canManage && (
+                            <button
+                              className="icon-btn icon-btn--danger team-tmpl__remove"
+                              onClick={() => onUnpublishTeam(t.id)}
+                              title="Remove from team templates"
+                              aria-label="Remove from team templates"
+                            >
+                              <TrashIcon />
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
             </>
           )}
@@ -1287,6 +1366,7 @@ export default function Sidebar(props: Props) {
               ? [
                   { label: 'View Objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
                   { label: 'Duplicate', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },
+                  ...teamMenuItems(menu.board),
                   { label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) },
                 ]
               : [
@@ -1302,6 +1382,7 @@ export default function Sidebar(props: Props) {
                     mnemonic: 't',
                     onClick: () => onSetTemplate(menu.board, !menu.board.is_template),
                   },
+                  ...teamMenuItems(menu.board),
                   ...(menu.board.shared_out
                     ? [{ label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) }]
                     : []),

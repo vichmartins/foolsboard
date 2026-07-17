@@ -79,6 +79,9 @@ class BoardOut(ORMModel):
     folder_id: UUID | None = None
     owner_id: UUID | None = None
     is_template: bool = False
+    # This board is published as a workspace-wide ("team") template, and by whom.
+    shared_template: bool = False
+    shared_template_by: str | None = None
     # True when this board was shared with the caller (not owned by them).
     shared: bool = False
     # True when the caller owns this board and has shared it out (crown badge).
@@ -87,6 +90,18 @@ class BoardOut(ORMModel):
     member_ids: list[UUID] = []
     owner_name: str | None = None
     created_at: datetime
+    updated_at: datetime
+
+
+class SharedTemplateOut(BaseModel):
+    """A board published as a workspace-wide template, for the Team Templates
+    list. Visible to everyone; anyone can start a copy from it."""
+
+    id: UUID
+    name: str
+    description: str | None = None
+    owner_name: str | None = None
+    published_by: str | None = None
     updated_at: datetime
 
 

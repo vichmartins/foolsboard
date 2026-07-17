@@ -78,6 +78,53 @@ def test_template_marking_is_per_user_on_shared_boards(client, admin):
     assert client.get(f"/api/boards/{bid}", headers=auth(admin_token)).json()["is_template"] is True
 
 
+def test_team_template_publish_visible_copyable_and_unpublish_rules(client, admin):
+    """Publishing a board as a team template makes it visible to everyone and
+    copyable by anyone; only the publisher or an admin can unpublish."""
+    admin_token, admin_user = admin
+    code = client.post(
+        "/api/invites", json={"expires_in_minutes": 60}, headers=auth(admin_token)
+    ).json()["code"]
+    btoken = register(client, "bob", invite=code).json()["access_token"]
+
+    bid = new_board(client, admin_token, "Team Starter")
+    # Bob can't copy it yet (private, not shared with him, not a team template).
+    assert client.post(f"/api/boards/{bid}/copy", headers=auth(btoken)).status_code == 404
+
+    pub = client.post(f"/api/boards/{bid}/share-template", headers=auth(admin_token))
+    assert pub.status_code == 200, pub.text
+    assert pub.json()["shared_template"] is True
+    assert pub.json()["shared_template_by"] == admin_user["username"]
+
+    # Bob (no access to the board) sees it in the shared-templates list...
+    shared = client.get("/api/boards/shared-templates", headers=auth(btoken)).json()
+    assert any(t["id"] == bid and t["name"] == "Team Starter" for t in shared)
+    # ...and can copy it into a plain private board of his own.
+    copy = client.post(f"/api/boards/{bid}/copy", headers=auth(btoken))
+    assert copy.status_code == 201, copy.text
+    assert copy.json()["shared_template"] is False
+
+    # Bob can't unpublish someone else's team template.
+    assert client.delete(f"/api/boards/{bid}/share-template", headers=auth(btoken)).status_code == 403
+    # The publisher can.
+    un = client.delete(f"/api/boards/{bid}/share-template", headers=auth(admin_token))
+    assert un.status_code == 200 and un.json()["shared_template"] is False
+    assert not client.get("/api/boards/shared-templates", headers=auth(btoken)).json()
+
+
+def test_admin_can_unpublish_any_team_template(client, admin):
+    admin_token, _ = admin
+    code = client.post(
+        "/api/invites", json={"expires_in_minutes": 60}, headers=auth(admin_token)
+    ).json()["code"]
+    btoken = register(client, "bob", invite=code).json()["access_token"]
+    # Bob publishes his own board; an admin can remove it.
+    bid = new_board(client, btoken, "Bob's Template")
+    assert client.post(f"/api/boards/{bid}/share-template", headers=auth(btoken)).status_code == 200
+    un = client.delete(f"/api/boards/{bid}/share-template", headers=auth(admin_token))
+    assert un.status_code == 200 and un.json()["shared_template"] is False
+
+
 def test_other_user_cannot_access_unshared_board(client, admin):
     token, _ = admin
     bid = new_board(client, token)

@@ -44,7 +44,7 @@ import {
 } from './components/icons'
 import { realtime, useBoardActivity, useBoardPresence, type ActivityKind } from './realtime'
 import { useUpdateAvailable } from './useUpdateAvailable'
-import type { Board, Category, Folder } from './types'
+import type { Board, Category, Folder, SharedTemplate } from './types'
 import { genId } from './types'
 import './App.css'
 
@@ -53,6 +53,11 @@ type ShareTarget = { type: 'board' | 'folder'; id: string; name: string }
 function Workspace() {
   const { user } = useAuth()
   const [boards, setBoards] = useState<Board[]>([])
+  // Workspace-wide "team" templates (published by anyone; see the Templates section).
+  const [sharedTemplates, setSharedTemplates] = useState<SharedTemplate[]>([])
+  const refreshSharedTemplates = useCallback(() => {
+    api.listSharedTemplates().then(setSharedTemplates).catch(() => {})
+  }, [])
   const [folders, setFolders] = useState<Folder[]>([])
   // Active folder filter for the board list (null = All Boards).
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null)
@@ -193,6 +198,7 @@ function Workspace() {
       setBoards(list)
       setActiveId(preferred && list.some((b) => b.id === preferred) ? preferred : list[0].id)
     })
+    refreshSharedTemplates()
     api
       .listFolders()
       .then((fs) => {
@@ -370,6 +376,30 @@ function Workspace() {
     } else {
       setActiveFolderId(null)
     }
+  }
+
+  // Publish / unpublish a board as a workspace-wide team template, and start a
+  // fresh board from one (a plain copy, like any other duplicate).
+  async function publishTeam(board: Board) {
+    const updated = await api.publishTeamTemplate(board.id).catch(() => null)
+    if (!updated) return
+    setBoards((bs) => bs.map((b) => (b.id === updated.id ? updated : b)))
+    refreshSharedTemplates()
+  }
+  async function unpublishTeam(boardId: string) {
+    const updated = await api.unpublishTeamTemplate(boardId).catch((e) => {
+      showToast(api.apiError(e, 'Could not remove this team template.'))
+      return null
+    })
+    if (updated) setBoards((bs) => bs.map((b) => (b.id === updated.id ? updated : b)))
+    refreshSharedTemplates()
+  }
+  async function useSharedTemplate(t: SharedTemplate) {
+    const copy = await api.copyBoard(t.id).catch(() => null)
+    if (!copy) return
+    setBoards((b) => [copy, ...b])
+    setActiveId(copy.id)
+    setActiveFolderId(null)
   }
 
   // Stop sharing a board: owner unshares it for everyone, a recipient leaves it.
@@ -797,6 +827,12 @@ function Workspace() {
           orderedTop={computeOrderedTop()}
           activeId={activeId}
           boardRev={boardRev}
+          sharedTemplates={sharedTemplates}
+          myUsername={user?.username ?? ''}
+          isAdmin={!!user?.is_admin}
+          onPublishTeam={publishTeam}
+          onUnpublishTeam={unpublishTeam}
+          onUseSharedTemplate={useSharedTemplate}
           onSelectBoard={setActiveId}
           onOpenObject={(bid, nid, open) => {
             setActiveId(bid)

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.107.0
+
+- feat: **Team templates.** Publish a board as a workspace-wide template that
+  everyone can start from — right-click a board and choose **Publish to Team**.
+  Published templates appear in a new **Team Templates** section in the sidebar for
+  all users, each with a **Use** button that spins up a fresh copy. Anyone can
+  publish; the publisher (or an admin) can remove one.
+
 ## v0.106.0
 
 - feat: **Duplicate any board.** Every board's menu now has a plain **Duplicate**
