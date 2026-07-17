@@ -718,15 +718,14 @@ export default function Sidebar(props: Props) {
           onDoubleClick={() => openDrill(b)}
           title={`${b.name} · double-click to view its objects`}
         >
-          <span className="tree-board__icon" aria-hidden="true">
-            <BoardIcon />
+          <span
+            className={'tree-board__icon' + (b.is_template ? ' tree-board__icon--template' : '')}
+            aria-hidden="true"
+            title={b.is_template ? 'Template' : undefined}
+          >
+            {b.is_template ? <TemplateIcon /> : <BoardIcon />}
           </span>
           <span className="tree-board__name">{b.name}</span>
-          {b.is_template && (
-            <span className="tree-board__template" title="Template" aria-label="Template">
-              <TemplateIcon />
-            </span>
-          )}
           {(b.shared || b.shared_out) && (
             <ShareMark
               boardId={b.id}
@@ -738,15 +737,25 @@ export default function Sidebar(props: Props) {
         </button>
         {!b.shared && (
           <span className="tree-board__tools">
-            <button className="icon-btn" title="Rename" aria-label="Rename board" onClick={() => startRenameBoard(b)}>
-              <PencilIcon />
-            </button>
-            <button className="icon-btn" title="Share" aria-label="Share board" onClick={() => onShareBoard(b)}>
+            {/* A template is read-only: no rename or merge affordance. */}
+            {!b.is_template && (
+              <button className="icon-btn" title="Rename" aria-label="Rename board" onClick={() => startRenameBoard(b)}>
+                <PencilIcon />
+              </button>
+            )}
+            <button
+              className="icon-btn"
+              title={b.is_template ? 'Share Template' : 'Share'}
+              aria-label="Share board"
+              onClick={() => onShareBoard(b)}
+            >
               <ShareIcon />
             </button>
-            <button className="icon-btn" title="Merge" aria-label="Merge into board" onClick={() => onMergeBoard(b)}>
-              <MergeIcon />
-            </button>
+            {!b.is_template && (
+              <button className="icon-btn" title="Merge" aria-label="Merge into board" onClick={() => onMergeBoard(b)}>
+                <MergeIcon />
+              </button>
+            )}
             <button className="icon-btn icon-btn--danger" title="Delete" aria-label="Delete board" onClick={() => onDeleteBoard(b)}>
               <TrashIcon />
             </button>
