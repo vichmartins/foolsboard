@@ -65,6 +65,8 @@ function Workspace() {
   const [moveFolderTarget, setMoveFolderTarget] = useState<Folder | null>(null)
   // Board being privately copied; the dialog picks where the copy lands.
   const [copyTarget, setCopyTarget] = useState<Board | null>(null)
+  // The template awaiting an "unlock to edit" confirmation.
+  const [unlockTarget, setUnlockTarget] = useState<Board | null>(null)
   // Resource being shared (opens the Share dialog).
   const [shareTarget, setShareTarget] = useState<ShareTarget | null>(null)
   // Board awaiting delete confirmation (type-to-confirm dialog).
@@ -847,6 +849,7 @@ function Workspace() {
           onUnshareBoard={unshareBoard}
           onCreatePrivateCopy={(b) => setCopyTarget(b)}
           onSetTemplate={setBoardTemplate}
+          onUnlockTemplate={setUnlockTarget}
           onCreateCategory={createCategory}
           onRenameCategory={renameCategory}
           onDeleteCategory={deleteCategory}
@@ -919,7 +922,7 @@ function Workspace() {
             </button>
             <button
               className="btn template-lock__btn"
-              onClick={() => void setBoardTemplate(activeBoard, false)}
+              onClick={() => setUnlockTarget(activeBoard)}
             >
               Unlock to Edit
             </button>
@@ -980,6 +983,25 @@ function Workspace() {
             setDialog(null)
           }}
           onCancel={() => setDialog(null)}
+        />
+      )}
+
+      {unlockTarget && (
+        <ConfirmDialog
+          title="Unlock Template?"
+          message={
+            <>
+              Unlocking <strong>{unlockTarget.name}</strong> turns it back into a regular,
+              editable storyboard and removes it from your templates. You can save it as a
+              template again any time.
+            </>
+          }
+          confirmLabel="Unlock to Edit"
+          onConfirm={() => {
+            void setBoardTemplate(unlockTarget, false)
+            setUnlockTarget(null)
+          }}
+          onCancel={() => setUnlockTarget(null)}
         />
       )}
 

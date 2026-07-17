@@ -70,6 +70,8 @@ interface Props {
   onUnshareBoard: (board: Board) => void
   onCreatePrivateCopy: (board: Board) => void
   onSetTemplate: (board: Board, isTemplate: boolean) => void
+  // Unlocking a template (back to an editable board) asks for confirmation first.
+  onUnlockTemplate: (board: Board) => void
   onCreateCategory: (name: string) => void
   onRenameCategory: (id: string, name: string) => void
   onDeleteCategory: (id: string) => void
@@ -167,6 +169,7 @@ export default function Sidebar(props: Props) {
     onUnshareBoard,
     onCreatePrivateCopy,
     onSetTemplate,
+    onUnlockTemplate,
     onCreateCategory,
     onRenameCategory,
     onDeleteCategory,
@@ -1286,36 +1289,30 @@ export default function Sidebar(props: Props) {
                   },
                   { label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) },
                 ]
-              : [
-                  { label: 'View Objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
-                  // A template is read-only: no renaming or merging into it.
-                  ...(menu.board.is_template
-                    ? []
-                    : [{ label: 'Rename', mnemonic: 'r', onClick: () => startRenameBoard(menu.board) }]),
-                  { label: 'Move to…', mnemonic: 'v', onClick: () => onMoveBoard(menu.board) },
-                  {
-                    label: menu.board.is_template ? 'Share Template' : 'Share',
-                    mnemonic: 's',
-                    onClick: () => onShareBoard(menu.board),
-                  },
-                  ...(menu.board.is_template
-                    ? []
-                    : [{ label: 'Merge', mnemonic: 'm', onClick: () => onMergeBoard(menu.board) }]),
-                  {
-                    label: menu.board.is_template ? 'Create From Template' : 'Duplicate',
-                    mnemonic: 'c',
-                    onClick: () => onCreatePrivateCopy(menu.board),
-                  },
-                  {
-                    label: menu.board.is_template ? 'Unlock to Edit' : 'Save as Template',
-                    mnemonic: 't',
-                    onClick: () => onSetTemplate(menu.board, !menu.board.is_template),
-                  },
-                  ...(menu.board.shared_out
-                    ? [{ label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) }]
-                    : []),
-                  { label: 'Delete', mnemonic: 'd', danger: true, onClick: () => onDeleteBoard(menu.board) },
-                ]
+              : menu.board.is_template
+                ? [
+                    // A template is read-only: no rename/merge; duplicate is surfaced
+                    // near the top as the primary "use it" action.
+                    { label: 'View Objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
+                    { label: 'Create From Template', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },
+                    { label: 'Move to…', mnemonic: 'v', onClick: () => onMoveBoard(menu.board) },
+                    { label: 'Share Template', mnemonic: 's', onClick: () => onShareBoard(menu.board) },
+                    { label: 'Unlock to Edit', mnemonic: 't', onClick: () => onUnlockTemplate(menu.board) },
+                    { label: 'Delete', mnemonic: 'd', danger: true, onClick: () => onDeleteBoard(menu.board) },
+                  ]
+                : [
+                    { label: 'View Objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
+                    { label: 'Rename', mnemonic: 'r', onClick: () => startRenameBoard(menu.board) },
+                    { label: 'Move to…', mnemonic: 'v', onClick: () => onMoveBoard(menu.board) },
+                    { label: 'Share', mnemonic: 's', onClick: () => onShareBoard(menu.board) },
+                    { label: 'Merge', mnemonic: 'm', onClick: () => onMergeBoard(menu.board) },
+                    { label: 'Duplicate', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },
+                    { label: 'Save as Template', mnemonic: 't', onClick: () => onSetTemplate(menu.board, true) },
+                    ...(menu.board.shared_out
+                      ? [{ label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) }]
+                      : []),
+                    { label: 'Delete', mnemonic: 'd', danger: true, onClick: () => onDeleteBoard(menu.board) },
+                  ]
           }
           onClose={() => setMenu(null)}
         />
