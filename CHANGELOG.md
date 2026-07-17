@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.108.0
+
+- feat: **Templates are read-only.** A board you've saved as a template now opens
+  locked — you can pan, zoom, and view it, but not move, edit, add, or delete
+  anything, so a reusable starting point can't be changed by accident. A banner
+  offers **Duplicate to use** (a fresh editable copy) or **Remove from Templates to
+  edit** (unlock it). Since templates are per-account, this only affects the person
+  it's a template for.
+
 ## v0.107.2
 
 - change: **Removed team templates / "Publish to Team".** The workspace-wide
