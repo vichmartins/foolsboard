@@ -689,15 +689,17 @@ function Workspace() {
           >
             <PlusIcon />
           </button>
-          <button
-            className="icon-btn"
-            title={activeIsTemplate ? 'Templates are read-only' : `Rename${hintSuffix('board-rename')}`}
-            aria-label="Rename"
-            onClick={() => setDialog('rename')}
-            disabled={!activeBoard || activeIsTemplate}
-          >
-            <PencilIcon />
-          </button>
+          {!activeIsTemplate && (
+            <button
+              className="icon-btn"
+              title={`Rename${hintSuffix('board-rename')}`}
+              aria-label="Rename"
+              onClick={() => setDialog('rename')}
+              disabled={!activeBoard}
+            >
+              <PencilIcon />
+            </button>
+          )}
           <button
             className="icon-btn"
             title={`Move board${hintSuffix('board-move')}`}
@@ -707,15 +709,17 @@ function Workspace() {
           >
             <FolderIcon />
           </button>
-          <button
-            className="icon-btn"
-            onClick={() => setDialog('merge')}
-            disabled={boards.length < 2 || activeIsTemplate}
-            title={activeIsTemplate ? 'Templates are read-only' : `Merge${hintSuffix('board-merge')}`}
-            aria-label="Merge"
-          >
-            <MergeIcon />
-          </button>
+          {!activeIsTemplate && (
+            <button
+              className="icon-btn"
+              onClick={() => setDialog('merge')}
+              disabled={boards.length < 2}
+              title={`Merge${hintSuffix('board-merge')}`}
+              aria-label="Merge"
+            >
+              <MergeIcon />
+            </button>
+          )}
           {!activeBoard?.shared && (
             <button
               className="icon-btn"

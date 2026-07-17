@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.108.3
+
+- change: On a template, the top-bar **Rename and Merge buttons are now hidden**
+  (rather than shown disabled), since neither applies to a read-only template.
+
 ## v0.108.2
 
 - change: **Templates are fully locked down.** A template can no longer be renamed
