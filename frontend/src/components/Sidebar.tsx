@@ -1274,21 +1274,33 @@ export default function Sidebar(props: Props) {
             menu.board.shared
               ? [
                   { label: 'View Objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
-                  { label: 'Duplicate', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },
+                  {
+                    label: menu.board.is_template ? 'Create From Template' : 'Duplicate',
+                    mnemonic: 'c',
+                    onClick: () => onCreatePrivateCopy(menu.board),
+                  },
                   { label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) },
                 ]
               : [
                   { label: 'View Objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
-                  { label: 'Rename', mnemonic: 'r', onClick: () => startRenameBoard(menu.board) },
+                  // A template is read-only: no renaming or merging into it.
+                  ...(menu.board.is_template
+                    ? []
+                    : [{ label: 'Rename', mnemonic: 'r', onClick: () => startRenameBoard(menu.board) }]),
                   { label: 'Move to…', mnemonic: 'v', onClick: () => onMoveBoard(menu.board) },
                   {
                     label: menu.board.is_template ? 'Share Template' : 'Share',
                     mnemonic: 's',
                     onClick: () => onShareBoard(menu.board),
                   },
-                  { label: 'Merge', mnemonic: 'm', onClick: () => onMergeBoard(menu.board) },
-                  // A plain copy, available on every board -- no longer tied to templates.
-                  { label: 'Duplicate', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },
+                  ...(menu.board.is_template
+                    ? []
+                    : [{ label: 'Merge', mnemonic: 'm', onClick: () => onMergeBoard(menu.board) }]),
+                  {
+                    label: menu.board.is_template ? 'Create From Template' : 'Duplicate',
+                    mnemonic: 'c',
+                    onClick: () => onCreatePrivateCopy(menu.board),
+                  },
                   {
                     label: menu.board.is_template ? 'Remove from Templates' : 'Save as Template',
                     mnemonic: 't',
@@ -1365,8 +1377,13 @@ export default function Sidebar(props: Props) {
               mnemonic: 'o',
               onClick: () => onOpenObject(objMenu.node.board_id, objMenu.node.id, true),
             },
-            { label: 'Rename', mnemonic: 'r', onClick: () => startRenameObj(objMenu.node) },
-            { label: 'Duplicate', mnemonic: 'd', onClick: () => void duplicateObj(objMenu.node) },
+            // A template's objects are read-only: no rename / duplicate / delete.
+            ...(drill?.is_template
+              ? []
+              : [
+                  { label: 'Rename', mnemonic: 'r', onClick: () => startRenameObj(objMenu.node) },
+                  { label: 'Duplicate', mnemonic: 'd', onClick: () => void duplicateObj(objMenu.node) },
+                ]),
             ...(drill && drill.id === activeId
               ? [
                   {
@@ -1396,12 +1413,16 @@ export default function Sidebar(props: Props) {
                     },
                   ]
                 : []),
-            {
-              label: 'Delete',
-              mnemonic: 'l',
-              danger: true,
-              onClick: () => setDeleteObj(objMenu.node),
-            },
+            ...(drill?.is_template
+              ? []
+              : [
+                  {
+                    label: 'Delete',
+                    mnemonic: 'l',
+                    danger: true,
+                    onClick: () => setDeleteObj(objMenu.node),
+                  },
+                ]),
           ]}
           onClose={() => setObjMenu(null)}
         />
