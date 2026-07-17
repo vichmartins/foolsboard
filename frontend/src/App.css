@@ -1601,6 +1601,27 @@
   flex: none;
   padding: 5px 12px;
   font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+/* Tinted like the admin-panel actions: soft accent fill, solid on hover.
+   Theme-aware via color-mix, so it reads correctly in dark/light/pink. */
+.template-lock__btn--go {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.template-lock__btn--go:hover {
+  color: #fff;
+  background: var(--accent);
+}
+.template-lock__btn--alt {
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--text-dim) 12%, transparent);
+}
+.template-lock__btn--alt:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--text-dim) 22%, transparent);
 }
 .loading {
   display: grid;
