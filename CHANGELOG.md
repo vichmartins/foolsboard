@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.107.1
+
+- change: **The Templates and Team Templates sections are now docked, resizable
+  panels** (VS Code-style) pinned below the board tree. Each collapses to just a
+  header, and when open you can drag its top edge to set a height — which is
+  remembered, so re-opening returns to that height. The board tree above scrolls
+  independently.
+
 ## v0.107.0
 
 - feat: **Team templates.** Publish a board as a workspace-wide template that
