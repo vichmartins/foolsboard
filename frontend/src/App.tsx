@@ -49,7 +49,7 @@ import type { Board, Category, Folder } from './types'
 import { genId } from './types'
 import './App.css'
 
-type ShareTarget = { type: 'board' | 'folder'; id: string; name: string }
+type ShareTarget = { type: 'board' | 'folder'; id: string; name: string; isTemplate?: boolean }
 
 function Workspace() {
   const { user } = useAuth()
@@ -304,7 +304,7 @@ function Workspace() {
       } else if (matches('board-share', e)) {
         if (activeBoard && !activeBoard.shared) {
           e.preventDefault()
-          setShareTarget({ type: 'board', id: activeBoard.id, name: activeBoard.name })
+          setShareTarget({ type: 'board', id: activeBoard.id, name: activeBoard.name, isTemplate: activeBoard.is_template })
         }
       } else if (matches('board-delete', e)) {
         if (activeBoard && !activeBoard.shared) {
@@ -727,7 +727,7 @@ function Workspace() {
               aria-label="Share"
               onClick={() =>
                 activeBoard &&
-                setShareTarget({ type: 'board', id: activeBoard.id, name: activeBoard.name })
+                setShareTarget({ type: 'board', id: activeBoard.id, name: activeBoard.name, isTemplate: activeBoard.is_template })
               }
               disabled={!activeBoard}
             >
@@ -835,7 +835,7 @@ function Workspace() {
           onCreateBoardInFolder={createBoardInFolder}
           onMoveBoardToFolder={moveBoardToFolder}
           onMoveFolderToFolder={moveFolderToFolder}
-          onShareBoard={(b) => setShareTarget({ type: 'board', id: b.id, name: b.name })}
+          onShareBoard={(b) => setShareTarget({ type: 'board', id: b.id, name: b.name, isTemplate: b.is_template })}
           onRenameBoard={renameBoardById}
           onDeleteBoard={(b) => setDeleteTarget(b)}
           onMergeBoard={(b) => {
@@ -1102,6 +1102,7 @@ function Workspace() {
           resourceType={shareTarget.type}
           resourceId={shareTarget.id}
           resourceName={shareTarget.name}
+          isTemplate={shareTarget.isTemplate}
           onClose={() => setShareTarget(null)}
         />
       )}

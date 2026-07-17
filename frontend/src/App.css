@@ -423,10 +423,6 @@
 .tree-board-row--active .tree-board__icon {
   color: var(--accent);
 }
-/* A template board: the star icon (accent) marks it as a template at a glance. */
-.tree-board__icon--template {
-  color: var(--accent);
-}
 .tree-board__dot--shared {
   background: #14b8a6;
   border-radius: 50%;
@@ -1509,9 +1505,17 @@
      doesn't briefly add a horizontal scrollbar that jolts the layout. */
   overflow: hidden;
 }
-/* Read-only template board: nodes are view-only (no double-click editors, inline
-   buttons, or drag). Panning/zooming the canvas still works. */
-.canvas-wrap--readonly .react-flow__node {
+/* Read-only template board: objects can still be selected/viewed (and media
+   played), but every inline edit affordance is neutralized. Drag/create/delete
+   and the editors are blocked in the Canvas handlers; this hides the media card
+   grips/handles/buttons and stops the caption's double-click rename. */
+.canvas-wrap--readonly .media-node__resize,
+.canvas-wrap--readonly .media-node__rotate,
+.canvas-wrap--readonly .media-node__flip,
+.canvas-wrap--readonly .media-node__del {
+  display: none;
+}
+.canvas-wrap--readonly .media-node__caption {
   pointer-events: none;
 }
 

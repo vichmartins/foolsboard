@@ -716,13 +716,9 @@ export default function Sidebar(props: Props) {
           onDragStart={(e) => beginItemDrag(e, BOARD_DND, b.id)}
           onClick={(e) => clickItem(e, b.id, () => onSelectBoard(b.id))}
           onDoubleClick={() => openDrill(b)}
-          title={`${b.name} · double-click to view its objects`}
+          title={`${b.name}${b.is_template ? ' (Template)' : ''} · double-click to view its objects`}
         >
-          <span
-            className={'tree-board__icon' + (b.is_template ? ' tree-board__icon--template' : '')}
-            aria-hidden="true"
-            title={b.is_template ? 'Template' : undefined}
-          >
+          <span className="tree-board__icon" aria-hidden="true">
             {b.is_template ? <TemplateIcon /> : <BoardIcon />}
           </span>
           <span className="tree-board__name">{b.name}</span>
