@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.108.6
+
+- change: The template menu action now reads **Unlock to Edit** (matching the
+  banner), instead of "Remove from Templates".
+- polish: Setting a board as a template now animates — it slides into the
+  Templates section — and the read-only banner smoothly fades/slides in and out
+  instead of popping.
+
 ## v0.108.5
 
 - polish: A template's star icon now follows the selection state like any board
