@@ -11,6 +11,32 @@ def _second_user(client, admin_token, name="bob"):
     return register(client, name, invite=code).json()["access_token"]
 
 
+def test_sharing_a_template_gives_the_recipient_a_template(client, admin):
+    token, _ = admin
+    btoken = _second_user(client, token)
+    bid = new_board(client, token, "Starter")
+    client.patch(f"/api/boards/{bid}", json={"is_template": True}, headers=auth(token))
+    sid = client.post(
+        "/api/shares", json={"recipient": "bob", "board_id": bid}, headers=auth(token)
+    ).json()["id"]
+    assert client.post(f"/api/shares/{sid}/accept", headers=auth(btoken)).status_code == 200
+
+    entry = [b for b in client.get("/api/boards", headers=auth(btoken)).json() if b["id"] == bid]
+    assert entry and entry[0]["is_template"] is True  # recipient gets it as a template
+
+
+def test_sharing_a_plain_board_is_not_a_template_for_recipient(client, admin):
+    token, _ = admin
+    btoken = _second_user(client, token)
+    bid = new_board(client, token, "Plain")  # not a template
+    sid = client.post(
+        "/api/shares", json={"recipient": "bob", "board_id": bid}, headers=auth(token)
+    ).json()["id"]
+    client.post(f"/api/shares/{sid}/accept", headers=auth(btoken))
+    entry = [b for b in client.get("/api/boards", headers=auth(btoken)).json() if b["id"] == bid]
+    assert entry and entry[0]["is_template"] is False
+
+
 def test_accept_share_grants_access(client, admin):
     token, _ = admin
     bid = new_board(client, token, "Shared")

@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.108.1
+
+- feat: **Sharing a template gives the recipient a template.** The board menu now
+  says **Share Template** for a template, and when the recipient accepts, it lands
+  in *their* Templates section (read-only) rather than as a plain shared board.
+- change: **Duplicating a template is now "Create From Template"** (distinct from a
+  plain board's "Create Private Copy").
+- polish: Retheme the template read-only banner (proper lock icon, app-styled card,
+  Title Case buttons), and make the Templates count use the same muted color as the
+  Categories/Folders counts instead of orange.
+
 ## v0.108.0
 
 - feat: **Templates are read-only.** A board you've saved as a template now opens
