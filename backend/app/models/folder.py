@@ -23,6 +23,11 @@ class Folder(UUIDMixin, TimestampMixin, Base):
     parent_folder_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("folders.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    # Optional category this folder is filed under (null = uncategorized).
+    # Deleting a category just uncategorizes its items (SET NULL).
+    category_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     # Manual sort order within the owner's folder list (ascending).
     position: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"

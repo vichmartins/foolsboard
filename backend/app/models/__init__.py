@@ -7,6 +7,7 @@ from .appsetting import AppSetting
 from .asset import Asset
 from .board import Board
 from .board_template import BoardTemplate
+from .category import Category
 from .edge import Edge
 from .folder import Folder
 from .invite import InviteCode
@@ -21,6 +22,7 @@ __all__ = [
     "Asset",
     "Board",
     "BoardTemplate",
+    "Category",
     "Edge",
     "ErrorLog",
     "Folder",
