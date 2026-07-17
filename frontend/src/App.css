@@ -486,7 +486,7 @@
   margin-top: 4px;
 }
 
-/* --- Docked bottom panels (Templates / Team Templates), VS Code-style -------
+/* --- Docked bottom panel (Templates), VS Code-style ------------------------
    Collapse to a header; when open, a body at a drag-resizable, remembered height. */
 .sidebar__docks {
   flex: none;
@@ -549,48 +549,6 @@
   padding: 0 6px 8px;
 }
 
-.team-tmpl {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 4px 4px 22px;
-  border-radius: 7px;
-  font-size: 13px;
-}
-.team-tmpl:hover {
-  background: var(--bg-elev-2);
-}
-.team-tmpl__name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text);
-}
-.team-tmpl__use {
-  flex: none;
-  padding: 2px 9px;
-  font-size: 11px;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-dim);
-  cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
-}
-.team-tmpl__use:hover {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-.team-tmpl__remove {
-  flex: none;
-  opacity: 0;
-}
-.team-tmpl:hover .team-tmpl__remove {
-  opacity: 1;
-}
 .tree-cat__row {
   display: flex;
   align-items: center;

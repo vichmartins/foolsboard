@@ -10,20 +10,8 @@ export interface Board {
   shared: boolean // shared with me (not owned by me)
   shared_out?: boolean // I own it and have shared it out (crown badge)
   is_template?: boolean // my personal reusable starting point (per-user star)
-  shared_template?: boolean // published as a workspace-wide "team" template
-  shared_template_by?: string | null // username who published it
   owner_name: string | null
   created_at: string
-  updated_at: string
-}
-
-// A board published as a workspace-wide team template (from GET /boards/shared-templates).
-export interface SharedTemplate {
-  id: string
-  name: string
-  description: string | null
-  owner_name: string | null
-  published_by: string | null
   updated_at: string
 }
 

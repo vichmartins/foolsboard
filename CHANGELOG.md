@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.107.2
+
+- change: **Removed team templates / "Publish to Team".** The workspace-wide
+  template-publishing feature has been taken out. Your **personal** templates (the
+  per-account Templates section) and the plain **Duplicate** action are unchanged.
+
 ## v0.107.1
 
 - change: **The Templates and Team Templates sections are now docked, resizable

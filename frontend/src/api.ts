@@ -15,7 +15,6 @@ import type {
   LinkRef,
   RequestLog,
   Share,
-  SharedTemplate,
   StoryEdge,
   StoryNode,
   User,
@@ -351,17 +350,6 @@ export async function absorbNodes(boardId: string, nodeIds: string[]): Promise<v
 // Make a private, unshared copy of a board the caller can access.
 export async function copyBoard(boardId: string): Promise<Board> {
   return (await http.post(`/boards/${boardId}/copy`)).data
-}
-
-// --- Team (workspace-wide) templates ---------------------------------------
-export async function listSharedTemplates(): Promise<SharedTemplate[]> {
-  return (await http.get('/boards/shared-templates')).data
-}
-export async function publishTeamTemplate(boardId: string): Promise<Board> {
-  return (await http.post(`/boards/${boardId}/share-template`)).data
-}
-export async function unpublishTeamTemplate(boardId: string): Promise<Board> {
-  return (await http.delete(`/boards/${boardId}/share-template`)).data
 }
 
 // Every accessible board with its nodes/edges/assets, for the workspace-wide Gallery.

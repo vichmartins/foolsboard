@@ -23,7 +23,6 @@ from ..schemas import (
     BoardUpdate,
     GalleryBoardOut,
     GalleryOut,
-    SharedTemplateOut,
 )
 from ..storage import storage
 from .assets import gc_orphan_files
@@ -93,13 +92,6 @@ def _board_out(
     item = BoardOut.model_validate(board)
     # Template status is per-user, not a property of the board.
     item.is_template = board.id in template_ids
-    # Team-template status is global (published workspace-wide).
-    if board.shared_template_by_id is not None:
-        item.shared_template = True
-        if board.shared_template_by_id not in owner_names:
-            pub = db.get(User, board.shared_template_by_id)
-            owner_names[board.shared_template_by_id] = pub.username if pub else None
-        item.shared_template_by = owner_names[board.shared_template_by_id]
     if board.owner_id != user.id:
         item.shared = True
         if board.owner_id not in owner_names:
@@ -313,40 +305,6 @@ def reorder_boards(
     )
 
 
-@router.get("/shared-templates", response_model=list[SharedTemplateOut])
-def list_shared_templates(
-    db: Session = Depends(get_db), user: User = Depends(get_current_user)
-) -> list[SharedTemplateOut]:
-    """Every board published as a workspace-wide team template (visible to all)."""
-    # Declared before GET /{board_id} so the literal path isn't parsed as an id.
-    boards = list(
-        db.scalars(
-            select(Board).where(Board.shared_template_by_id.is_not(None)).order_by(Board.name)
-        )
-    )
-    names: dict = {}
-
-    def name_of(uid: UUID | None) -> str | None:
-        if uid is None:
-            return None
-        if uid not in names:
-            u = db.get(User, uid)
-            names[uid] = u.username if u else None
-        return names[uid]
-
-    return [
-        SharedTemplateOut(
-            id=b.id,
-            name=b.name,
-            description=b.description,
-            owner_name=name_of(b.owner_id),
-            published_by=name_of(b.shared_template_by_id),
-            updated_at=b.updated_at,
-        )
-        for b in boards
-    ]
-
-
 @router.get("/{board_id}", response_model=BoardOut)
 def get_board(
     board_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
@@ -425,13 +383,7 @@ def copy_board(
 ) -> BoardOut:
     """Make a private, unshared copy of a board the caller can access (the whole
     graph + media is duplicated into a new board owned by them)."""
-    src = db.get(Board, board_id)
-    # Copy is allowed for a board you can access, OR any published team template
-    # (that's the point of a team template -- anyone can start from it).
-    if src is None or (
-        src.shared_template_by_id is None and not can_access_board(src, user, db)
-    ):
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Board not found")
+    src = _get_accessible_board(board_id, db, user)
     min_pos = db.scalar(select(func.min(Board.position)).where(Board.owner_id == user.id))
     position = (min_pos - 1) if min_pos is not None else 0
     new = Board(
@@ -477,43 +429,6 @@ def copy_board(
     log_event(db, user=user, action="board.copy", entity_type="board", entity_id=new.id,
               summary=f"made a private copy of “{src.name}”")
     return _board_out(new, user, db, {}, set(), set())  # a fresh copy is nobody's template
-
-
-@router.post("/{board_id}/share-template", response_model=BoardOut)
-def publish_team_template(
-    board_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
-) -> BoardOut:
-    """Publish a board you can access as a workspace-wide team template. Anyone can
-    then start a copy from it (see copy_board)."""
-    board = _get_accessible_board(board_id, db, user)
-    if board.shared_template_by_id is None:
-        board.shared_template_by_id = user.id
-        db.commit()
-        db.refresh(board)
-        log_event(db, user=user, action="board.template.publish", entity_type="board",
-                  entity_id=board.id, summary=f"published “{board.name}” as a team template")
-    return _single_board_out(board, user, db)
-
-
-@router.delete("/{board_id}/share-template", response_model=BoardOut)
-def unpublish_team_template(
-    board_id: UUID, db: Session = Depends(get_db), user: User = Depends(get_current_user)
-) -> BoardOut:
-    """Unpublish a team template. Allowed for whoever published it, or any admin."""
-    board = db.get(Board, board_id)
-    if board is None or board.shared_template_by_id is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Board not found")
-    if board.shared_template_by_id != user.id and not user.is_admin:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
-            "Only the publisher or an admin can unpublish this team template",
-        )
-    board.shared_template_by_id = None
-    db.commit()
-    db.refresh(board)
-    log_event(db, user=user, action="board.template.unpublish", entity_type="board",
-              entity_id=board.id, summary=f"removed “{board.name}” from team templates")
-    return _single_board_out(board, user, db)
 
 
 @router.post("/{board_id}/absorb", status_code=status.HTTP_204_NO_CONTENT)
