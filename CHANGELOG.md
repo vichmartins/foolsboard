@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.108.5
+
+- polish: A template's star icon now follows the selection state like any board
+  (muted when unselected, accent when active) instead of always looking
+  highlighted; its hover tooltip shows the board name and marks it a template.
+- change: You can now **select/deselect objects** while viewing a read-only
+  template (for inspection) — editing stays blocked.
+- change: The Share dialog title now reads **Share Template** for a template.
+
 ## v0.108.4
 
 - change: In the explorer, a **template board now shows a star icon** (accent) in

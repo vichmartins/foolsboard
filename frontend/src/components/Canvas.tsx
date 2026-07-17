@@ -2127,7 +2127,7 @@ function CanvasInner({
         edgeTypes={edgeTypes}
         nodesDraggable={!locked && !ro}
         nodesConnectable={!locked && !ro}
-        elementsSelectable={!locked && !ro}
+        elementsSelectable={!locked}
         connectionMode={ConnectionMode.Loose}
         deleteKeyCode={['Delete', 'Backspace']}
         onNodesChange={onNodesChange}

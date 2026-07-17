@@ -18,10 +18,17 @@ interface Props {
   resourceType: 'board' | 'folder'
   resourceId: string
   resourceName: string
+  isTemplate?: boolean
   onClose: () => void
 }
 
-export default function ShareDialog({ resourceType, resourceId, resourceName, onClose }: Props) {
+export default function ShareDialog({
+  resourceType,
+  resourceId,
+  resourceName,
+  isTemplate,
+  onClose,
+}: Props) {
   const [recipient, setRecipient] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -78,7 +85,9 @@ export default function ShareDialog({ resourceType, resourceId, resourceName, on
   return (
     <div className="overlay" onMouseDown={onClose}>
       <div className="dialog" onMouseDown={(e) => e.stopPropagation()}>
-        <h2 className="dialog__title">Share {resourceType === 'board' ? 'Board' : 'Folder'}</h2>
+        <h2 className="dialog__title">
+          Share {isTemplate ? 'Template' : resourceType === 'board' ? 'Board' : 'Folder'}
+        </h2>
         <p className="dialog__message">
           Share <strong>{resourceName}</strong> with another user by username or email. They can
           accept or reject; once accepted you can collaborate on it.
