@@ -1307,7 +1307,7 @@ export default function Sidebar(props: Props) {
                     onClick: () => onCreatePrivateCopy(menu.board),
                   },
                   {
-                    label: menu.board.is_template ? 'Remove from Templates' : 'Save as Template',
+                    label: menu.board.is_template ? 'Unlock to Edit' : 'Save as Template',
                     mnemonic: 't',
                     onClick: () => onSetTemplate(menu.board, !menu.board.is_template),
                   },

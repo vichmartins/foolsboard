@@ -900,8 +900,11 @@ function Workspace() {
         ) : (
           <div className="loading">Loading…</div>
         )}
-        {activeBoard?.is_template && (
-          <div className="template-lock">
+        {activeBoard && (
+          <div
+            className={'template-lock' + (activeBoard.is_template ? ' template-lock--visible' : '')}
+            aria-hidden={!activeBoard.is_template}
+          >
             <span className="template-lock__icon" aria-hidden="true">
               <LockIcon />
             </span>
