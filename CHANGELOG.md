@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.106.0
+
+- feat: **Duplicate any board.** Every board's menu now has a plain **Duplicate**
+  action (a full private copy — objects, links, and media), no longer tied to
+  templates. Previously you had to mark a board as a template just to copy it.
+- feat: **Templates section in the explorer.** Your template boards are now
+  grouped into a dedicated, collapsible **Templates** section at the bottom of the
+  sidebar. They also stay in their normal spot — the section is just a quick way to
+  find your reusable starting points.
+
 ## v0.105.6
 
 - fix: **Templates are now per-account.** Marking a board as a template used to set
