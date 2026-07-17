@@ -274,6 +274,9 @@ function Workspace() {
   }, [docStatus, idle, flashAct, galleryOpen, impexOpen, dialog, mergeConfirm, moveFolderBoard, moveFolderTarget, moveIds])
 
   const activeBoard = boards.find((b) => b.id === activeId) ?? null
+  // A template opens read-only, so its edit actions (rename / merge / new object)
+  // are locked everywhere until it's removed from templates.
+  const activeIsTemplate = !!activeBoard?.is_template
 
   // Board actions: Ctrl+Alt+<letter> (avoids browser + canvas Ctrl-combos). Each
   // respects the same availability as its top-bar button; ignored while typing.
@@ -284,7 +287,7 @@ function Workspace() {
         e.preventDefault()
         setDialog('new')
       } else if (matches('board-rename', e)) {
-        if (activeBoard) {
+        if (activeBoard && !activeBoard.is_template) {
           e.preventDefault()
           setDialog('rename')
         }
@@ -294,7 +297,7 @@ function Workspace() {
           setMoveFolderBoard(activeBoard)
         }
       } else if (matches('board-merge', e)) {
-        if (boards.length >= 2) {
+        if (boards.length >= 2 && !activeBoard?.is_template) {
           e.preventDefault()
           setDialog('merge')
         }
@@ -688,10 +691,10 @@ function Workspace() {
           </button>
           <button
             className="icon-btn"
-            title={`Rename${hintSuffix('board-rename')}`}
+            title={activeIsTemplate ? 'Templates are read-only' : `Rename${hintSuffix('board-rename')}`}
             aria-label="Rename"
             onClick={() => setDialog('rename')}
-            disabled={!activeBoard}
+            disabled={!activeBoard || activeIsTemplate}
           >
             <PencilIcon />
           </button>
@@ -707,8 +710,8 @@ function Workspace() {
           <button
             className="icon-btn"
             onClick={() => setDialog('merge')}
-            disabled={boards.length < 2}
-            title={`Merge${hintSuffix('board-merge')}`}
+            disabled={boards.length < 2 || activeIsTemplate}
+            title={activeIsTemplate ? 'Templates are read-only' : `Merge${hintSuffix('board-merge')}`}
             aria-label="Merge"
           >
             <MergeIcon />
@@ -832,7 +835,9 @@ function Workspace() {
           onRenameBoard={renameBoardById}
           onDeleteBoard={(b) => setDeleteTarget(b)}
           onMergeBoard={(b) => {
-            if (b.id === activeId) showToast("A board can't merge into itself.")
+            if (activeIsTemplate)
+              showToast('This template is read-only — remove it from Templates to edit.')
+            else if (b.id === activeId) showToast("A board can't merge into itself.")
             else setMergeConfirm(b)
           }}
           onUnshareBoard={unshareBoard}
@@ -940,7 +945,7 @@ function Workspace() {
 
       {deleteTarget && (
         <TypeToConfirmDialog
-          title="Delete Storyboard?"
+          title={deleteTarget.is_template ? 'Delete Template?' : 'Delete Storyboard?'}
           message={
             <>
               <strong>{deleteTarget.name}</strong> and all of its objects, links, and media will
@@ -948,7 +953,7 @@ function Workspace() {
             </>
           }
           requiredText={deleteTarget.name}
-          confirmLabel="Delete board"
+          confirmLabel={deleteTarget.is_template ? 'Delete Template' : 'Delete Board'}
           danger
           onConfirm={() => deleteBoardById(deleteTarget.id)}
           onCancel={() => setDeleteTarget(null)}

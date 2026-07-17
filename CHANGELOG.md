@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.108.2
+
+- change: **Templates are fully locked down.** A template can no longer be renamed
+  or merged (those actions are removed from its menu and disabled in the top bar),
+  its Duplicate action reads **Create From Template**, and its delete dialog says
+  **Delete Template**. In the object drill-in (View Objects) a template's objects
+  are read-only too — the right-click menu drops Rename / Duplicate / Delete,
+  leaving only Open and Play.
+
 ## v0.108.1
 
 - feat: **Sharing a template gives the recipient a template.** The board menu now
