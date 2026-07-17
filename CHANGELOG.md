@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.108.14
+
+- polish: The canvas lock control now **collapses/expands smoothly** when a board's
+  read-only state changes (e.g. Unlock to Edit) instead of popping out of existence.
+
 ## v0.108.13
 
 - polish: The template banner buttons now rest on the bright, saturated accent

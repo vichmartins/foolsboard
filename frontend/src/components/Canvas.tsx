@@ -2193,17 +2193,19 @@ function CanvasInner({
           >
             <FitViewIcon />
           </ControlButton>
-          {/* A template is already read-only, so the manual canvas lock is moot. */}
-          {!ro && (
-            <ControlButton
-              className="rf-icon-btn"
-              onClick={() => setLocked((v) => !v)}
-              title={locked ? 'Unlock the Canvas' : 'Lock the Canvas (prevent moving objects)'}
-              aria-label="Toggle canvas lock"
-            >
-              {locked ? <LockIcon /> : <UnlockIcon />}
-            </ControlButton>
-          )}
+          {/* A template is already read-only, so the manual canvas lock is moot --
+              kept mounted so it collapses/expands smoothly as read-only toggles
+              (e.g. "Unlock to Edit") rather than popping in/out. */}
+          <ControlButton
+            className={'rf-icon-btn rf-lock-btn' + (ro ? ' rf-lock-btn--hidden' : '')}
+            onClick={() => !ro && setLocked((v) => !v)}
+            title={locked ? 'Unlock the Canvas' : 'Lock the Canvas (prevent moving objects)'}
+            aria-label="Toggle canvas lock"
+            tabIndex={ro ? -1 : undefined}
+            aria-hidden={ro || undefined}
+          >
+            {locked ? <LockIcon /> : <UnlockIcon />}
+          </ControlButton>
           <ControlButton
             className="rf-play-btn"
             onClick={() => {
