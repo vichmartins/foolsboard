@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.108.8
+
+- polish: Move / Create-From-Template picker now uses the app's themed **folder
+  and category icons** instead of a stray unicode glyph, for a consistent look.
+- polish: Top-bar board dropdown now shows each item's **type icon** on the right
+  (board, or a star for a template), alongside the shared indicator.
+- change: The sharing indicator now distinguishes **who shares from who receives** —
+  one person when you own and shared it out, two people when it's shared with you —
+  and only tints accent (purple) while its row is selected.
+- change: The **canvas lock** control is hidden for templates (they're already
+  read-only, so it did nothing).
+- fix: Capitalized the "No Folder / Category (Top Level)" and "No Folder /
+  Category" options in the move / new-board pickers.
+
 ## v0.108.7
 
 - change: Reordered the template menu (View Objects · Create From Template · Move

@@ -730,6 +730,7 @@ export default function Sidebar(props: Props) {
               boardId={b.id}
               memberIds={b.member_ids}
               owner={!!b.shared_out}
+              active={b.id === activeId}
               title={b.shared ? `Shared by ${b.owner_name ?? 'someone'}` : 'Shared with others'}
             />
           )}

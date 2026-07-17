@@ -2,6 +2,7 @@
 // onMove receives 'none' | a folder id | 'cat:<categoryId>'.
 import { useState } from 'react'
 import type { Category, Folder } from '../types'
+import { CategoryIcon, FolderIcon } from './icons'
 
 const NONE = '__none__'
 
@@ -50,7 +51,8 @@ export default function MoveToFolderDialog({
                 checked={choice === NONE}
                 onChange={() => setChoice(NONE)}
               />
-              <span>No folder / category (top level)</span>
+              <span className="merge-tree__icon merge-item__icon--empty" aria-hidden="true" />
+              <span>No Folder / Category (Top Level)</span>
             </label>
           </li>
 
@@ -64,7 +66,10 @@ export default function MoveToFolderDialog({
                   checked={choice === f.id}
                   onChange={() => setChoice(f.id)}
                 />
-                <span>🗀 {f.name}</span>
+                <span className="merge-tree__icon">
+                  <FolderIcon />
+                </span>
+                <span>{f.name}</span>
               </label>
             </li>
           ))}
@@ -79,6 +84,9 @@ export default function MoveToFolderDialog({
                   checked={choice === 'cat:' + c.id}
                   onChange={() => setChoice('cat:' + c.id)}
                 />
+                <span className="merge-tree__icon">
+                  <CategoryIcon />
+                </span>
                 <span>{c.name}</span>
               </label>
             </li>

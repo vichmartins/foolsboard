@@ -947,6 +947,22 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Type glyph on the right of each row/pill: board or template (star). Dim by
+   default, accent on the active row (which already tints its text accent). */
+.board-select__type {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  color: var(--text-dim);
+}
+.board-select__type svg {
+  width: 15px;
+  height: 15px;
+}
+.board-select__option--active .board-select__type {
+  color: var(--accent);
+}
 /* Drag handle: dim, revealed on row hover; cursor signals draggability. */
 .board-select__grip {
   flex: none;
@@ -5552,6 +5568,11 @@ button.merge-tree__chev {
 }
 .merge-item:hover {
   border-color: var(--accent);
+}
+/* Keep the icon column aligned when a row (e.g. the top-level option) has none. */
+.merge-item__icon--empty {
+  flex: none;
+  width: 14px;
 }
 .merge-item input {
   accent-color: var(--accent);

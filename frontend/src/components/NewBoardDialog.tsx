@@ -39,7 +39,7 @@ export default function NewBoardDialog({
   const canCreate = name.trim().length > 0
   const ownFolders = folders.filter((f) => !f.shared)
   const destOptions = [
-    { value: NONE, label: kind === 'board' ? 'No folder / category' : 'No category' },
+    { value: NONE, label: kind === 'board' ? 'No Folder / Category' : 'No Category' },
     ...(kind === 'board'
       ? ownFolders.map((f) => ({ value: 'f:' + f.id, label: f.name, icon: <FolderIcon /> }))
       : []),
