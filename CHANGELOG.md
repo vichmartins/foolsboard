@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.108.13
+
+- polish: The template banner buttons now rest on the bright, saturated accent
+  colour and soften to a light accent tint on hover (previously the reverse).
+
 ## v0.108.12
 
 - polish: The template banner buttons are now tinted in the theme's accent hue —
