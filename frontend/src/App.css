@@ -423,6 +423,10 @@
 .tree-board-row--active .tree-board__icon {
   color: var(--accent);
 }
+/* A template board: the star icon (accent) marks it as a template at a glance. */
+.tree-board__icon--template {
+  color: var(--accent);
+}
 .tree-board__dot--shared {
   background: #14b8a6;
   border-radius: 50%;

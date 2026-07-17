@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.108.4
+
+- change: In the explorer, a **template board now shows a star icon** (accent) in
+  place of the usual board icon, so it reads as a template at a glance, and its
+  hover actions drop **Rename** and **Merge** (leaving Share + Delete).
+
 ## v0.108.3
 
 - change: On a template, the top-bar **Rename and Merge buttons are now hidden**
