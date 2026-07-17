@@ -10,6 +10,7 @@ import * as api from '../api'
 import { makeMatcher } from '../search'
 import { useGlobalPresence } from '../realtime'
 import ContextMenu from './ContextMenu'
+import DockPanel from './DockPanel'
 import ConfirmDialog from './ConfirmDialog'
 import { exportDocNodeAs, DOC_EXPORT_FORMATS } from './docExport'
 import ShareMark from './ShareMark'
@@ -191,8 +192,6 @@ export default function Sidebar(props: Props) {
 
   const [expanded, setExpanded] = useState<Set<string>>(() => loadSet(EXPANDED_KEY))
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(() => loadSet(COLLAPSED_CATS_KEY))
-  const [templatesOpen, setTemplatesOpen] = useState(true)
-  const [teamOpen, setTeamOpen] = useState(true)
 
   // Drop ids of folders/categories that no longer exist from the persisted
   // expand/collapse sets, so deleting them doesn't leave them accumulating in
@@ -1258,89 +1257,60 @@ export default function Sidebar(props: Props) {
                 </div>
               )
             })}
+          </div>
 
-            {/* Your templates, grouped into their own section. Read-only view --
-                the boards also live in their normal spot; this is just a filter. */}
+          {/* Docked, VS Code-style panels below the scrolling tree: each collapses
+              to a header and, when open, shows a body at a drag-resizable height. */}
+          <div className="sidebar__docks">
             {templateBoards.length > 0 && (
-              <div className="tree-cat tree-cat--templates">
-                <div className="tree-cat__row">
-                  <button
-                    className={'tree-chevron' + (templatesOpen ? ' tree-chevron--open' : '')}
-                    onClick={() => setTemplatesOpen((o) => !o)}
-                    aria-label={templatesOpen ? 'Collapse' : 'Expand'}
-                  >
-                    <ChevronIcon />
-                  </button>
-                  <button className="tree-cat__name" onClick={() => setTemplatesOpen((o) => !o)}>
-                    <span className="tree-cat__icon">
-                      <TemplateIcon />
-                    </span>
-                    <span className="tree-cat__label">Templates</span>
-                  </button>
-                  <span className="tree-cat__count">{templateBoards.length}</span>
-                </div>
-                <div className="tree-collapse" data-open={templatesOpen} aria-hidden={!templatesOpen}>
-                  <div className="tree-children">
-                    {templateBoards.map((b) => boardRow(b, 'templates'))}
-                  </div>
-                </div>
-              </div>
+              <DockPanel
+                title="Templates"
+                icon={<TemplateIcon />}
+                count={templateBoards.length}
+                storageKey="fb.dock.templates"
+                accent
+              >
+                {templateBoards.map((b) => boardRow(b, 'templates'))}
+              </DockPanel>
             )}
 
-            {/* Team templates: boards anyone in the workspace published. Start a
-                copy with "Use"; the publisher or an admin can remove one. */}
             {sharedTemplates.length > 0 && (
-              <div className="tree-cat tree-cat--templates tree-cat--team">
-                <div className="tree-cat__row">
-                  <button
-                    className={'tree-chevron' + (teamOpen ? ' tree-chevron--open' : '')}
-                    onClick={() => setTeamOpen((o) => !o)}
-                    aria-label={teamOpen ? 'Collapse' : 'Expand'}
-                  >
-                    <ChevronIcon />
-                  </button>
-                  <button className="tree-cat__name" onClick={() => setTeamOpen((o) => !o)}>
-                    <span className="tree-cat__icon">
-                      <TemplateIcon />
-                    </span>
-                    <span className="tree-cat__label">Team Templates</span>
-                  </button>
-                  <span className="tree-cat__count">{sharedTemplates.length}</span>
-                </div>
-                <div className="tree-collapse" data-open={teamOpen} aria-hidden={!teamOpen}>
-                  <div className="tree-children">
-                    {sharedTemplates.map((t) => {
-                      const canManage = t.published_by === myUsername || isAdmin
-                      return (
-                        <div
-                          className="team-tmpl"
-                          key={t.id}
-                          title={`Team template${t.published_by ? ` · by ${t.published_by}` : ''}`}
+              <DockPanel
+                title="Team Templates"
+                icon={<TemplateIcon />}
+                count={sharedTemplates.length}
+                storageKey="fb.dock.team"
+              >
+                {sharedTemplates.map((t) => {
+                  const canManage = t.published_by === myUsername || isAdmin
+                  return (
+                    <div
+                      className="team-tmpl"
+                      key={t.id}
+                      title={`Team template${t.published_by ? ` · by ${t.published_by}` : ''}`}
+                    >
+                      <span className="team-tmpl__name">{t.name}</span>
+                      <button
+                        className="team-tmpl__use"
+                        onClick={() => onUseSharedTemplate(t)}
+                        title="Start a new board from this template"
+                      >
+                        Use
+                      </button>
+                      {canManage && (
+                        <button
+                          className="icon-btn icon-btn--danger team-tmpl__remove"
+                          onClick={() => onUnpublishTeam(t.id)}
+                          title="Remove from team templates"
+                          aria-label="Remove from team templates"
                         >
-                          <span className="team-tmpl__name">{t.name}</span>
-                          <button
-                            className="team-tmpl__use"
-                            onClick={() => onUseSharedTemplate(t)}
-                            title="Start a new board from this template"
-                          >
-                            Use
-                          </button>
-                          {canManage && (
-                            <button
-                              className="icon-btn icon-btn--danger team-tmpl__remove"
-                              onClick={() => onUnpublishTeam(t.id)}
-                              title="Remove from team templates"
-                              aria-label="Remove from team templates"
-                            >
-                              <TrashIcon />
-                            </button>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
+                          <TrashIcon />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </DockPanel>
             )}
           </div>
             </>
