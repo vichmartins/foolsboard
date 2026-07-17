@@ -44,16 +44,6 @@ class Board(UUIDMixin, TimestampMixin, Base):
         ForeignKey("folders.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
-    # If set, this board is published as a workspace-wide ("team") template that
-    # anyone can start a copy from. The referenced user is who published it (for
-    # attribution + unpublish permission; an admin can also unpublish). Null = not
-    # a team template. This is deliberately global -- a team template is meant to
-    # be visible to everyone -- unlike personal templates, which are per-user (see
-    # BoardTemplate).
-    shared_template_by_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
-    )
-
     nodes: Mapped[list["Node"]] = relationship(
         back_populates="board",
         cascade="all, delete-orphan",
