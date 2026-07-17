@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import Board, Folder, Share, User
+from ..models import Board, BoardTemplate, Folder, Share, User
 from ..realtime import hub
 from ..schemas import ShareCreate, ShareOut, ShareUserOut
 
@@ -187,6 +187,24 @@ def accept_share(
     if share is None or share.shared_with_id != user.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Share not found")
     share.status = "accepted"
+    # Sharing a template hands the recipient a template, not a plain board: if the
+    # sharer marked this board as their template, mark it as the recipient's too
+    # (so it lands read-only in their Templates section). Board shares only.
+    if share.board_id is not None:
+        owner_templated = db.scalar(
+            select(BoardTemplate.id).where(
+                BoardTemplate.board_id == share.board_id,
+                BoardTemplate.user_id == share.owner_id,
+            )
+        )
+        mine = db.scalar(
+            select(BoardTemplate.id).where(
+                BoardTemplate.board_id == share.board_id,
+                BoardTemplate.user_id == user.id,
+            )
+        )
+        if owner_templated is not None and mine is None:
+            db.add(BoardTemplate(user_id=user.id, board_id=share.board_id))
     db.commit()
     db.refresh(share)
     _notify(share.owner_id, "updated", share, db)

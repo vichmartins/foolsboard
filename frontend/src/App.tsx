@@ -33,6 +33,7 @@ import {
   DocIcon,
   FolderIcon,
   GalleryIcon,
+  LockIcon,
   MergeIcon,
   PencilIcon,
   PlusIcon,
@@ -892,7 +893,9 @@ function Workspace() {
         )}
         {activeBoard?.is_template && (
           <div className="template-lock">
-            <span className="template-lock__icon" aria-hidden="true">🔒</span>
+            <span className="template-lock__icon" aria-hidden="true">
+              <LockIcon />
+            </span>
             <span className="template-lock__text">
               This board is a <strong>template</strong> — read-only.
             </span>
@@ -900,13 +903,13 @@ function Workspace() {
               className="btn btn--primary template-lock__btn"
               onClick={() => setCopyTarget(activeBoard)}
             >
-              Duplicate to use
+              Create From Template
             </button>
             <button
               className="btn template-lock__btn"
               onClick={() => void setBoardTemplate(activeBoard, false)}
             >
-              Remove from Templates to edit
+              Unlock to Edit
             </button>
           </div>
         )}
@@ -1070,11 +1073,11 @@ function Workspace() {
 
       {copyTarget && (
         <MoveToFolderDialog
-          title="Create Private Copy"
-          confirmLabel="Create copy"
+          title={copyTarget.is_template ? 'Create From Template' : 'Create Private Copy'}
+          confirmLabel={copyTarget.is_template ? 'Create Board' : 'Create Copy'}
           folders={folders}
           categories={categories}
-          boardName={`Copy of ${copyTarget.name}`}
+          boardName={copyTarget.is_template ? copyTarget.name : `Copy of ${copyTarget.name}`}
           currentFolderId={null}
           currentCategoryId={null}
           onCancel={() => setCopyTarget(null)}

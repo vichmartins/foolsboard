@@ -1281,7 +1281,11 @@ export default function Sidebar(props: Props) {
                   { label: 'View Objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
                   { label: 'Rename', mnemonic: 'r', onClick: () => startRenameBoard(menu.board) },
                   { label: 'Move to…', mnemonic: 'v', onClick: () => onMoveBoard(menu.board) },
-                  { label: 'Share', mnemonic: 's', onClick: () => onShareBoard(menu.board) },
+                  {
+                    label: menu.board.is_template ? 'Share Template' : 'Share',
+                    mnemonic: 's',
+                    onClick: () => onShareBoard(menu.board),
+                  },
                   { label: 'Merge', mnemonic: 'm', onClick: () => onMergeBoard(menu.board) },
                   // A plain copy, available on every board -- no longer tied to templates.
                   { label: 'Duplicate', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },
