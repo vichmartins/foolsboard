@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.108.10
+
+- revert: Restored the template banner's original **Create From Template / Unlock
+  to Edit** button styling (solid primary + neutral), per preference.
+
 ## v0.108.9
 
 - polish: The template banner's **Create From Template / Unlock to Edit** buttons
