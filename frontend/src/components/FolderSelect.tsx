@@ -161,7 +161,7 @@ export default function FolderSelect({
         </span>
         <span className="board-select__current">{active?.name ?? 'All Boards'}</span>
         {active?.shared_out ? (
-          <OwnerIcon className="owner-crown" />
+          <OwnerIcon solo className="owner-crown" />
         ) : active?.shared ? (
           <span className="pick-owner" title={`Shared by ${active.owner_name ?? 'someone'}`}>
             <span className="pick-dot" />
@@ -249,7 +249,12 @@ export default function FolderSelect({
                       onDragEnd={onFolderDragEnd}
                       title="Shared with others — drag to reorder"
                     >
-                      <OwnerIcon className="owner-crown" />
+                      <OwnerIcon
+                        solo
+                        className={
+                          f.id === activeFolderId ? 'owner-crown' : 'owner-crown owner-crown--recipient'
+                        }
+                      />
                     </span>
                   ) : (
                     <span

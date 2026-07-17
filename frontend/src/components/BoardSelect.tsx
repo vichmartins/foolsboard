@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Board } from '../types'
 import { useGlobalPresence } from '../realtime'
 import ShareMark from './ShareMark'
+import { BoardIcon, TemplateIcon } from './icons'
 
 interface Props {
   boards: Board[]
@@ -108,8 +109,14 @@ export default function BoardSelect({
             boardId={activeId}
             memberIds={activeMemberIds}
             owner={!!activeSharedOut}
+            active
             title={activeShared ? `Shared by ${activeOwnerName ?? 'someone'}` : 'Shared with others'}
           />
+        )}
+        {active && (
+          <span className="board-select__type" aria-hidden="true">
+            {active.is_template ? <TemplateIcon /> : <BoardIcon />}
+          </span>
         )}
         <span className={'board-select__chevron' + (open ? ' board-select__chevron--open' : '')}>
           ▾
@@ -147,9 +154,13 @@ export default function BoardSelect({
                   boardId={b.id}
                   memberIds={b.member_ids}
                   owner={!!b.shared_out}
+                  active={b.id === activeId}
                   title={b.shared ? `Shared by ${b.owner_name ?? 'someone'}` : 'Shared with others'}
                 />
               )}
+              <span className="board-select__type" aria-hidden="true">
+                {b.is_template ? <TemplateIcon /> : <BoardIcon />}
+              </span>
             </button>
           </li>
         ))}
