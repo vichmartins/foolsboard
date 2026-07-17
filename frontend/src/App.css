@@ -485,6 +485,16 @@
 .tree-cat {
   margin-top: 4px;
 }
+/* The virtual "Templates" section: set off from user categories with a divider
+   and a faint accent on its icon so it reads as a distinct, app-provided group. */
+.tree-cat--templates {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.tree-cat--templates .tree-cat__icon {
+  color: var(--accent);
+}
 .tree-cat__row {
   display: flex;
   align-items: center;

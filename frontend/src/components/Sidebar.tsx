@@ -178,6 +178,7 @@ export default function Sidebar(props: Props) {
 
   const [expanded, setExpanded] = useState<Set<string>>(() => loadSet(EXPANDED_KEY))
   const [collapsedCats, setCollapsedCats] = useState<Set<string>>(() => loadSet(COLLAPSED_CATS_KEY))
+  const [templatesOpen, setTemplatesOpen] = useState(true)
 
   // Drop ids of folders/categories that no longer exist from the persisted
   // expand/collapse sets, so deleting them doesn't leave them accumulating in
@@ -423,6 +424,8 @@ export default function Sidebar(props: Props) {
   const folderById = new Map(folders.map((f) => [f.id, f]))
   const boardById = new Map(boards.map((b) => [b.id, b]))
   const boardsIn = (fid: string) => boards.filter((b) => b.folder_id === fid)
+  // Your templates, surfaced in their own section (they also stay in place).
+  const templateBoards = boards.filter((b) => b.is_template)
   const kindOf = (id: string): 'board' | 'folder' => (folderById.has(id) ? 'folder' : 'board')
 
   // --- multi-select ---------------------------------------------------------
@@ -1232,6 +1235,34 @@ export default function Sidebar(props: Props) {
                 </div>
               )
             })}
+
+            {/* Your templates, grouped into their own section. Read-only view --
+                the boards also live in their normal spot; this is just a filter. */}
+            {templateBoards.length > 0 && (
+              <div className="tree-cat tree-cat--templates">
+                <div className="tree-cat__row">
+                  <button
+                    className={'tree-chevron' + (templatesOpen ? ' tree-chevron--open' : '')}
+                    onClick={() => setTemplatesOpen((o) => !o)}
+                    aria-label={templatesOpen ? 'Collapse' : 'Expand'}
+                  >
+                    <ChevronIcon />
+                  </button>
+                  <button className="tree-cat__name" onClick={() => setTemplatesOpen((o) => !o)}>
+                    <span className="tree-cat__icon">
+                      <TemplateIcon />
+                    </span>
+                    <span className="tree-cat__label">Templates</span>
+                  </button>
+                  <span className="tree-cat__count">{templateBoards.length}</span>
+                </div>
+                <div className="tree-collapse" data-open={templatesOpen} aria-hidden={!templatesOpen}>
+                  <div className="tree-children">
+                    {templateBoards.map((b) => boardRow(b, 'templates'))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
             </>
           )}
@@ -1255,8 +1286,8 @@ export default function Sidebar(props: Props) {
             menu.board.shared
               ? [
                   { label: 'View Objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
+                  { label: 'Duplicate', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },
                   { label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) },
-                  { label: 'Create Private Copy', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },
                 ]
               : [
                   { label: 'View Objects', mnemonic: 'o', onClick: () => openDrill(menu.board) },
@@ -1264,31 +1295,15 @@ export default function Sidebar(props: Props) {
                   { label: 'Move to…', mnemonic: 'v', onClick: () => onMoveBoard(menu.board) },
                   { label: 'Share', mnemonic: 's', onClick: () => onShareBoard(menu.board) },
                   { label: 'Merge', mnemonic: 'm', onClick: () => onMergeBoard(menu.board) },
-                  ...(menu.board.is_template
-                    ? [
-                        {
-                          label: 'New Board from Template',
-                          mnemonic: 'n',
-                          onClick: () => onCreatePrivateCopy(menu.board),
-                        },
-                        {
-                          label: 'Remove from Templates',
-                          mnemonic: 't',
-                          onClick: () => onSetTemplate(menu.board, false),
-                        },
-                      ]
-                    : [
-                        {
-                          label: 'Save as Template',
-                          mnemonic: 't',
-                          onClick: () => onSetTemplate(menu.board, true),
-                        },
-                      ]),
+                  // A plain copy, available on every board -- no longer tied to templates.
+                  { label: 'Duplicate', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },
+                  {
+                    label: menu.board.is_template ? 'Remove from Templates' : 'Save as Template',
+                    mnemonic: 't',
+                    onClick: () => onSetTemplate(menu.board, !menu.board.is_template),
+                  },
                   ...(menu.board.shared_out
-                    ? [
-                        { label: 'Create Private Copy', mnemonic: 'c', onClick: () => onCreatePrivateCopy(menu.board) },
-                        { label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) },
-                      ]
+                    ? [{ label: 'Unshare', mnemonic: 'u', onClick: () => onUnshareBoard(menu.board) }]
                     : []),
                   { label: 'Delete', mnemonic: 'd', danger: true, onClick: () => onDeleteBoard(menu.board) },
                 ]
