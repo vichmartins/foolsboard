@@ -1606,6 +1606,28 @@
   flex: none;
   padding: 5px 12px;
   font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+/* Both buttons are tinted in the theme's accent hue (light purple in dark/light,
+   pink in the pink theme), staying "adjacent" to the aesthetic. The primary
+   action carries the accent label on a light-accent fill; the secondary is a
+   lighter tone of the same colour. Hover deepens the tint rather than going
+   solid/washed. */
+.template-lock__btn--go {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.template-lock__btn--go:hover {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.template-lock__btn--alt {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.template-lock__btn--alt:hover {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 .loading {
   display: grid;
