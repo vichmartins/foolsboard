@@ -751,7 +751,9 @@
   padding: 10px 16px;
   background: var(--bg-elev);
   border-bottom: 1px solid var(--border);
-  z-index: 5;
+  /* Above the template read-only banner (z-index 6) so its dropdowns aren't
+     covered by it; still below modal overlays (z-index 500+). */
+  z-index: 10;
   /* Wrap the controls onto a second row in a narrow window instead of
      overflowing horizontally, so everything stays reachable. */
   flex-wrap: wrap;

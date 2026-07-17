@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.108.7
+
+- change: Reordered the template menu (View Objects · Create From Template · Move
+  to… · Share Template · Unlock to Edit · Delete).
+- change: **Unlock to Edit now asks for confirmation** (from both the menu and the
+  banner), explaining it turns the template back into a regular storyboard.
+- fix: Top-bar dropdowns now render **above** the template read-only banner instead
+  of behind it.
+
 ## v0.108.6
 
 - change: The template menu action now reads **Unlock to Edit** (matching the
