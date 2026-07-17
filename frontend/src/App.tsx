@@ -704,7 +704,7 @@ function Workspace() {
           )}
           <button
             className="icon-btn"
-            title={`Move board${hintSuffix('board-move')}`}
+            title={`Move Board${hintSuffix('board-move')}`}
             aria-label="Move"
             onClick={() => activeBoard && setMoveFolderBoard(activeBoard)}
             disabled={!activeBoard}
@@ -915,13 +915,13 @@ function Workspace() {
               This board is a <strong>template</strong> — read-only.
             </span>
             <button
-              className="btn btn--primary template-lock__btn"
+              className="btn template-lock__btn template-lock__btn--go"
               onClick={() => setCopyTarget(activeBoard)}
             >
               Create From Template
             </button>
             <button
-              className="btn template-lock__btn"
+              className="btn template-lock__btn template-lock__btn--alt"
               onClick={() => setUnlockTarget(activeBoard)}
             >
               Unlock to Edit

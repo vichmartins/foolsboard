@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.108.9
+
+- polish: The template banner's **Create From Template / Unlock to Edit** buttons
+  now use the app's tinted button style (like the admin panel) — soft accent fill
+  that goes solid on hover — fixing the washed-out look in the light theme.
+- fix: Capitalized the **Move Board** toolbar tooltip.
+
 ## v0.108.8
 
 - polish: Move / Create-From-Template picker now uses the app's themed **folder
