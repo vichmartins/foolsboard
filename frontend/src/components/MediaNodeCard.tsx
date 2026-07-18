@@ -387,6 +387,11 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
         src={url}
         poster={thumb || undefined}
         controls
+        // The browser's native picture-in-picture overlay is positioned in screen
+        // space, so it drifts outside the video while the board is panned (a CSS
+        // transform it can't track) and can't be repositioned from CSS. Disabling
+        // it removes that stray floating button.
+        disablePictureInPicture
         preload="metadata"
         style={sizeStyle}
       />
