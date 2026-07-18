@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.109.1
+
+- polish: The category (and folder) picker's row actions now use the app's themed
+  Share/Rename/Delete icons instead of plain unicode glyphs.
+- feature: **Right-clicking a category** in the explorer now opens a context menu
+  (New Folder · New Board · Share Category · Rename · Delete); the sidebar row also
+  gained a Share button. Shared-with-me categories stay read-through.
+
 ## v0.109.0
 
 - feature: **Categories can now be shared**, with full folder parity — share,

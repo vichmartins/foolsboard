@@ -75,6 +75,7 @@ interface Props {
   onCreateCategory: (name: string) => void
   onRenameCategory: (id: string, name: string) => void
   onDeleteCategory: (id: string) => void
+  onShareCategory: (category: Category) => void
   onReorderCategories: (ids: string[]) => void
   onFileItem: (itemId: string, categoryId: string | null, index?: number) => void
   onFileItems: (
@@ -173,6 +174,7 @@ export default function Sidebar(props: Props) {
     onCreateCategory,
     onRenameCategory,
     onDeleteCategory,
+    onShareCategory,
     onReorderCategories,
     onFileItems,
     onCreateFolderIn,
@@ -243,6 +245,7 @@ export default function Sidebar(props: Props) {
   }, [])
   const [menu, setMenu] = useState<{ x: number; y: number; board: Board } | null>(null)
   const [folderMenu, setFolderMenu] = useState<{ x: number; y: number; folder: Folder } | null>(null)
+  const [catMenu, setCatMenu] = useState<{ x: number; y: number; cat: Category } | null>(null)
   const [addMenu, setAddMenu] = useState<{ x: number; y: number; catId: string } | null>(null)
   const treeRef = useRef<HTMLDivElement>(null)
   const dragging = useRef(false)
@@ -1174,6 +1177,14 @@ export default function Sidebar(props: Props) {
                         }
                         clearHints()
                       }}
+                      onContextMenu={
+                        c.shared
+                          ? undefined
+                          : (e) => {
+                              e.preventDefault()
+                              setCatMenu({ x: e.clientX, y: e.clientY, cat: c })
+                            }
+                      }
                     >
                       <button
                         className={'tree-chevron' + (isOpen ? ' tree-chevron--open' : '')}
@@ -1189,35 +1200,46 @@ export default function Sidebar(props: Props) {
                         <span className="tree-cat__label">{c.name}</span>
                       </button>
                       <span className="tree-cat__count">{items.length}</span>
-                      <span className="tree-cat__tools">
-                        <button
-                          className="icon-btn"
-                          title="Add Folder or Board"
-                          aria-label="Add to category"
-                          onClick={(e) => setAddMenu({ x: e.clientX, y: e.clientY, catId: c.id })}
-                        >
-                          <PlusIcon />
-                        </button>
-                        <button
-                          className="icon-btn"
-                          title="Rename"
-                          aria-label="Rename category"
-                          onClick={() => {
-                            setEditingId(c.id)
-                            setEditName(c.name)
-                          }}
-                        >
-                          <PencilIcon />
-                        </button>
-                        <button
-                          className="icon-btn icon-btn--danger"
-                          title="Delete Category"
-                          aria-label="Delete category"
-                          onClick={() => onDeleteCategory(c.id)}
-                        >
-                          <TrashIcon />
-                        </button>
-                      </span>
+                      {/* A category shared with me is read-through: no edit tools. */}
+                      {!c.shared && (
+                        <span className="tree-cat__tools">
+                          <button
+                            className="icon-btn"
+                            title="Add Folder or Board"
+                            aria-label="Add to category"
+                            onClick={(e) => setAddMenu({ x: e.clientX, y: e.clientY, catId: c.id })}
+                          >
+                            <PlusIcon />
+                          </button>
+                          <button
+                            className="icon-btn"
+                            title="Share Category"
+                            aria-label="Share category"
+                            onClick={() => onShareCategory(c)}
+                          >
+                            <ShareIcon />
+                          </button>
+                          <button
+                            className="icon-btn"
+                            title="Rename"
+                            aria-label="Rename category"
+                            onClick={() => {
+                              setEditingId(c.id)
+                              setEditName(c.name)
+                            }}
+                          >
+                            <PencilIcon />
+                          </button>
+                          <button
+                            className="icon-btn icon-btn--danger"
+                            title="Delete Category"
+                            aria-label="Delete category"
+                            onClick={() => onDeleteCategory(c.id)}
+                          >
+                            <TrashIcon />
+                          </button>
+                        </span>
+                      )}
                     </div>
                   )}
                   <div className="tree-collapse" data-open={isOpen} aria-hidden={!isOpen}>
@@ -1367,6 +1389,41 @@ export default function Sidebar(props: Props) {
             },
           ]}
           onClose={() => setFolderMenu(null)}
+        />
+      )}
+
+      {catMenu && (
+        <ContextMenu
+          x={catMenu.x}
+          y={catMenu.y}
+          items={[
+            {
+              label: 'New Folder',
+              mnemonic: 'f',
+              onClick: () => beginCreate('cat:' + catMenu.cat.id, 'folder'),
+            },
+            {
+              label: 'New Board',
+              mnemonic: 'b',
+              onClick: () => beginCreate('cat:' + catMenu.cat.id, 'board'),
+            },
+            { label: 'Share Category', mnemonic: 's', onClick: () => onShareCategory(catMenu.cat) },
+            {
+              label: 'Rename',
+              mnemonic: 'r',
+              onClick: () => {
+                setEditingId(catMenu.cat.id)
+                setEditName(catMenu.cat.name)
+              },
+            },
+            {
+              label: 'Delete',
+              mnemonic: 'd',
+              danger: true,
+              onClick: () => onDeleteCategory(catMenu.cat.id),
+            },
+          ]}
+          onClose={() => setCatMenu(null)}
         />
       )}
 
