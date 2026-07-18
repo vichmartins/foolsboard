@@ -865,6 +865,7 @@ function Workspace() {
           onCreateCategory={createCategory}
           onRenameCategory={renameCategory}
           onDeleteCategory={deleteCategory}
+          onShareCategory={(c) => setShareTarget({ type: 'category', id: c.id, name: c.name })}
           onReorderCategories={reorderCategories}
           onFileItem={fileItem}
           onFileItems={fileItems}

@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Board, Folder } from '../types'
 import OwnerIcon from './OwnerIcon'
-import { FolderIcon } from './icons'
+import { FolderIcon, PencilIcon, ShareIcon, TrashIcon } from './icons'
 
 const BOARD_DND = 'application/x-foolsboard-board'
 const FOLDER_DND = 'application/x-foolsboard-folder'
@@ -287,7 +287,7 @@ export default function FolderSelect({
                         aria-label="Share folder"
                         onClick={() => onShare(f)}
                       >
-                        ⤴
+                        <ShareIcon />
                       </button>
                       <button
                         className="folder-row__act"
@@ -298,7 +298,7 @@ export default function FolderSelect({
                           setEditName(f.name)
                         }}
                       >
-                        ✎
+                        <PencilIcon />
                       </button>
                       <button
                         className="folder-row__act folder-row__act--danger"
@@ -306,7 +306,7 @@ export default function FolderSelect({
                         aria-label="Delete folder"
                         onClick={() => onDelete(f.id)}
                       >
-                        ✕
+                        <TrashIcon />
                       </button>
                     </>
                   )}

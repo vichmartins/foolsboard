@@ -1196,6 +1196,10 @@
   cursor: pointer;
   opacity: 0;
 }
+.folder-row__act svg {
+  width: 14px;
+  height: 14px;
+}
 .folder-row:hover .folder-row__act {
   opacity: 1;
 }

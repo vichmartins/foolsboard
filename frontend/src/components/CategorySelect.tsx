@@ -5,7 +5,7 @@
 // into that category. Shared-with-me categories are shown read-through.
 import { useEffect, useRef, useState } from 'react'
 import type { Category } from '../types'
-import { CategoryIcon } from './icons'
+import { CategoryIcon, PencilIcon, ShareIcon, TrashIcon } from './icons'
 import OwnerIcon from './OwnerIcon'
 
 const BOARD_DND = 'application/x-foolsboard-board'
@@ -278,7 +278,7 @@ export default function CategorySelect({
                         aria-label="Share category"
                         onClick={() => onShare(c)}
                       >
-                        ⤴
+                        <ShareIcon />
                       </button>
                       <button
                         className="folder-row__act"
@@ -289,7 +289,7 @@ export default function CategorySelect({
                           setEditName(c.name)
                         }}
                       >
-                        ✎
+                        <PencilIcon />
                       </button>
                       <button
                         className="folder-row__act folder-row__act--danger"
@@ -297,7 +297,7 @@ export default function CategorySelect({
                         aria-label="Delete category"
                         onClick={() => onDelete(c.id)}
                       >
-                        ✕
+                        <TrashIcon />
                       </button>
                     </>
                   )}
