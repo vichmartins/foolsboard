@@ -1547,23 +1547,27 @@
      doesn't briefly add a horizontal scrollbar that jolts the layout. */
   overflow: hidden;
 }
-/* Switching boards remounts the canvas; fade the node/edge layer in so a board's
-   contents arrive smoothly instead of popping. Only the viewport (nodes + edges)
-   animates -- the dotted background and controls stay put. Opacity only, so it
-   never fights React Flow's pan/zoom transform on the same element. */
-.canvas-wrap .react-flow__viewport {
-  animation: board-content-in 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+/* Switching boards remounts the canvas; animate the node/edge layer in so a
+   board's contents settle into place instead of popping. We target the pane
+   (which holds only the pan/zoom viewport) -- the dotted background, controls and
+   minimap are its siblings and stay put. Scaling the pane is safe: it composes
+   with the viewport's own pan/zoom transform rather than overwriting it, giving a
+   gentle grow-and-fade from the canvas centre. */
+.canvas-wrap .react-flow__pane {
+  animation: board-content-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @keyframes board-content-in {
   from {
     opacity: 0;
+    transform: scale(0.94);
   }
   to {
     opacity: 1;
+    transform: scale(1);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .canvas-wrap .react-flow__viewport {
+  .canvas-wrap .react-flow__pane {
     animation: none;
   }
 }
