@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.109.0
+
+- feature: **Categories can now be shared**, with full folder parity — share,
+  rename, delete, drag-reorder, sort, and drop boards/folders onto them to file.
+  Sharing a category grants the recipient the category and everything filed in it
+  (its folders and their boards, plus any loose boards); it shows up in their
+  explorer with the owner's name, and the owner gets a shared-out crown. Your
+  per-user layout is unchanged, so you can still file shared items into your own
+  categories. Existing categories are migrated automatically.
+
 ## v0.108.14
 
 - polish: The canvas lock control now **collapses/expands smoothly** when a board's

@@ -8,10 +8,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from .. import categories_svc
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import Board, BoardTemplate, Folder, Share, User
+from ..models import Board, BoardTemplate, Category, Folder, Share, User
 from ..realtime import hub
 from ..schemas import ShareCreate, ShareOut, ShareUserOut
 
@@ -34,6 +35,14 @@ def _user_out(u: User | None) -> ShareUserOut | None:
     return ShareUserOut(id=u.id, username=u.username) if u else None
 
 
+def _resource_type(share: Share) -> str:
+    if share.board_id:
+        return "board"
+    if share.folder_id:
+        return "folder"
+    return "category"
+
+
 def _resource_name(share: Share, db: Session) -> str | None:
     if share.board_id:
         b = db.get(Board, share.board_id)
@@ -41,15 +50,19 @@ def _resource_name(share: Share, db: Session) -> str | None:
     if share.folder_id:
         f = db.get(Folder, share.folder_id)
         return f.name if f else None
+    if share.category_id:
+        c = db.get(Category, share.category_id)
+        return c.name if c else None
     return None
 
 
 def _to_out(share: Share, db: Session) -> ShareOut:
     return ShareOut(
         id=share.id,
-        resource_type="board" if share.board_id else "folder",
+        resource_type=_resource_type(share),
         board_id=share.board_id,
         folder_id=share.folder_id,
+        category_id=share.category_id,
         resource_name=_resource_name(share, db),
         status=share.status,
         permission=share.permission,
@@ -64,6 +77,7 @@ def _to_out_batch(shares: list[Share], db: Session) -> list[ShareOut]:
     names and the owner/recipient users are fetched in one query each."""
     board_ids = {s.board_id for s in shares if s.board_id}
     folder_ids = {s.folder_id for s in shares if s.folder_id}
+    category_ids = {s.category_id for s in shares if s.category_id}
     user_ids = {s.owner_id for s in shares} | {s.shared_with_id for s in shares}
     boards = (
         dict(db.execute(select(Board.id, Board.name).where(Board.id.in_(board_ids))).all())
@@ -73,17 +87,30 @@ def _to_out_batch(shares: list[Share], db: Session) -> list[ShareOut]:
         dict(db.execute(select(Folder.id, Folder.name).where(Folder.id.in_(folder_ids))).all())
         if folder_ids else {}
     )
+    categories = (
+        dict(db.execute(select(Category.id, Category.name).where(Category.id.in_(category_ids))).all())
+        if category_ids else {}
+    )
     users = (
         {u.id: u for u in db.scalars(select(User).where(User.id.in_(user_ids)))}
         if user_ids else {}
     )
+
+    def _name(s: Share) -> str | None:
+        if s.board_id:
+            return boards.get(s.board_id)
+        if s.folder_id:
+            return folders.get(s.folder_id)
+        return categories.get(s.category_id)
+
     return [
         ShareOut(
             id=s.id,
-            resource_type="board" if s.board_id else "folder",
+            resource_type=_resource_type(s),
             board_id=s.board_id,
             folder_id=s.folder_id,
-            resource_name=boards.get(s.board_id) if s.board_id else folders.get(s.folder_id),
+            category_id=s.category_id,
+            resource_name=_name(s),
             status=s.status,
             permission=s.permission,
             owner=_user_out(users.get(s.owner_id)),
@@ -98,17 +125,22 @@ def _to_out_batch(shares: list[Share], db: Session) -> list[ShareOut]:
 def create_share(
     payload: ShareCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)
 ) -> ShareOut:
-    if bool(payload.board_id) == bool(payload.folder_id):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Share exactly one board or folder")
+    targets = [payload.board_id, payload.folder_id, payload.category_id]
+    if sum(t is not None for t in targets) != 1:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Share exactly one board, folder or category")
     # The caller must own the resource being shared.
     if payload.board_id is not None:
         board = db.get(Board, payload.board_id)
         if board is None or board.owner_id != user.id:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Board not found")
-    else:
+    elif payload.folder_id is not None:
         folder = db.get(Folder, payload.folder_id)
         if folder is None or folder.owner_id != user.id:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Folder not found")
+    else:
+        # Sync the JSON layout into a DB row first, so a just-created category shares.
+        if categories_svc.ensure_owned_category(db, user, payload.category_id) is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Category not found")
 
     ident = payload.recipient.strip().lower()
     recipient = db.scalar(
@@ -126,6 +158,7 @@ def create_share(
             Share.shared_with_id == recipient.id,
             Share.board_id == payload.board_id,
             Share.folder_id == payload.folder_id,
+            Share.category_id == payload.category_id,
         )
     )
     if existing is not None:
@@ -144,13 +177,14 @@ def create_share(
         shared_with_id=recipient.id,
         board_id=payload.board_id,
         folder_id=payload.folder_id,
+        category_id=payload.category_id,
     )
     db.add(share)
     db.commit()
     db.refresh(share)
     _notify(share.shared_with_id, "incoming", share, db)
     _notify(share.owner_id, "outgoing", share, db)  # owner: refresh crown badge
-    kind = "board" if payload.board_id else "folder"
+    kind = _resource_type(share)
     log_event(db, user=user, action="share.create", entity_type="share", entity_id=share.id,
               summary=f"shared a {kind} with {recipient.username}")
     return _to_out(share, db)

@@ -95,6 +95,7 @@ class ShareCreate(BaseModel):
     recipient: str  # username or email of the person to share with
     board_id: UUID | None = None
     folder_id: UUID | None = None
+    category_id: UUID | None = None
 
 
 class ShareUserOut(BaseModel):
@@ -104,9 +105,10 @@ class ShareUserOut(BaseModel):
 
 class ShareOut(BaseModel):
     id: UUID
-    resource_type: str  # 'board' | 'folder'
+    resource_type: str  # 'board' | 'folder' | 'category'
     board_id: UUID | None = None
     folder_id: UUID | None = None
+    category_id: UUID | None = None
     resource_name: str | None = None
     status: str
     permission: str
@@ -295,6 +297,10 @@ class CategoryIn(BaseModel):
     id: str = Field(max_length=64)
     name: str = Field(min_length=1, max_length=120)
     items: list[str] = Field(default_factory=list)  # ordered folder/board ids
+    # Output-only flags (ignored on input). A category can be shared like a folder.
+    shared: bool = False  # shared with me (owned by someone else)
+    shared_out: bool = False  # I own it and have shared it out (crown badge)
+    owner_name: str | None = None  # username of the owner, when shared with me
 
 
 class CategoriesPayload(BaseModel):

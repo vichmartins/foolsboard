@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from .. import categories_svc
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
@@ -44,6 +45,10 @@ def list_folders(
             )
         )
     )
+    # Folders reachable through a category shared with me.
+    cat_ids = categories_svc.shared_category_ids(db, user)
+    if cat_ids:
+        folder_ids |= set(db.scalars(select(Folder.id).where(Folder.category_id.in_(cat_ids))))
     shared = (
         list(db.scalars(select(Folder).where(Folder.id.in_(folder_ids), Folder.owner_id != user.id)))
         if folder_ids

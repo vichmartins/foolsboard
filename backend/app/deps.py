@@ -14,7 +14,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from .database import get_db
-from .models import Board, Node, Share, User
+from .models import Board, Folder, Node, Share, User
 from .security import decode_token
 
 _bearer = HTTPBearer(auto_error=False)
@@ -45,19 +45,31 @@ def get_current_admin(user: User = Depends(get_current_user)) -> User:
 
 
 def can_access_board(board: Board, user: User, db: Session) -> bool:
-    """True if the user owns the board or has an accepted share for it (directly
-    or via a share on the board's folder)."""
+    """True if the user owns the board or has an accepted share for it -- directly,
+    via a share on the board's folder, or via a share on the category the board (or
+    its folder) is filed in."""
     if board.owner_id == user.id:
         return True
+    # Categories that would grant access: the board's own, and its folder's.
+    cat_targets: set = set()
+    if board.category_id is not None:
+        cat_targets.add(board.category_id)
+    if board.folder_id is not None:
+        folder = db.get(Folder, board.folder_id)
+        if folder is not None and folder.category_id is not None:
+            cat_targets.add(folder.category_id)
+    conds = [
+        Share.board_id == board.id,
+        and_(Share.folder_id.is_not(None), Share.folder_id == board.folder_id),
+    ]
+    if cat_targets:
+        conds.append(and_(Share.category_id.is_not(None), Share.category_id.in_(cat_targets)))
     return (
         db.scalar(
             select(Share.id).where(
                 Share.shared_with_id == user.id,
                 Share.status == "accepted",
-                or_(
-                    Share.board_id == board.id,
-                    and_(Share.folder_id.is_not(None), Share.folder_id == board.folder_id),
-                ),
+                or_(*conds),
             )
         )
         is not None
