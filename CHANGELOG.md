@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.109.2
+
+- fix: **Import now syncs imported categories to the database** (creates the
+  category + files its folders/boards), so an imported category is immediately
+  consistent and shareable instead of only living in the layout until the next
+  save.
+- fix: The Export picker no longer offers **shared (not-owned) boards, folders or
+  categories** — the server can't export someone else's items, so listing them
+  was misleading.
+
 ## v0.109.1
 
 - polish: The category (and folder) picker's row actions now use the app's themed

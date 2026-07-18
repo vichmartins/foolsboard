@@ -37,6 +37,42 @@ def test_export_then_import_round_trip(client, admin):
     assert any(n["title"] == "Scene 1" for n in graph["nodes"])
 
 
+def test_category_export_import_round_trip_and_db_sync(client, admin, db):
+    """Exporting a category carries its folders/boards; importing recreates the
+    category AND syncs it to the DB (Category row + folder.category_id) so it's
+    immediately consistent and shareable, not just present in the JSON layout."""
+    from app.models import Category, Folder
+
+    token, _ = admin
+    fid = client.post("/api/folders", json={"name": "Act One"}, headers=auth(token)).json()["id"]
+    bid = new_board(client, token, "Scene")
+    client.patch(f"/api/boards/{bid}/folder", json={"folder_id": fid}, headers=auth(token))
+    cat_id = str(uuid.uuid4())
+    layout = {"categories": [{"id": cat_id, "name": "Season 1", "items": [fid]}], "top": []}
+    assert client.put("/api/auth/me/categories", json=layout, headers=auth(token)).status_code == 200
+
+    ex = client.post("/api/boards/export", json={"category_ids": [cat_id]}, headers=auth(token))
+    assert ex.status_code == 200, ex.text
+    imp = client.post(
+        "/api/boards/import",
+        files={"file": ("b.zip", io.BytesIO(ex.content), "application/zip")},
+        headers=auth(token),
+    )
+    assert imp.status_code == 200, imp.text
+
+    # A fresh "Season 1" category (distinct id) now exists with one folder item.
+    cats = client.get("/api/auth/me/categories", headers=auth(token)).json()["categories"]
+    imported = [c for c in cats if c["name"] == "Season 1" and c["id"] != cat_id]
+    assert imported, cats
+    new_cat = imported[0]
+    assert len(new_cat["items"]) == 1
+
+    # DB is in sync: the Category row exists and the imported folder points at it.
+    new_folder = db.get(Folder, uuid.UUID(new_cat["items"][0]))
+    assert new_folder is not None and str(new_folder.category_id) == new_cat["id"]
+    assert db.get(Category, uuid.UUID(new_cat["id"])) is not None
+
+
 def test_import_rejects_non_zip(client, admin):
     token, _ = admin
     r = client.post(

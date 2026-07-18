@@ -75,21 +75,26 @@ export default function ImportExportDialog({
   const toggle = toggleIn(setSelected)
   const toggleFolder = toggleIn(setSelectedFolders)
   const toggleCategory = toggleIn(setSelectedCategories)
-  // "Everything" = every category + folder + board selected at once.
+  // Only items you own are exportable -- a shared board/folder/category belongs to
+  // someone else, so the server would skip it. Keep them out of the export tree.
+  const ownBoards = boards.filter((b) => !b.shared)
+  const ownFolders = folders.filter((f) => !f.shared)
+  const ownCategories = categories.filter((c) => !c.shared)
+  // "Everything" = every category + folder + board you own selected at once.
   const everythingOn =
-    boards.length + folders.length + categories.length > 0 &&
-    selected.size === boards.length &&
-    selectedFolders.size === folders.length &&
-    selectedCategories.size === categories.length
+    ownBoards.length + ownFolders.length + ownCategories.length > 0 &&
+    selected.size === ownBoards.length &&
+    selectedFolders.size === ownFolders.length &&
+    selectedCategories.size === ownCategories.length
   const toggleEverything = () => {
     if (everythingOn) {
       setSelected(new Set())
       setSelectedFolders(new Set())
       setSelectedCategories(new Set())
     } else {
-      setSelected(new Set(boards.map((b) => b.id)))
-      setSelectedFolders(new Set(folders.map((f) => f.id)))
-      setSelectedCategories(new Set(categories.map((c) => c.id)))
+      setSelected(new Set(ownBoards.map((b) => b.id)))
+      setSelectedFolders(new Set(ownFolders.map((f) => f.id)))
+      setSelectedCategories(new Set(ownCategories.map((c) => c.id)))
     }
   }
   // --- navigable export tree (mirrors the Merge picker) ---------------------
@@ -165,7 +170,9 @@ export default function ImportExportDialog({
     return null
   }
 
-  const topItems = orderedTop.filter((id) => boardById.has(id) || folderById.has(id))
+  const topItems = orderedTop.filter(
+    (id) => !boardById.get(id)?.shared && !folderById.get(id)?.shared && (boardById.has(id) || folderById.has(id)),
+  )
 
   function exportFilename(ids: string[], fids: string[]): string {
     if (fids.length === 1 && ids.length === 0) {
@@ -307,7 +314,7 @@ export default function ImportExportDialog({
               </label>
               <div className="merge-tree">
                 {topItems.map((id) => renderItem(id, 0))}
-                {categories.map((c) => {
+                {ownCategories.map((c) => {
                   const open = !collapsed.has(c.id)
                   // Only items that still exist (a deleted board leaves a dead id).
                   const items = c.items.filter((id) => boardById.has(id) || folderById.has(id))
@@ -318,7 +325,7 @@ export default function ImportExportDialog({
                     </div>
                   )
                 })}
-                {topItems.length === 0 && categories.length === 0 && (
+                {topItems.length === 0 && ownCategories.length === 0 && (
                   <p className="merge-tree__empty">Nothing to export yet.</p>
                 )}
               </div>
