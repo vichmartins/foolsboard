@@ -2274,7 +2274,7 @@ function CanvasInner({
 
       {selectionRect && <MinimapSelection rect={selectionRect} />}
 
-      {!nodes.length && (
+      {!loading && !nodes.length && (
         <div className="canvas-hint">Right-click anywhere to create your first object</div>
       )}
 
