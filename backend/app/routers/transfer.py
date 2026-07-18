@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .. import categories_svc
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
@@ -516,6 +517,11 @@ def _do_import(zf: zipfile.ZipFile, db: Session, user: User) -> list[Board]:
         if not isinstance(layout.get("top"), list):
             layout["top"] = []
         user.categories = json.dumps(layout)
+        # Categories are now shareable DB entities: mirror the freshly imported
+        # layout into Category rows + set category_id on the new folders/boards,
+        # so an imported category is immediately consistent (and shareable) rather
+        # than only existing in the JSON until the next save.
+        categories_svc.sync_owned_categories(db, user, categories_svc.parse_layout(user))
 
     db.commit()
     for board in created:
