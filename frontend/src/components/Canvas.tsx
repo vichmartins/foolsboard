@@ -287,6 +287,14 @@ function CanvasInner({
   // Canvas lock (replaces React Flow's built-in interactive button so its tooltip
   // can match our styling): when locked, objects can't be moved/selected/linked.
   const [locked, setLocked] = useState(false)
+  // The canvas remounts per board, so to animate the lock control's collapse when
+  // *opening* a template we render it expanded for one frame, then flip it hidden
+  // so the CSS transition fires (a transition can't animate an initial mount).
+  const [lockCollapsed, setLockCollapsed] = useState(false)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setLockCollapsed(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
   // Where playthrough begins: set by "Play from here" (a specific object), else
   // null so it falls back to the current selection / the start chooser.
   const [playStart, setPlayStart] = useState<string | null>(null)
@@ -2197,7 +2205,7 @@ function CanvasInner({
               kept mounted so it collapses/expands smoothly as read-only toggles
               (e.g. "Unlock to Edit") rather than popping in/out. */}
           <ControlButton
-            className={'rf-icon-btn rf-lock-btn' + (ro ? ' rf-lock-btn--hidden' : '')}
+            className={'rf-icon-btn rf-lock-btn' + (ro && lockCollapsed ? ' rf-lock-btn--hidden' : '')}
             onClick={() => !ro && setLocked((v) => !v)}
             title={locked ? 'Unlock the Canvas' : 'Lock the Canvas (prevent moving objects)'}
             aria-label="Toggle canvas lock"
