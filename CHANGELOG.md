@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.109.3
+
+- fix: The canvas lock control now collapses **fully** on a template instead of
+  leaving an ~8px gap in the controls stack — its padding/border are collapsed
+  along with its height (with border-box, max-height alone couldn't shrink past
+  the padding).
+
 ## v0.109.2
 
 - fix: **Import now syncs imported categories to the database** (creates the
