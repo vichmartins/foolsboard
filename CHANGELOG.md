@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.109.7
+
+- polish: The board-switch transition is now a more noticeable **grow-and-fade**
+  (0.5s) — the contents gently scale up from the canvas centre as they fade in,
+  instead of a quick fade. Pan/zoom, background, and controls are unaffected.
+
 ## v0.109.6
 
 - polish: Switching boards now **fades the board's contents in** smoothly instead
