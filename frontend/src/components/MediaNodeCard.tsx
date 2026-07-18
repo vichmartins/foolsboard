@@ -17,7 +17,6 @@ import { collabColor } from '../collab'
 import { realtime } from '../realtime'
 import { FlipIcon, ResizeGripIcon, RotateIcon } from './icons'
 import AudioPlayer from './AudioPlayer'
-import VideoPlayer from './VideoPlayer'
 
 const SIDES: Position[] = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
@@ -374,18 +373,22 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
     )
   } else if (mk === 'video') {
     body = (
-      // key on the url so a background re-encode that swaps the file mounts a
-      // fresh element instead of reusing an errored one. Custom controls (not the
-      // native ones) keep every button -- including PiP and fullscreen -- inside
-      // the object so nothing drifts off it during a board pan.
-      <VideoPlayer
+      <video
+        // key on the url so that when a background re-encode swaps the file
+        // (e.g. a briefly-shown stale/deleted source is replaced by the live
+        // one), React mounts a fresh element instead of reusing an errored one —
+        // a media element that has failed to load won't recover from just a
+        // `src` attribute change.
         key={url}
-        src={url}
-        poster={thumb || undefined}
-        style={sizeStyle}
-        rootRef={(el) => {
+        ref={(el) => {
           mediaRef.current = el
         }}
+        className="media-node__video nodrag"
+        src={url}
+        poster={thumb || undefined}
+        controls
+        preload="metadata"
+        style={sizeStyle}
       />
     )
   } else if (mk === 'audio') {
