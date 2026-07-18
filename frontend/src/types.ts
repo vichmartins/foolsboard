@@ -31,6 +31,9 @@ export interface Category {
   id: string
   name: string
   items: string[]
+  shared?: boolean // shared with me (owned by someone else)
+  shared_out?: boolean // I own it and have shared it out (crown badge)
+  owner_name?: string | null // username of the owner, when shared with me
 }
 
 export interface ShareUser {
@@ -40,9 +43,10 @@ export interface ShareUser {
 
 export interface Share {
   id: string
-  resource_type: 'board' | 'folder'
+  resource_type: 'board' | 'folder' | 'category'
   board_id: string | null
   folder_id: string | null
+  category_id: string | null
   resource_name: string | null
   status: 'pending' | 'accepted' | 'rejected'
   permission: string

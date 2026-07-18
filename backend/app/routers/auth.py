@@ -3,7 +3,6 @@ current user's profile / password / avatar management."""
 from __future__ import annotations
 
 import io
-import json
 import random
 from datetime import datetime, timezone
 
@@ -11,6 +10,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.orm import Session
 
+from .. import categories_svc
 from ..audit import log_event
 from ..database import get_db
 from ..deps import get_current_user
@@ -189,14 +189,12 @@ def get_me(user: User = Depends(get_current_user)) -> UserOut:
 
 
 @router.get("/me/categories", response_model=CategoriesPayload)
-def get_categories(user: User = Depends(get_current_user)) -> CategoriesPayload:
-    """The user's explorer layout (categories + their member folder/board ids)."""
-    if not user.categories:
-        return CategoriesPayload()
-    try:
-        return CategoriesPayload.model_validate(json.loads(user.categories))
-    except (ValueError, TypeError):
-        return CategoriesPayload()
+def get_categories(
+    user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> CategoriesPayload:
+    """The user's explorer layout: their own categories (+ shared-out flags) plus
+    any categories shared with them (contents from the owner's placement)."""
+    return categories_svc.build_payload(db, user)
 
 
 @router.put("/me/categories", response_model=CategoriesPayload)
@@ -205,9 +203,13 @@ def set_categories(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> CategoriesPayload:
-    user.categories = payload.model_dump_json()
+    # The JSON stays the source of truth for per-user layout (so shared items can
+    # be filed too); the DB mirror keeps the shareable identity + membership index.
+    own = CategoriesPayload(categories=[c for c in payload.categories if not c.shared], top=payload.top)
+    user.categories = own.model_dump_json()
+    categories_svc.sync_owned_categories(db, user, own)
     db.commit()
-    return payload
+    return categories_svc.build_payload(db, user)
 
 
 @router.put("/me/last-board", status_code=status.HTTP_204_NO_CONTENT)

@@ -49,7 +49,7 @@ import type { Board, Category, Folder } from './types'
 import { genId } from './types'
 import './App.css'
 
-type ShareTarget = { type: 'board' | 'folder'; id: string; name: string; isTemplate?: boolean }
+type ShareTarget = { type: 'board' | 'folder' | 'category'; id: string; name: string; isTemplate?: boolean }
 
 function Workspace() {
   const { user } = useAuth()
@@ -362,6 +362,15 @@ function Workspace() {
   function refreshLists() {
     api.listBoards().then(setBoards).catch(() => {})
     api.listFolders().then(setFolders).catch(() => {})
+    // A category may have been shared with (or by) me -- refresh the layout so the
+    // shared category (and the owner's shared-out crown) shows up without a reload.
+    api
+      .getLayout()
+      .then(({ categories, top }) => {
+        setCategories(categories)
+        setTopOrder(top)
+      })
+      .catch(() => {})
   }
 
   async function makePrivateCopy(board: Board, dest: string) {
@@ -645,6 +654,9 @@ function Workspace() {
           onRename={renameCategory}
           onDelete={deleteCategory}
           onSort={sortCategories}
+          onReorder={reorderCategories}
+          onShare={(c) => setShareTarget({ type: 'category', id: c.id, name: c.name })}
+          onDropItem={(itemId, categoryId) => fileItem(itemId, categoryId)}
         />
 
         <FolderSelect

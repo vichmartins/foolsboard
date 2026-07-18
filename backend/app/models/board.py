@@ -44,6 +44,12 @@ class Board(UUIDMixin, TimestampMixin, Base):
         ForeignKey("folders.id", ondelete="SET NULL"), nullable=True, index=True
     )
 
+    # Optional category this board is filed directly under (null = uncategorized).
+    # Deleting a category just uncategorizes its items (SET NULL).
+    category_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+
     nodes: Mapped[list["Node"]] = relationship(
         back_populates="board",
         cascade="all, delete-orphan",

@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from .. import categories_svc
 from ..audit import log_event
 from ..database import get_db
 from ..deps import can_access_board, get_current_user
@@ -155,12 +156,23 @@ def list_boards(
             )
         )
     )
+    # Boards reachable through a category shared with me: loose boards filed
+    # directly in it, plus boards inside folders that are filed in it.
+    cat_ids = categories_svc.shared_category_ids(db, user)
+    cat_folder_ids = (
+        set(db.scalars(select(Folder.id).where(Folder.category_id.in_(cat_ids))))
+        if cat_ids else set()
+    )
     shared: list[Board] = []
     conds = []
     if board_ids:
         conds.append(Board.id.in_(board_ids))
     if folder_ids:
         conds.append(Board.folder_id.in_(folder_ids))
+    if cat_ids:
+        conds.append(Board.category_id.in_(cat_ids))
+    if cat_folder_ids:
+        conds.append(Board.folder_id.in_(cat_folder_ids))
     if conds:
         shared = list(
             db.scalars(select(Board).where(Board.owner_id != user.id, or_(*conds)))

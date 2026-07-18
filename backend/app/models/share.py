@@ -1,8 +1,10 @@
-"""A Share grants another user access to one of your boards or folders.
+"""A Share grants another user access to one of your boards, folders or categories.
 
-Exactly one of board_id / folder_id is set (enforced by the router). A folder
-share grants access to every board currently in that folder. status moves
-pending -> accepted / rejected; only accepted shares grant access.
+Exactly one of board_id / folder_id / category_id is set (enforced by the router).
+A folder share grants access to every board in that folder; a category share grants
+access to the category and everything filed in it (its folders and their boards,
+plus any loose boards). status moves pending -> accepted / rejected; only accepted
+shares grant access.
 """
 from __future__ import annotations
 
@@ -23,6 +25,9 @@ class Share(UUIDMixin, TimestampMixin, Base):
     )
     folder_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("folders.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    category_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("categories.id", ondelete="CASCADE"), nullable=True, index=True
     )
     # Who shared it, and who it's shared with.
     owner_id: Mapped[UUID] = mapped_column(

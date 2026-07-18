@@ -362,6 +362,7 @@ export async function createShare(payload: {
   recipient: string
   board_id?: string
   folder_id?: string
+  category_id?: string
 }): Promise<Share> {
   return (await http.post('/shares', payload)).data
 }

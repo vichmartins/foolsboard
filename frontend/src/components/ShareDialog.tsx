@@ -15,7 +15,7 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 interface Props {
-  resourceType: 'board' | 'folder'
+  resourceType: 'board' | 'folder' | 'category'
   resourceId: string
   resourceName: string
   isTemplate?: boolean
@@ -43,7 +43,11 @@ export default function ShareDialog({
         if (!alive) return
         setShares(
           all.filter((s) =>
-            resourceType === 'board' ? s.board_id === resourceId : s.folder_id === resourceId,
+            resourceType === 'board'
+              ? s.board_id === resourceId
+              : resourceType === 'folder'
+                ? s.folder_id === resourceId
+                : s.category_id === resourceId,
           ),
         )
       })
@@ -66,7 +70,9 @@ export default function ShareDialog({
       await api.createShare(
         resourceType === 'board'
           ? { recipient: r, board_id: resourceId }
-          : { recipient: r, folder_id: resourceId },
+          : resourceType === 'folder'
+            ? { recipient: r, folder_id: resourceId }
+            : { recipient: r, category_id: resourceId },
       )
       setRecipient('')
       setTick((t) => t + 1)
@@ -86,7 +92,14 @@ export default function ShareDialog({
     <div className="overlay" onMouseDown={onClose}>
       <div className="dialog" onMouseDown={(e) => e.stopPropagation()}>
         <h2 className="dialog__title">
-          Share {isTemplate ? 'Template' : resourceType === 'board' ? 'Board' : 'Folder'}
+          Share{' '}
+          {isTemplate
+            ? 'Template'
+            : resourceType === 'board'
+              ? 'Board'
+              : resourceType === 'folder'
+                ? 'Folder'
+                : 'Category'}
         </h2>
         <p className="dialog__message">
           Share <strong>{resourceName}</strong> with another user by username or email. They can
