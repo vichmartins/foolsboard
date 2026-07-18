@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.109.4
+
+- polish: The canvas lock control now actually **animates** its collapse when you
+  open a template (the canvas remounts per board, so it's rendered expanded for
+  one frame then transitioned closed), instead of just appearing already-gone. It
+  still expands smoothly on Unlock to Edit, and respects reduced-motion.
+
 ## v0.109.3
 
 - fix: The canvas lock control now collapses **fully** on a template instead of
