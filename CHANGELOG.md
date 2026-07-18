@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.109.14
+
+- fix: Switching from one template to another no longer makes the canvas lock
+  button twitch (briefly flash in, then re-collapse). It now only animates when
+  the read-only state actually changes between boards, so template → template
+  keeps it cleanly hidden.
+
 ## v0.109.13
 
 - revert: Reverted all recent video-object changes (custom player, disabled PiP,
