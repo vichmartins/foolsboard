@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.109.8
+
+- feature: Boards now show a themed **loading spinner** (accent ring with a soft
+  glow) while the graph is fetched, and the content then grows-and-fades in once
+  it actually arrives — so slower boards get a proper reveal instead of a blank
+  canvas. The spinner is delayed slightly so quick loads never flash it; respects
+  reduced-motion.
+
 ## v0.109.7
 
 - polish: The board-switch transition is now a more noticeable **grow-and-fade**

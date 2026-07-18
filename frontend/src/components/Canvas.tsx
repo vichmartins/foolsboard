@@ -282,6 +282,9 @@ function CanvasInner({
 
   const [nodes, setNodes] = useState<Node[]>([])
   const [edges, setEdges] = useState<Edge[]>([])
+  // True while the board's graph is being fetched (shows the loading overlay and
+  // gates the content reveal so it animates in once the real data arrives).
+  const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [playOpen, setPlayOpen] = useState(false)
   // Canvas lock (replaces React Flow's built-in interactive button so its tooltip
@@ -467,6 +470,7 @@ function CanvasInner({
   // Load the whole board graph whenever the board changes.
   useEffect(() => {
     let active = true
+    setLoading(true)
     setAssetsById(new Map()) // drop the previous board's assets while loading
     refreshAssets()
     api
@@ -476,11 +480,15 @@ function CanvasInner({
         setNodes(g.nodes.map((n) => toRFNode(n)))
         setEdges(g.edges.map(toRFEdge))
         setSelectedId(null)
+        setLoading(false)
       })
       .catch(() => {
         // Don't leave an unhandled rejection / blank canvas; a board_dirty or the
         // next board switch will retry.
-        if (active) onToast?.('Could not load this board — retrying on the next change.')
+        if (active) {
+          onToast?.('Could not load this board — retrying on the next change.')
+          setLoading(false)
+        }
       })
     return () => {
       active = false
@@ -2111,7 +2119,9 @@ function CanvasInner({
     <MediaAssetContext.Provider value={assetsById}>
     <NodeEditContext.Provider value={handleNodeEdited}>
     <div
-      className={'canvas-wrap' + (ro ? ' canvas-wrap--readonly' : '')}
+      className={
+        'canvas-wrap' + (ro ? ' canvas-wrap--readonly' : '') + (loading ? '' : ' canvas-wrap--loaded')
+      }
       style={{ '--me-color': myColor } as React.CSSProperties}
       onPointerMove={broadcastCursor}
       // Element-level file-drop zone. Some Chromium setups (e.g. a VPN/privacy
@@ -2138,6 +2148,11 @@ function CanvasInner({
         else void createMediaNodesAtRef.current(files, e.clientX, e.clientY)
       }}
     >
+      {loading && (
+        <div className="board-loader" aria-hidden="true">
+          <div className="board-loader__spinner" />
+        </div>
+      )}
       <ReactFlow
         nodes={displayNodes}
         edges={edges}
