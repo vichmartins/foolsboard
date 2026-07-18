@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.109.5
+
+- polish: The canvas lock control now animates in **both** directions — it
+  collapses when opening a template and expands back in when opening an editable
+  board (previously only the collapse animated). A timing fallback keeps the lock
+  from ever getting stuck hidden on an editable board.
+
 ## v0.109.4
 
 - polish: The canvas lock control now actually **animates** its collapse when you
