@@ -1699,12 +1699,18 @@
 .rf-lock-btn {
   max-height: 40px;
   overflow: hidden;
-  transition: max-height 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
+  transition: max-height 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+    padding 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
 }
+/* Collapse padding + border too, not just max-height -- with border-box the
+   button can't shrink below its vertical padding, which otherwise leaves an 8px
+   gap in the controls stack. */
 .rf-lock-btn--hidden {
   max-height: 0;
-  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
   border-bottom-width: 0;
+  opacity: 0;
   pointer-events: none;
 }
 
