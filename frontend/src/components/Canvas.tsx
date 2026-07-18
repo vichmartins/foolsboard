@@ -287,14 +287,24 @@ function CanvasInner({
   // Canvas lock (replaces React Flow's built-in interactive button so its tooltip
   // can match our styling): when locked, objects can't be moved/selected/linked.
   const [locked, setLocked] = useState(false)
-  // The canvas remounts per board, so to animate the lock control's collapse when
-  // *opening* a template we render it expanded for one frame, then flip it hidden
-  // so the CSS transition fires (a transition can't animate an initial mount).
-  const [lockCollapsed, setLockCollapsed] = useState(false)
+  // The canvas remounts per board, so a CSS transition can't animate the lock
+  // control's initial mount. To animate it in BOTH directions (collapse when
+  // opening a template, expand when opening an editable board) we render it in the
+  // opposite of its target state for one frame, then flip to the target so the
+  // transition fires. `lockReady` false = pre-flip (opposite), true = target.
+  const [lockReady, setLockReady] = useState(false)
   useEffect(() => {
-    const id = requestAnimationFrame(() => setLockCollapsed(true))
-    return () => cancelAnimationFrame(id)
+    const raf = requestAnimationFrame(() => setLockReady(true))
+    // Fallback so the control still reaches its target if rAF is throttled
+    // (e.g. a backgrounded tab), rather than staying stuck in the opposite state.
+    const timer = setTimeout(() => setLockReady(true), 80)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(timer)
+    }
   }, [])
+  // Target: hidden on a template (ro), shown otherwise. Pre-flip shows the opposite.
+  const lockHidden = lockReady ? ro : !ro
   // Where playthrough begins: set by "Play from here" (a specific object), else
   // null so it falls back to the current selection / the start chooser.
   const [playStart, setPlayStart] = useState<string | null>(null)
@@ -2205,7 +2215,7 @@ function CanvasInner({
               kept mounted so it collapses/expands smoothly as read-only toggles
               (e.g. "Unlock to Edit") rather than popping in/out. */}
           <ControlButton
-            className={'rf-icon-btn rf-lock-btn' + (ro && lockCollapsed ? ' rf-lock-btn--hidden' : '')}
+            className={'rf-icon-btn rf-lock-btn' + (lockHidden ? ' rf-lock-btn--hidden' : '')}
             onClick={() => !ro && setLocked((v) => !v)}
             title={locked ? 'Unlock the Canvas' : 'Lock the Canvas (prevent moving objects)'}
             aria-label="Toggle canvas lock"
