@@ -2559,54 +2559,56 @@
 .media-node__open:hover {
   background: var(--bg-hover);
 }
-/* Hover-reveal media controls (remove ✕ + download), shared by every media/link
-   node. They sit INSIDE the node's top-right corner -- over the media -- so they
-   travel with the object and read as part of it instead of floating outside and
-   drifting during a pan. A dark scrim keeps them legible over any image/video;
-   hover tints to the semantic colour (danger to remove, accent to download). */
-.media-node__del,
-.media-node__dl {
+/* Hover-reveal remove badge, shared by every media/link node. */
+.media-node__del {
   position: absolute;
-  top: 8px;
+  top: -8px;
+  right: -8px;
   z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   padding: 0;
-  border: 1px solid color-mix(in srgb, #ffffff 16%, transparent);
-  border-radius: 7px;
-  background: color-mix(in srgb, #000000 52%, transparent);
-  color: #fff;
-  cursor: pointer;
-  text-decoration: none;
-  opacity: 0;
-  transition: opacity 0.12s ease, background 0.12s ease, border-color 0.12s ease;
-}
-.media-node__del {
-  right: 8px;
-  font-size: 12px;
-  line-height: 1;
-}
-.media-node__dl {
-  right: 38px;
-}
-.media-node__dl svg {
-  width: 13px;
-  height: 13px;
-}
-.media-node__del:hover {
+  border: 2px solid var(--bg-elev);
+  border-radius: 50%;
   background: var(--danger, #ef4444);
-  border-color: var(--danger, #ef4444);
-}
-.media-node__dl:hover {
-  background: var(--accent);
-  border-color: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
 }
 .media-node:hover .media-node__del,
+.media-node__del:focus-visible {
+  opacity: 1;
+}
+/* Hover-reveal download badge (sits just left of the remove ✕). */
+.media-node__dl {
+  position: absolute;
+  top: -8px;
+  right: 20px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--bg-elev);
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.media-node__dl svg {
+  width: 12px;
+  height: 12px;
+}
 .media-node:hover .media-node__dl,
-.media-node__del:focus-visible,
 .media-node__dl:focus-visible {
   opacity: 1;
 }

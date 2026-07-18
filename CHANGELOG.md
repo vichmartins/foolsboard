@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.109.11
+
+- fix: Disabled the browser's native picture-in-picture button on video objects —
+  it's positioned in screen space, so it drifted outside the video while panning
+  the board and couldn't be repositioned.
+- revert: Restored the media node's remove/download controls to their previous
+  look (v0.109.10's in-corner restyle reverted).
+
 ## v0.109.10
 
 - polish: A media node's remove (and download) controls now sit **inside** the
