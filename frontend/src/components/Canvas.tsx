@@ -190,6 +190,11 @@ function toRFNode(n: StoryNode): Node {
   }
 }
 
+// The canvas remounts per board, so this survives across boards: it holds the
+// read-only state of the previously-open board, letting the lock control animate
+// only when that state actually changes (board <-> template), not on every mount.
+let prevLockRo: boolean | null = null
+
 function CanvasInner({
   boardId,
   mergeSourceIds,
@@ -291,12 +296,18 @@ function CanvasInner({
   // can match our styling): when locked, objects can't be moved/selected/linked.
   const [locked, setLocked] = useState(false)
   // The canvas remounts per board, so a CSS transition can't animate the lock
-  // control's initial mount. To animate it in BOTH directions (collapse when
-  // opening a template, expand when opening an editable board) we render it in the
-  // opposite of its target state for one frame, then flip to the target so the
-  // transition fires. `lockReady` false = pre-flip (opposite), true = target.
+  // control's initial mount. To animate it (collapse when opening a template,
+  // expand when opening an editable board) we render it in the opposite of its
+  // target state for one frame, then flip to the target so the transition fires.
+  // BUT only when read-only actually changed from the previous board -- otherwise
+  // template -> template would flash the button in and re-collapse it (a twitch).
   const [lockReady, setLockReady] = useState(false)
+  const animateLock = useRef(prevLockRo !== null && prevLockRo !== ro)
   useEffect(() => {
+    prevLockRo = ro // remember this board's state for the next board's mount
+  }, [ro])
+  useEffect(() => {
+    if (!animateLock.current) return // same state as before: no enter animation
     const raf = requestAnimationFrame(() => setLockReady(true))
     // Fallback so the control still reaches its target if rAF is throttled
     // (e.g. a backgrounded tab), rather than staying stuck in the opposite state.
@@ -306,8 +317,10 @@ function CanvasInner({
       clearTimeout(timer)
     }
   }, [])
-  // Target: hidden on a template (ro), shown otherwise. Pre-flip shows the opposite.
-  const lockHidden = lockReady ? ro : !ro
+  // When animating: pre-flip (opposite) then target. Otherwise: straight to target
+  // (ro), so an unchanged state shows no flash. In-place ro flips (Unlock to Edit)
+  // still animate via the persistent element's CSS transition.
+  const lockHidden = animateLock.current ? (lockReady ? ro : !ro) : ro
   // Where playthrough begins: set by "Play from here" (a specific object), else
   // null so it falls back to the current selection / the start chooser.
   const [playStart, setPlayStart] = useState<string | null>(null)
