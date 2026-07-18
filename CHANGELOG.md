@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.109.9
+
+- fix: While a board's graph is loading, the empty-board hint ("Right-click
+  anywhere to create your first object") no longer flashes — the node list is
+  briefly empty during the fetch, which made a heavy board momentarily look empty
+  instead of loading. The hint now waits until loading finishes.
+
 ## v0.109.8
 
 - feature: Boards now show a themed **loading spinner** (accent ring with a soft
