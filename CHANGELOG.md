@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.109.6
+
+- polish: Switching boards now **fades the board's contents in** smoothly instead
+  of popping every object into place at once. Only the node/edge layer animates
+  (the dotted background and controls stay put); respects reduced-motion.
+
 ## v0.109.5
 
 - polish: The canvas lock control now animates in **both** directions — it
