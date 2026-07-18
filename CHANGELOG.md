@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.109.13
+
+- revert: Reverted all recent video-object changes (custom player, disabled PiP,
+  control restyle). Video objects are back to their original native controls.
+
 ## v0.109.12
 
 - change: Video objects now use a **custom player** instead of the browser's native
