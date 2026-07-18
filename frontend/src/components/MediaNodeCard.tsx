@@ -17,6 +17,7 @@ import { collabColor } from '../collab'
 import { realtime } from '../realtime'
 import { FlipIcon, ResizeGripIcon, RotateIcon } from './icons'
 import AudioPlayer from './AudioPlayer'
+import VideoPlayer from './VideoPlayer'
 
 const SIDES: Position[] = [Position.Top, Position.Right, Position.Bottom, Position.Left]
 
@@ -373,27 +374,18 @@ export default function MediaNodeCard({ id, data, selected }: NodeProps) {
     )
   } else if (mk === 'video') {
     body = (
-      <video
-        // key on the url so that when a background re-encode swaps the file
-        // (e.g. a briefly-shown stale/deleted source is replaced by the live
-        // one), React mounts a fresh element instead of reusing an errored one —
-        // a media element that has failed to load won't recover from just a
-        // `src` attribute change.
+      // key on the url so a background re-encode that swaps the file mounts a
+      // fresh element instead of reusing an errored one. Custom controls (not the
+      // native ones) keep every button -- including PiP and fullscreen -- inside
+      // the object so nothing drifts off it during a board pan.
+      <VideoPlayer
         key={url}
-        ref={(el) => {
-          mediaRef.current = el
-        }}
-        className="media-node__video nodrag"
         src={url}
         poster={thumb || undefined}
-        controls
-        // The browser's native picture-in-picture overlay is positioned in screen
-        // space, so it drifts outside the video while the board is panned (a CSS
-        // transform it can't track) and can't be repositioned from CSS. Disabling
-        // it removes that stray floating button.
-        disablePictureInPicture
-        preload="metadata"
         style={sizeStyle}
+        rootRef={(el) => {
+          mediaRef.current = el
+        }}
       />
     )
   } else if (mk === 'audio') {
