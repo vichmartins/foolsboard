@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.109.10
+
+- polish: A media node's remove (and download) controls now sit **inside** the
+  object's top-right corner as themed overlay buttons on a dark scrim (hover-tinted
+  to danger/accent), instead of floating outside the corner as badges — so they
+  stay put with the object during a pan and look part of it.
+
 ## v0.109.9
 
 - fix: While a board's graph is loading, the empty-board hint ("Right-click
