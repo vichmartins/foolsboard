@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.109.12
+
+- change: Video objects now use a **custom player** instead of the browser's native
+  controls. Every control — play, seek, volume, **picture-in-picture** and
+  **fullscreen** — lives inside the video and travels with it, so nothing drifts
+  off the object when you pan the board. PiP and fullscreen are back (the native
+  PiP overlay that drifted is gone for good).
+
 ## v0.109.11
 
 - fix: Disabled the browser's native picture-in-picture button on video objects —
