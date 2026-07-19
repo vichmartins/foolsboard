@@ -1770,15 +1770,13 @@
 .rf-lock-btn {
   max-height: 30px;
   overflow: hidden;
+  /* Drives in-place read-only flips (e.g. Unlock to Edit on the current board). */
   transition: max-height 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
     padding 0.26s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.2s ease;
 }
 /* Collapse padding + border too, not just max-height -- with border-box the
    button can't shrink below its vertical padding, which otherwise leaves an 8px
-   gap in the controls stack. The canvas remounts on board switch, so Canvas.tsx
-   applies this class one frame *after* mount for a template, which lets the
-   transition play (opening a template collapses it smoothly); the resting state
-   is always fully collapsed, even if the animation is skipped. */
+   gap in the controls stack. This is the resting hidden (template) state. */
 .rf-lock-btn--hidden {
   max-height: 0;
   padding-top: 0;
@@ -1787,9 +1785,40 @@
   opacity: 0;
   pointer-events: none;
 }
+/* The canvas remounts on board switch, so the entrance is a keyframe (plays
+   reliably on mount, unlike a transition that needs its start state to paint
+   first). Each animates FROM the opposite of the resting state TO the base, so
+   opening a template collapses the button and opening an editable board expands
+   it -- both smooth, both directions. */
+.rf-lock-btn--enter-collapse {
+  animation: rf-lock-collapse 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.rf-lock-btn--enter-expand {
+  animation: rf-lock-expand 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes rf-lock-collapse {
+  from {
+    max-height: 30px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    opacity: 1;
+  }
+}
+@keyframes rf-lock-expand {
+  from {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .rf-lock-btn {
     transition: none;
+  }
+  .rf-lock-btn--enter-collapse,
+  .rf-lock-btn--enter-expand {
+    animation: none;
   }
 }
 
