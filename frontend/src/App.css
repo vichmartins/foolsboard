@@ -1804,12 +1804,14 @@
     opacity: 1;
   }
 }
+/* Expand: the button's space is already reserved on mount (base max-height), so we
+   animate only opacity + a GPU-composited scale -- no max-height growth means the
+   sibling controls below don't reflow as it appears, which is the smooth "pop"
+   (like the board-content reveal) rather than a jerky top-down height wipe. */
 @keyframes rf-lock-expand {
   from {
-    max-height: 0;
-    padding-top: 0;
-    padding-bottom: 0;
     opacity: 0;
+    transform: scale(0.5);
   }
 }
 @media (prefers-reduced-motion: reduce) {

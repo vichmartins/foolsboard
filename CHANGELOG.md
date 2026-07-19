@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.109.17
+
+- fix: The canvas lock control now expands in with a **scale + fade** (its space is
+  reserved up front, so the control buttons below it no longer reflow as it grows).
+  That reflow was the source of the jerky "pop" when opening an editable board from
+  a template; the collapse (opening a template) is unchanged.
+
 ## v0.109.16
 
 - fix: The canvas lock control's entrance is now driven by a **CSS keyframe** (the
