@@ -308,12 +308,20 @@ function CanvasInner({
   }, [ro])
   useEffect(() => {
     if (!animateLock.current) return // same state as before: no enter animation
-    const raf = requestAnimationFrame(() => setLockReady(true))
+    // Double rAF: let the pre-flip (opposite) state actually paint for one frame
+    // before flipping to the target, so the transition has a starting point and
+    // the expand doesn't jump. A single rAF can flip before that first paint
+    // (React re-renders from the callback), which pops instead of animating.
+    let raf2 = 0
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setLockReady(true))
+    })
     // Fallback so the control still reaches its target if rAF is throttled
     // (e.g. a backgrounded tab), rather than staying stuck in the opposite state.
-    const timer = setTimeout(() => setLockReady(true), 80)
+    const timer = setTimeout(() => setLockReady(true), 90)
     return () => {
-      cancelAnimationFrame(raf)
+      cancelAnimationFrame(raf1)
+      cancelAnimationFrame(raf2)
       clearTimeout(timer)
     }
   }, [])
