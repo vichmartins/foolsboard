@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.109.15
+
+- fix: The canvas lock control now **expands in smoothly** when opening an editable
+  board from a template (it used to pop in). The enter animation now waits a full
+  frame for its starting state to paint before animating, so both the collapse and
+  the expand are smooth.
+
 ## v0.109.14
 
 - fix: Switching from one template to another no longer makes the canvas lock
