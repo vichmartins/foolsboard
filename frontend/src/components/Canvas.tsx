@@ -295,40 +295,27 @@ function CanvasInner({
   // Canvas lock (replaces React Flow's built-in interactive button so its tooltip
   // can match our styling): when locked, objects can't be moved/selected/linked.
   const [locked, setLocked] = useState(false)
-  // The canvas remounts per board, so a CSS transition can't animate the lock
-  // control's initial mount. To animate it (collapse when opening a template,
-  // expand when opening an editable board) we render it in the opposite of its
-  // target state for one frame, then flip to the target so the transition fires.
-  // BUT only when read-only actually changed from the previous board -- otherwise
-  // template -> template would flash the button in and re-collapse it (a twitch).
-  const [lockReady, setLockReady] = useState(false)
-  const animateLock = useRef(prevLockRo !== null && prevLockRo !== ro)
+  // The canvas remounts per board, so the lock control animates its entrance with
+  // a CSS keyframe -- which plays reliably on mount, unlike a transition (that
+  // needs its start state to paint first, and pops if it doesn't). We only animate
+  // when read-only actually changed vs the previous board, and the direction is
+  // captured at mount so an in-place flip (Unlock to Edit, same mount) doesn't
+  // retrigger it -- that case animates via the transition on `.rf-lock-btn`.
+  // template -> template (unchanged) shows no animation, avoiding a twitch.
+  const lockEnter = useRef<'collapse' | 'expand' | null>(
+    prevLockRo !== null && prevLockRo !== ro ? (ro ? 'collapse' : 'expand') : null,
+  )
   useEffect(() => {
     prevLockRo = ro // remember this board's state for the next board's mount
   }, [ro])
-  useEffect(() => {
-    if (!animateLock.current) return // same state as before: no enter animation
-    // Double rAF: let the pre-flip (opposite) state actually paint for one frame
-    // before flipping to the target, so the transition has a starting point and
-    // the expand doesn't jump. A single rAF can flip before that first paint
-    // (React re-renders from the callback), which pops instead of animating.
-    let raf2 = 0
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => setLockReady(true))
-    })
-    // Fallback so the control still reaches its target if rAF is throttled
-    // (e.g. a backgrounded tab), rather than staying stuck in the opposite state.
-    const timer = setTimeout(() => setLockReady(true), 90)
-    return () => {
-      cancelAnimationFrame(raf1)
-      cancelAnimationFrame(raf2)
-      clearTimeout(timer)
-    }
-  }, [])
-  // When animating: pre-flip (opposite) then target. Otherwise: straight to target
-  // (ro), so an unchanged state shows no flash. In-place ro flips (Unlock to Edit)
-  // still animate via the persistent element's CSS transition.
-  const lockHidden = animateLock.current ? (lockReady ? ro : !ro) : ro
+  const lockClass =
+    'rf-icon-btn rf-lock-btn' +
+    (ro ? ' rf-lock-btn--hidden' : '') +
+    (lockEnter.current === 'collapse'
+      ? ' rf-lock-btn--enter-collapse'
+      : lockEnter.current === 'expand'
+        ? ' rf-lock-btn--enter-expand'
+        : '')
   // Where playthrough begins: set by "Play from here" (a specific object), else
   // null so it falls back to the current selection / the start chooser.
   const [playStart, setPlayStart] = useState<string | null>(null)
@@ -2251,7 +2238,7 @@ function CanvasInner({
               kept mounted so it collapses/expands smoothly as read-only toggles
               (e.g. "Unlock to Edit") rather than popping in/out. */}
           <ControlButton
-            className={'rf-icon-btn rf-lock-btn' + (lockHidden ? ' rf-lock-btn--hidden' : '')}
+            className={lockClass}
             onClick={() => !ro && setLocked((v) => !v)}
             title={locked ? 'Unlock the Canvas' : 'Lock the Canvas (prevent moving objects)'}
             aria-label="Toggle canvas lock"

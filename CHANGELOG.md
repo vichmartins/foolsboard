@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.109.16
+
+- fix: The canvas lock control's entrance is now driven by a **CSS keyframe** (the
+  same reliable, on-mount mechanism as the board-content reveal) instead of a
+  frame-timed transition. The expand when opening an editable board from a template
+  no longer pops — both the collapse and the expand are consistently smooth.
+
 ## v0.109.15
 
 - fix: The canvas lock control now **expands in smoothly** when opening an editable
