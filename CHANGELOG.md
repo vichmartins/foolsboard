@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.109.19
+
+- polish: When the canvas lock control expands in (opening an editable board from a
+  template), its space now **grows smoothly** so the control buttons below it slide
+  down in step with the icon fading in, instead of jumping to their new position.
+
 ## v0.109.18
 
 - polish: The canvas lock control's expand (opening an editable board from a
