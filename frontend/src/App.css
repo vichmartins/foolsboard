@@ -1801,24 +1801,31 @@
     opacity: 1;
   }
 }
-/* Expand: the button's space is reserved up front (base max-height), so we animate
-   only opacity + a GPU-composited scale -- nothing below it reflows. It's held
-   hidden until the board's content is ready and then reveals off the SAME
-   `--loaded` trigger as the content, over the SAME 0.5s, so the two move together
-   instead of the lock racing ahead. */
+/* Expand: held collapsed until the board's content is ready, then it grows its
+   height (so the control buttons below it slide down smoothly rather than jumping)
+   AND fades + scales the icon in -- all off the SAME `--loaded` trigger as the
+   content reveal, over the SAME 0.5s, so everything moves together. */
 .rf-lock-btn--enter-expand {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
   opacity: 0;
-  transform: scale(0.5);
 }
 .canvas-wrap--loaded .rf-lock-btn--enter-expand {
   animation: rf-lock-expand 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 @keyframes rf-lock-expand {
   from {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
     opacity: 0;
-    transform: scale(0.5);
+    transform: scale(0.6);
   }
   to {
+    max-height: 30px;
+    padding-top: 4px;
+    padding-bottom: 4px;
     opacity: 1;
     transform: scale(1);
   }
@@ -1832,8 +1839,10 @@
     animation: none;
   }
   .rf-lock-btn--enter-expand {
+    max-height: 30px;
+    padding-top: 4px;
+    padding-bottom: 4px;
     opacity: 1;
-    transform: none;
   }
 }
 
