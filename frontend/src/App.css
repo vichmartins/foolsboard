@@ -1791,10 +1791,7 @@
    opening a template collapses the button and opening an editable board expands
    it -- both smooth, both directions. */
 .rf-lock-btn--enter-collapse {
-  animation: rf-lock-collapse 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.rf-lock-btn--enter-expand {
-  animation: rf-lock-expand 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: rf-lock-collapse 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @keyframes rf-lock-collapse {
   from {
@@ -1804,14 +1801,26 @@
     opacity: 1;
   }
 }
-/* Expand: the button's space is already reserved on mount (base max-height), so we
-   animate only opacity + a GPU-composited scale -- no max-height growth means the
-   sibling controls below don't reflow as it appears, which is the smooth "pop"
-   (like the board-content reveal) rather than a jerky top-down height wipe. */
+/* Expand: the button's space is reserved up front (base max-height), so we animate
+   only opacity + a GPU-composited scale -- nothing below it reflows. It's held
+   hidden until the board's content is ready and then reveals off the SAME
+   `--loaded` trigger as the content, over the SAME 0.5s, so the two move together
+   instead of the lock racing ahead. */
+.rf-lock-btn--enter-expand {
+  opacity: 0;
+  transform: scale(0.5);
+}
+.canvas-wrap--loaded .rf-lock-btn--enter-expand {
+  animation: rf-lock-expand 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
 @keyframes rf-lock-expand {
   from {
     opacity: 0;
     transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -1819,8 +1828,12 @@
     transition: none;
   }
   .rf-lock-btn--enter-collapse,
-  .rf-lock-btn--enter-expand {
+  .canvas-wrap--loaded .rf-lock-btn--enter-expand {
     animation: none;
+  }
+  .rf-lock-btn--enter-expand {
+    opacity: 1;
+    transform: none;
   }
 }
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.109.18
+
+- polish: The canvas lock control's expand (opening an editable board from a
+  template) now reveals in step with the board content — same trigger (once the
+  content is ready) and same 0.5s duration/easing — instead of racing ahead of it
+  at a faster speed.
+
 ## v0.109.17
 
 - fix: The canvas lock control now expands in with a **scale + fade** (its space is
